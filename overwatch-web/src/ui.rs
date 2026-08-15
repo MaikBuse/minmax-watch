@@ -61,6 +61,87 @@ pub struct ModeChip {
     pub roster_size: usize,
 }
 
+/// The app mark: the three role arcs around the reticle, same drawing as
+/// `assets/icon.svg`.
+///
+/// The glyph alone, never the `minmax.watch` wordmark. The header already
+/// carries the mode switch, the map, the side toggle, the sync light, the
+/// ingest date and a reset, and a screen whose entire argument is density
+/// cannot spend a hundred pixels of it naming the app you already opened. The
+/// wordmark does its work on the tab, the install prompt and the link preview.
+///
+/// Drawn inline rather than as an `<img>` so it needs no network round trip and
+/// cannot flash in after the first paint.
+fn brand_mark() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 96 96",
+            width: "22",
+            height: "22",
+            "aria-hidden": "true",
+            g {
+                fill: "none",
+                stroke_width: "10",
+                stroke_linecap: "round",
+                transform: "rotate(-90 48 48)",
+                circle {
+                    cx: "48", cy: "48", r: "32",
+                    stroke: "var(--role-tank)",
+                    stroke_dasharray: "55.85 145.2",
+                }
+                circle {
+                    cx: "48", cy: "48", r: "32",
+                    stroke: "var(--role-damage)",
+                    stroke_dasharray: "55.85 145.2",
+                    stroke_dashoffset: "-67.02",
+                }
+                circle {
+                    cx: "48", cy: "48", r: "32",
+                    stroke: "var(--role-support)",
+                    stroke_dasharray: "55.85 145.2",
+                    stroke_dashoffset: "-134.04",
+                }
+            }
+            g {
+                stroke: "currentColor",
+                stroke_width: "8",
+                stroke_linecap: "round",
+                fill: "none",
+                circle { cx: "48", cy: "48", r: "10" }
+                path { d: "M48 30v-6M48 66v6M30 48h-6M66 48h6" }
+            }
+        }
+    }
+}
+
+/// The one place the app says who it is and whose artwork it is borrowing.
+///
+/// The portraits and map shots in this bundle are Blizzard's. Serving them
+/// across a LAN and serving them to the open internet are different postures,
+/// and the second one should say so out loud rather than leave it to be
+/// inferred from a licence file nobody opens.
+#[component]
+pub fn Footer() -> Element {
+    rsx! {
+        footer { class: "footer",
+            a { href: "https://minmax.watch/", "minmax.watch" }
+            span { class: "sep", "·" }
+            a {
+                href: "https://github.com/MaikBuse/minmax-watch",
+                rel: "noopener",
+                "source"
+            }
+            span { class: "sep", "·" }
+            span { "MIT" }
+            span { class: "sep", "·" }
+            span {
+                "not affiliated with or endorsed by Blizzard Entertainment. \
+                 Overwatch, hero and map artwork are Blizzard's."
+            }
+        }
+    }
+}
+
 /// The role glyph on a mode segment, drawn inline rather than set in type.
 ///
 /// The obvious candidates in Unicode — a shogi piece for the shield, a position
@@ -390,6 +471,13 @@ pub fn Header(
 
     rsx! {
         header { class: "header",
+            a {
+                class: "brand",
+                href: "/",
+                "aria-label": "MinMax — minmax.watch",
+                title: "minmax.watch",
+                {brand_mark()}
+            }
             ModeSwitch { role, modes, on_role }
             div { class: "context",
                 match map {

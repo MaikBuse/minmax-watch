@@ -1,18 +1,41 @@
 {
-    "name": "Overwatch Picker",
-    "short_name": "Picker",
-    "description": "Keyboard-first hero picks for tank and support, scored locally.",
+    "id": "/",
+    "name": "MinMax",
+    "short_name": "MinMax",
+    "description": "Keyboard-first Overwatch 2 draft assistant. Scores every pick locally, so the network is never between a keystroke and an answer.",
+    "lang": "en",
+    "dir": "ltr",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#0f1115",
-    "theme_color": "#0f1115",
+    "background_color": "#0B0D11",
+    "theme_color": "#0B0D11",
     "orientation": "any",
+    "categories": ["games", "utilities"],
     "icons": [
         {
             "src": "/icon.svg",
             "sizes": "any",
             "type": "image/svg+xml",
-            "purpose": "any maskable"
+            "purpose": "any"
+        },
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
         }
     ]
 }

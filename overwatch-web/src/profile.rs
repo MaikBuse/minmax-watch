@@ -8,7 +8,12 @@
 use overwatch_core::{Dataset, HeroSet, Role, Weights};
 use serde::{Deserialize, Serialize};
 
-const STORAGE_KEY: &str = "overwatch-picker.profile";
+const STORAGE_KEY: &str = "minmax.profile";
+
+/// The key this was stored under before the app was named. Read once, migrated
+/// forward, then removed — a rename that silently emptied everyone's hero pool
+/// would cost exactly the setup time the profile exists to save.
+const LEGACY_STORAGE_KEY: &str = "overwatch-picker.profile";
 
 /// Stored by hero *key* rather than index, so a roster update — which shifts
 /// every index — cannot silently repoint your pool at the wrong heroes.
@@ -177,7 +182,7 @@ impl Profile {
     /// A bad profile must never stop the app from opening mid-draft.
     pub fn load(dataset: &Dataset) -> Self {
         let stored = storage()
-            .and_then(|s| s.get_item(STORAGE_KEY).ok().flatten())
+            .and_then(|s| read_raw(&s))
             .and_then(|raw| serde_json::from_str::<StoredProfile>(&raw).ok())
             .unwrap_or_default();
         Self::from_stored(stored, dataset)
@@ -206,6 +211,24 @@ fn to_set(keys: &[String], dataset: &Dataset) -> HeroSet {
 
 fn storage() -> Option<web_sys::Storage> {
     web_sys::window()?.local_storage().ok().flatten()
+}
+
+/// The stored profile, migrating it off the pre-rename key if that is where it
+/// still lives.
+///
+/// The write is what makes this a migration rather than a permanent fallback,
+/// and the remove is what stops a stale copy from winning later: without it, a
+/// profile saved here and then read on a build that still preferred the old key
+/// would silently roll back. Both are best-effort — a storage that refuses the
+/// write still returns the profile, it just migrates again next time.
+fn read_raw(storage: &web_sys::Storage) -> Option<String> {
+    if let Ok(Some(raw)) = storage.get_item(STORAGE_KEY) {
+        return Some(raw);
+    }
+    let raw = storage.get_item(LEGACY_STORAGE_KEY).ok().flatten()?;
+    let _ = storage.set_item(STORAGE_KEY, &raw);
+    let _ = storage.remove_item(LEGACY_STORAGE_KEY);
+    Some(raw)
 }
 
 #[cfg(test)]

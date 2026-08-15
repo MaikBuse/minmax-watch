@@ -134,7 +134,7 @@ impl Config {
 /// verbatim invites exactly one bug report, so it never appears here.
 fn print_banner(config: &Config) {
     let port = config.addr.port();
-    println!("overwatch-picker is up");
+    println!("minmax is up");
     println!("  this machine   http://localhost:{port}");
 
     match primary_local_ip() {
@@ -166,7 +166,7 @@ fn print_banner(config: &Config) {
             "      netsh interface portproxy add v4tov4 listenport={port} listenaddress=0.0.0.0 connectport={port} connectaddress={wsl_ip}"
         );
         println!(
-            "      New-NetFirewallRule -DisplayName 'Overwatch Picker' -Direction Inbound -LocalPort {port} -Protocol TCP -Action Allow"
+            "      New-NetFirewallRule -DisplayName 'MinMax' -Direction Inbound -LocalPort {port} -Protocol TCP -Action Allow"
         );
         println!();
         println!("  Note the forwarded address changes when WSL restarts; mirrored mode does not.");
