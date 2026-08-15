@@ -1,0 +1,796 @@
+generated = "2026-08-15"
+
+[[affinity]]
+map = "aatlis"
+hero = "anran"
+value = 30
+
+[[affinity]]
+map = "aatlis"
+hero = "dmon"
+value = 45
+
+[[affinity]]
+map = "aatlis"
+hero = "echo"
+value = 30
+
+[[affinity]]
+map = "aatlis"
+hero = "genji"
+value = 45
+
+[[affinity]]
+map = "aatlis"
+hero = "junker-queen"
+value = 30
+
+[[affinity]]
+map = "aatlis"
+hero = "shion"
+value = 60
+
+[[affinity]]
+map = "antarctic-peninsula"
+hero = "bastion"
+value = 60
+
+[[affinity]]
+map = "antarctic-peninsula"
+hero = "cassidy"
+value = 30
+
+[[affinity]]
+map = "antarctic-peninsula"
+hero = "mauga"
+value = 45
+
+[[affinity]]
+map = "antarctic-peninsula"
+hero = "mizuki"
+value = 60
+
+[[affinity]]
+map = "antarctic-peninsula"
+hero = "zarya"
+value = 60
+
+[[affinity]]
+map = "blizzard-world"
+hero = "emre"
+value = 60
+
+[[affinity]]
+map = "blizzard-world"
+hero = "illari"
+value = 60
+
+[[affinity]]
+map = "blizzard-world"
+hero = "kiriko"
+value = 30
+
+[[affinity]]
+map = "blizzard-world"
+hero = "mei"
+value = 60
+
+[[affinity]]
+map = "blizzard-world"
+hero = "ramattra"
+value = 45
+
+[[affinity]]
+map = "blizzard-world"
+hero = "sigma"
+value = 45
+
+[[affinity]]
+map = "blizzard-world"
+hero = "venture"
+value = 60
+
+[[affinity]]
+map = "blizzard-world"
+hero = "zenyatta"
+value = 30
+
+[[affinity]]
+map = "busan"
+hero = "emre"
+value = 45
+
+[[affinity]]
+map = "busan"
+hero = "lifeweaver"
+value = 45
+
+[[affinity]]
+map = "busan"
+hero = "mauga"
+value = 30
+
+[[affinity]]
+map = "busan"
+hero = "sojourn"
+value = 30
+
+[[affinity]]
+map = "busan"
+hero = "soldier-76"
+value = 45
+
+[[affinity]]
+map = "circuit-royal"
+hero = "ashe"
+value = 60
+
+[[affinity]]
+map = "circuit-royal"
+hero = "domina"
+value = 60
+
+[[affinity]]
+map = "circuit-royal"
+hero = "hanzo"
+value = 45
+
+[[affinity]]
+map = "circuit-royal"
+hero = "juno"
+value = 30
+
+[[affinity]]
+map = "circuit-royal"
+hero = "mei"
+value = 30
+
+[[affinity]]
+map = "circuit-royal"
+hero = "ramattra"
+value = 60
+
+[[affinity]]
+map = "circuit-royal"
+hero = "reinhardt"
+value = 30
+
+[[affinity]]
+map = "circuit-royal"
+hero = "sierra"
+value = 30
+
+[[affinity]]
+map = "circuit-royal"
+hero = "sigma"
+value = 60
+
+[[affinity]]
+map = "circuit-royal"
+hero = "widowmaker"
+value = 30
+
+[[affinity]]
+map = "circuit-royal"
+hero = "zenyatta"
+value = 60
+
+[[affinity]]
+map = "colosseo"
+hero = "freja"
+value = 45
+
+[[affinity]]
+map = "colosseo"
+hero = "genji"
+value = 30
+
+[[affinity]]
+map = "colosseo"
+hero = "jetpack-cat"
+value = 30
+
+[[affinity]]
+map = "colosseo"
+hero = "lucio"
+value = 45
+
+[[affinity]]
+map = "colosseo"
+hero = "shion"
+value = 45
+
+[[affinity]]
+map = "colosseo"
+hero = "sombra"
+value = 60
+
+[[affinity]]
+map = "colosseo"
+hero = "tracer"
+value = 60
+
+[[affinity]]
+map = "dorado"
+hero = "ashe"
+value = 30
+
+[[affinity]]
+map = "dorado"
+hero = "doomfist"
+value = 45
+
+[[affinity]]
+map = "dorado"
+hero = "dva"
+value = 45
+
+[[affinity]]
+map = "dorado"
+hero = "echo"
+value = 45
+
+[[affinity]]
+map = "dorado"
+hero = "hanzo"
+value = 30
+
+[[affinity]]
+map = "dorado"
+hero = "winston"
+value = 45
+
+[[affinity]]
+map = "eichenwalde"
+hero = "junkrat"
+value = 45
+
+[[affinity]]
+map = "eichenwalde"
+hero = "torbjorn"
+value = 60
+
+[[affinity]]
+map = "esperanca"
+hero = "doomfist"
+value = 30
+
+[[affinity]]
+map = "esperanca"
+hero = "freja"
+value = 30
+
+[[affinity]]
+map = "esperanca"
+hero = "reinhardt"
+value = 45
+
+[[affinity]]
+map = "esperanca"
+hero = "soldier-76"
+value = 60
+
+[[affinity]]
+map = "esperanca"
+hero = "sombra"
+value = 45
+
+[[affinity]]
+map = "esperanca"
+hero = "tracer"
+value = 45
+
+[[affinity]]
+map = "esperanca"
+hero = "winston"
+value = 30
+
+[[affinity]]
+map = "esperanca"
+hero = "wuyang"
+value = 30
+
+[[affinity]]
+map = "havana"
+hero = "ana"
+value = 30
+
+[[affinity]]
+map = "havana"
+hero = "ashe"
+value = 45
+
+[[affinity]]
+map = "havana"
+hero = "orisa"
+value = 45
+
+[[affinity]]
+map = "havana"
+hero = "sojourn"
+value = 60
+
+[[affinity]]
+map = "havana"
+hero = "torbjorn"
+value = 45
+
+[[affinity]]
+map = "havana"
+hero = "widowmaker"
+value = 45
+
+[[affinity]]
+map = "havana"
+hero = "zenyatta"
+value = 45
+
+[[affinity]]
+map = "hollywood"
+hero = "ana"
+value = 45
+
+[[affinity]]
+map = "ilios"
+hero = "echo"
+value = 60
+
+[[affinity]]
+map = "ilios"
+hero = "jetpack-cat"
+value = 60
+
+[[affinity]]
+map = "ilios"
+hero = "lucio"
+value = 60
+
+[[affinity]]
+map = "ilios"
+hero = "pharah"
+value = 45
+
+[[affinity]]
+map = "ilios"
+hero = "roadhog"
+value = 60
+
+[[affinity]]
+map = "ilios"
+hero = "vendetta"
+value = 30
+
+[[affinity]]
+map = "junkertown"
+hero = "freja"
+value = 60
+
+[[affinity]]
+map = "junkertown"
+hero = "kiriko"
+value = 45
+
+[[affinity]]
+map = "junkertown"
+hero = "venture"
+value = 30
+
+[[affinity]]
+map = "junkertown"
+hero = "wrecking-ball"
+value = 45
+
+[[affinity]]
+map = "kings-row"
+hero = "ana"
+value = 60
+
+[[affinity]]
+map = "kings-row"
+hero = "baptiste"
+value = 45
+
+[[affinity]]
+map = "kings-row"
+hero = "doomfist"
+value = 60
+
+[[affinity]]
+map = "kings-row"
+hero = "reinhardt"
+value = 60
+
+[[affinity]]
+map = "kings-row"
+hero = "vendetta"
+value = 45
+
+[[affinity]]
+map = "kings-row"
+hero = "widowmaker"
+value = 60
+
+[[affinity]]
+map = "kings-row"
+hero = "wrecking-ball"
+value = 30
+
+[[affinity]]
+map = "lijiang-tower"
+hero = "jetpack-cat"
+value = 45
+
+[[affinity]]
+map = "lijiang-tower"
+hero = "lucio"
+value = 30
+
+[[affinity]]
+map = "lijiang-tower"
+hero = "pharah"
+value = 60
+
+[[affinity]]
+map = "lijiang-tower"
+hero = "symmetra"
+value = 45
+
+[[affinity]]
+map = "midtown"
+hero = "roadhog"
+value = 30
+
+[[affinity]]
+map = "midtown"
+hero = "zarya"
+value = 30
+
+[[affinity]]
+map = "nepal"
+hero = "hazard"
+value = 45
+
+[[affinity]]
+map = "nepal"
+hero = "moira"
+value = 60
+
+[[affinity]]
+map = "nepal"
+hero = "roadhog"
+value = 45
+
+[[affinity]]
+map = "nepal"
+hero = "symmetra"
+value = 60
+
+[[affinity]]
+map = "new-junk-city"
+hero = "anran"
+value = 60
+
+[[affinity]]
+map = "new-junk-city"
+hero = "brigitte"
+value = 60
+
+[[affinity]]
+map = "new-junk-city"
+hero = "dmon"
+value = 60
+
+[[affinity]]
+map = "new-junk-city"
+hero = "hazard"
+value = 30
+
+[[affinity]]
+map = "new-junk-city"
+hero = "junker-queen"
+value = 45
+
+[[affinity]]
+map = "new-junk-city"
+hero = "junkrat"
+value = 60
+
+[[affinity]]
+map = "new-junk-city"
+hero = "reaper"
+value = 60
+
+[[affinity]]
+map = "new-queen-street"
+hero = "dva"
+value = 60
+
+[[affinity]]
+map = "new-queen-street"
+hero = "mercy"
+value = 45
+
+[[affinity]]
+map = "new-queen-street"
+hero = "reaper"
+value = 45
+
+[[affinity]]
+map = "new-queen-street"
+hero = "soldier-76"
+value = 30
+
+[[affinity]]
+map = "new-queen-street"
+hero = "tracer"
+value = 30
+
+[[affinity]]
+map = "new-queen-street"
+hero = "wuyang"
+value = 45
+
+[[affinity]]
+map = "numbani"
+hero = "baptiste"
+value = 60
+
+[[affinity]]
+map = "numbani"
+hero = "genji"
+value = 60
+
+[[affinity]]
+map = "numbani"
+hero = "junker-queen"
+value = 60
+
+[[affinity]]
+map = "numbani"
+hero = "juno"
+value = 60
+
+[[affinity]]
+map = "numbani"
+hero = "kiriko"
+value = 60
+
+[[affinity]]
+map = "numbani"
+hero = "orisa"
+value = 60
+
+[[affinity]]
+map = "numbani"
+hero = "winston"
+value = 60
+
+[[affinity]]
+map = "numbani"
+hero = "wuyang"
+value = 60
+
+[[affinity]]
+map = "oasis"
+hero = "cassidy"
+value = 60
+
+[[affinity]]
+map = "oasis"
+hero = "hazard"
+value = 60
+
+[[affinity]]
+map = "oasis"
+hero = "moira"
+value = 30
+
+[[affinity]]
+map = "oasis"
+hero = "pharah"
+value = 30
+
+[[affinity]]
+map = "oasis"
+hero = "shion"
+value = 30
+
+[[affinity]]
+map = "paraiso"
+hero = "domina"
+value = 30
+
+[[affinity]]
+map = "paraiso"
+hero = "dva"
+value = 30
+
+[[affinity]]
+map = "paraiso"
+hero = "illari"
+value = 30
+
+[[affinity]]
+map = "paraiso"
+hero = "lifeweaver"
+value = 30
+
+[[affinity]]
+map = "paraiso"
+hero = "ramattra"
+value = 30
+
+[[affinity]]
+map = "paraiso"
+hero = "symmetra"
+value = 30
+
+[[affinity]]
+map = "paraiso"
+hero = "torbjorn"
+value = 30
+
+[[affinity]]
+map = "rialto"
+hero = "baptiste"
+value = 30
+
+[[affinity]]
+map = "rialto"
+hero = "brigitte"
+value = 30
+
+[[affinity]]
+map = "rialto"
+hero = "mizuki"
+value = 45
+
+[[affinity]]
+map = "rialto"
+hero = "reaper"
+value = 30
+
+[[affinity]]
+map = "rialto"
+hero = "sigma"
+value = 30
+
+[[affinity]]
+map = "route-66"
+hero = "junkrat"
+value = 30
+
+[[affinity]]
+map = "route-66"
+hero = "lifeweaver"
+value = 60
+
+[[affinity]]
+map = "runasapi"
+hero = "anran"
+value = 45
+
+[[affinity]]
+map = "runasapi"
+hero = "bastion"
+value = 30
+
+[[affinity]]
+map = "runasapi"
+hero = "dmon"
+value = 30
+
+[[affinity]]
+map = "runasapi"
+hero = "emre"
+value = 30
+
+[[affinity]]
+map = "runasapi"
+hero = "juno"
+value = 45
+
+[[affinity]]
+map = "runasapi"
+hero = "mercy"
+value = 30
+
+[[affinity]]
+map = "runasapi"
+hero = "sierra"
+value = 60
+
+[[affinity]]
+map = "runasapi"
+hero = "sombra"
+value = 30
+
+[[affinity]]
+map = "samoa"
+hero = "cassidy"
+value = 45
+
+[[affinity]]
+map = "samoa"
+hero = "mauga"
+value = 60
+
+[[affinity]]
+map = "samoa"
+hero = "mizuki"
+value = 30
+
+[[affinity]]
+map = "samoa"
+hero = "moira"
+value = 45
+
+[[affinity]]
+map = "samoa"
+hero = "orisa"
+value = 30
+
+[[affinity]]
+map = "samoa"
+hero = "sojourn"
+value = 45
+
+[[affinity]]
+map = "samoa"
+hero = "zarya"
+value = 45
+
+[[affinity]]
+map = "shambali-monastery"
+hero = "bastion"
+value = 45
+
+[[affinity]]
+map = "shambali-monastery"
+hero = "domina"
+value = 45
+
+[[affinity]]
+map = "shambali-monastery"
+hero = "hanzo"
+value = 60
+
+[[affinity]]
+map = "shambali-monastery"
+hero = "illari"
+value = 45
+
+[[affinity]]
+map = "shambali-monastery"
+hero = "mei"
+value = 45
+
+[[affinity]]
+map = "shambali-monastery"
+hero = "mercy"
+value = 60
+
+[[affinity]]
+map = "suravasa"
+hero = "brigitte"
+value = 45
+
+[[affinity]]
+map = "suravasa"
+hero = "vendetta"
+value = 60
+
+[[affinity]]
+map = "suravasa"
+hero = "venture"
+value = 45
+
+[[affinity]]
+map = "watchpoint-gibraltar"
+hero = "sierra"
+value = 45
+
+[[affinity]]
+map = "watchpoint-gibraltar"
+hero = "wrecking-ball"
+value = 60

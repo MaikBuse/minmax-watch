@@ -1,0 +1,17 @@
+[package]
+name = "overwatch-core"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Pure domain model and scoring engine for the Overwatch hero picker. No I/O, wasm32-clean."
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+# Test-only. The session types cross a socket as JSON, and the tests that pin
+# their wire shape need to speak it; the crate itself still does no I/O and
+# carries no serialisation format of its own.
+[dev-dependencies]
+serde_json = { workspace = true }

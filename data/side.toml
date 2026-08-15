@@ -1,0 +1,129 @@
+# How much each hero prefers attacking over defending, on -100..=100.
+# Positive leans attack, negative leans defend, 0 means it makes no difference.
+#
+# Hand-curated, like synergy.toml. No source publishes this: counterpickgg's map
+# column is a single "best maps" list with no side, and counterwatch is duel data
+# with no map context at all. The ingest never writes this file.
+#
+# These are judgement calls, not measurements. The bar for a non-zero value here
+# is that the hero's kit is built around something only one side gets — setup
+# time and held angles on defence, or the mobility to open a choke on attack.
+# Anything less clear-cut is left at zero rather than guessed at, which is why
+# most of the roster is absent from this file. It only applies on Escort and
+# Hybrid; every other mode starts both teams in the same posture.
+
+generated = "hand-curated"
+
+# --- defence: kit needs setup time, or holds an angle the attackers must break -
+
+[[side]]
+hero = "bastion"
+value = -70
+note = "Configuration: Sentry wants a prepared angle onto a choke the attackers have to walk into."
+
+[[side]]
+hero = "torbjorn"
+value = -70
+note = "The turret is only worth its build time somewhere the fight has to come to it."
+
+[[side]]
+hero = "symmetra"
+value = -55
+note = "Turrets and a wall placed before the fight starts; far weaker pushing into an unknown."
+
+[[side]]
+hero = "widowmaker"
+value = -40
+note = "A held long sightline is defence's to keep; on attack she has to reposition into it every push."
+
+[[side]]
+hero = "mei"
+value = -40
+note = "Wall denies a choke the attackers must clear, and stalls a point they must hold."
+
+[[side]]
+hero = "junkrat"
+value = -40
+note = "Trap and mine cover the approach the attackers are obliged to take."
+
+[[side]]
+hero = "sigma"
+value = -20
+note = "Barrier and rock trade space for time, which is the defending side's currency."
+
+[[side]]
+hero = "orisa"
+value = -20
+note = "Anchors a hold; less able to create the opening a push needs."
+
+[[side]]
+hero = "hanzo"
+value = -20
+note = "Storm Arrows into a choke the attackers have to funnel through."
+
+[[side]]
+hero = "illari"
+value = -20
+note = "The pylon holds a fixed position better than it follows a push."
+
+# --- attack: mobility that opens a choke, or pressure the defence must answer --
+
+[[side]]
+hero = "doomfist"
+value = 60
+note = "Displaces the anchor holding the choke, which is the whole problem on attack."
+
+[[side]]
+hero = "winston"
+value = 50
+note = "Jumps the choke instead of clearing it, and forces the backline off its angle."
+
+[[side]]
+hero = "tracer"
+value = 50
+note = "Gets behind a set defence and makes it look away from the push."
+
+[[side]]
+hero = "genji"
+value = 50
+note = "Climbs past the held angle rather than trading into it."
+
+[[side]]
+hero = "wrecking-ball"
+value = 50
+note = "Disrupts a prepared hold; nothing to disrupt when you are the one holding."
+
+[[side]]
+hero = "lucio"
+value = 50
+note = "Speed boost is what moves a stalled push through a choke."
+
+[[side]]
+hero = "sombra"
+value = 40
+note = "Translocator flanks a defence that has committed to its positions."
+
+[[side]]
+hero = "pharah"
+value = 40
+note = "Takes an air angle over the choke the ground fight is stuck on."
+
+[[side]]
+hero = "reaper"
+value = 30
+note = "Wraith and Shadow Step get him onto a backline that cannot rotate."
+
+[[side]]
+hero = "dva"
+value = 30
+note = "Boosters commit into the hold and eat the defensive ultimate answering it."
+
+[[side]]
+hero = "venture"
+value = 30
+note = "Burrow crosses ground the defence expects to contest."
+
+[[side]]
+hero = "kiriko"
+value = 20
+note = "Swift Step keeps a diving attacker alive past the point a hold would punish."

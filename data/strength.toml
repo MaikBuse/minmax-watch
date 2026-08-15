@@ -1,0 +1,266 @@
+generated = "2026-08-15"
+
+[[strength]]
+hero = "ana"
+value = -33
+win_rate = 48.0
+
+[[strength]]
+hero = "anran"
+value = 33
+win_rate = 52.0
+
+[[strength]]
+hero = "ashe"
+value = 17
+win_rate = 51.0
+
+[[strength]]
+hero = "baptiste"
+value = -67
+win_rate = 46.0
+
+[[strength]]
+hero = "bastion"
+value = 0
+win_rate = 50.0
+
+[[strength]]
+hero = "brigitte"
+value = 0
+win_rate = 50.0
+
+[[strength]]
+hero = "cassidy"
+value = -50
+win_rate = 47.0
+
+[[strength]]
+hero = "dmon"
+value = 0
+win_rate = 50.0
+
+[[strength]]
+hero = "domina"
+value = 0
+win_rate = 50.0
+
+[[strength]]
+hero = "doomfist"
+value = 50
+win_rate = 53.0
+
+[[strength]]
+hero = "dva"
+value = -83
+win_rate = 45.0
+
+[[strength]]
+hero = "echo"
+value = -17
+win_rate = 49.0
+
+[[strength]]
+hero = "emre"
+value = -33
+win_rate = 48.0
+
+[[strength]]
+hero = "freja"
+value = -17
+win_rate = 49.0
+
+[[strength]]
+hero = "genji"
+value = 17
+win_rate = 51.0
+
+[[strength]]
+hero = "hanzo"
+value = 0
+win_rate = 50.0
+
+[[strength]]
+hero = "hazard"
+value = 17
+win_rate = 51.0
+
+[[strength]]
+hero = "illari"
+value = 0
+win_rate = 50.0
+
+[[strength]]
+hero = "jetpack-cat"
+value = 83
+win_rate = 55.0
+
+[[strength]]
+hero = "junker-queen"
+value = 83
+win_rate = 55.0
+
+[[strength]]
+hero = "junkrat"
+value = 50
+win_rate = 53.0
+
+[[strength]]
+hero = "juno"
+value = 33
+win_rate = 52.0
+
+[[strength]]
+hero = "kiriko"
+value = -67
+win_rate = 46.0
+
+[[strength]]
+hero = "lifeweaver"
+value = -50
+win_rate = 47.0
+
+[[strength]]
+hero = "lucio"
+value = 0
+win_rate = 50.0
+
+[[strength]]
+hero = "mauga"
+value = 17
+win_rate = 51.0
+
+[[strength]]
+hero = "mei"
+value = 67
+win_rate = 54.0
+
+[[strength]]
+hero = "mercy"
+value = -67
+win_rate = 46.0
+
+[[strength]]
+hero = "mizuki"
+value = 33
+win_rate = 52.0
+
+[[strength]]
+hero = "moira"
+value = 17
+win_rate = 51.0
+
+[[strength]]
+hero = "orisa"
+value = -50
+win_rate = 47.0
+
+[[strength]]
+hero = "pharah"
+value = 33
+win_rate = 52.0
+
+[[strength]]
+hero = "ramattra"
+value = 17
+win_rate = 51.0
+
+[[strength]]
+hero = "reaper"
+value = 33
+win_rate = 52.0
+
+[[strength]]
+hero = "reinhardt"
+value = 67
+win_rate = 54.0
+
+[[strength]]
+hero = "roadhog"
+value = -50
+win_rate = 47.0
+
+[[strength]]
+hero = "shion"
+value = -17
+win_rate = 49.0
+
+[[strength]]
+hero = "sierra"
+value = -17
+win_rate = 49.0
+
+[[strength]]
+hero = "sigma"
+value = 0
+win_rate = 50.0
+
+[[strength]]
+hero = "sojourn"
+value = -67
+win_rate = 46.0
+
+[[strength]]
+hero = "soldier-76"
+value = -17
+win_rate = 49.0
+
+[[strength]]
+hero = "sombra"
+value = -33
+win_rate = 48.0
+
+[[strength]]
+hero = "symmetra"
+value = 83
+win_rate = 55.0
+
+[[strength]]
+hero = "torbjorn"
+value = 100
+win_rate = 58.0
+
+[[strength]]
+hero = "tracer"
+value = 0
+win_rate = 50.0
+
+[[strength]]
+hero = "vendetta"
+value = 17
+win_rate = 51.0
+
+[[strength]]
+hero = "venture"
+value = 50
+win_rate = 53.0
+
+[[strength]]
+hero = "widowmaker"
+value = -83
+win_rate = 45.0
+
+[[strength]]
+hero = "winston"
+value = 17
+win_rate = 51.0
+
+[[strength]]
+hero = "wrecking-ball"
+value = 17
+win_rate = 51.0
+
+[[strength]]
+hero = "wuyang"
+value = 17
+win_rate = 51.0
+
+[[strength]]
+hero = "zarya"
+value = -17
+win_rate = 49.0
+
+[[strength]]
+hero = "zenyatta"
+value = 83
+win_rate = 55.0

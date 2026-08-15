@@ -1,0 +1,361 @@
+generated = "2026-08-15"
+source = "https://overfast-api.tekrop.fr/maps"
+
+[[map]]
+key = "hanaoka"
+name = "Hanaoka"
+mode = "clash"
+aliases = [
+    "hanaoka",
+    "han",
+]
+
+[[map]]
+key = "throne-of-anubis"
+name = "Throne of Anubis"
+mode = "clash"
+aliases = [
+    "throne",
+    "toa",
+    "throneofanubis",
+    "thr",
+]
+
+[[map]]
+key = "antarctic-peninsula"
+name = "Antarctic Peninsula"
+mode = "control"
+aliases = [
+    "ap",
+    "antarctic",
+    "antarcticpeninsula",
+    "ant",
+]
+
+[[map]]
+key = "arena-victoriae"
+name = "Arena Victoriae"
+mode = "control"
+aliases = [
+    "arenavictoriae",
+    "av",
+    "are",
+]
+
+[[map]]
+key = "busan"
+name = "Busan"
+mode = "control"
+aliases = [
+    "busan",
+    "bus",
+]
+
+[[map]]
+key = "gogadoro"
+name = "Gogadoro"
+mode = "control"
+aliases = [
+    "gogadoro",
+    "gog",
+]
+
+[[map]]
+key = "ilios"
+name = "Ilios"
+mode = "control"
+aliases = [
+    "ilios",
+    "ili",
+]
+
+[[map]]
+key = "lijiang-tower"
+name = "Lijiang Tower"
+mode = "control"
+aliases = [
+    "lt",
+    "lijiang",
+    "lijiangtower",
+    "lij",
+]
+
+[[map]]
+key = "nepal"
+name = "Nepal"
+mode = "control"
+aliases = [
+    "nepal",
+    "nep",
+]
+
+[[map]]
+key = "oasis"
+name = "Oasis"
+mode = "control"
+aliases = [
+    "oasis",
+    "oas",
+]
+
+[[map]]
+key = "samoa"
+name = "Samoa"
+mode = "control"
+aliases = [
+    "samoa",
+    "sam",
+]
+
+[[map]]
+key = "wuxing-university"
+name = "Wuxing University"
+mode = "control"
+aliases = [
+    "wuxinguniversity",
+    "wu",
+    "wux",
+]
+
+[[map]]
+key = "circuit-royal"
+name = "Circuit Royal"
+mode = "escort"
+aliases = [
+    "cr",
+    "circuit",
+    "circuitroyal",
+    "cir",
+]
+
+[[map]]
+key = "dorado"
+name = "Dorado"
+mode = "escort"
+aliases = [
+    "dorado",
+    "dor",
+]
+
+[[map]]
+key = "havana"
+name = "Havana"
+mode = "escort"
+aliases = [
+    "havana",
+    "hav",
+]
+
+[[map]]
+key = "junkertown"
+name = "Junkertown"
+mode = "escort"
+aliases = [
+    "junkertown",
+    "jun",
+]
+
+[[map]]
+key = "rialto"
+name = "Rialto"
+mode = "escort"
+aliases = [
+    "rialto",
+    "ria",
+]
+
+[[map]]
+key = "route-66"
+name = "Route 66"
+mode = "escort"
+aliases = [
+    "route66",
+    "r6",
+    "rou",
+]
+
+[[map]]
+key = "shambali-monastery"
+name = "Shambali Monastery"
+mode = "escort"
+aliases = [
+    "shambali",
+    "shambalimonastery",
+    "sm",
+    "sha",
+]
+
+[[map]]
+key = "watchpoint-gibraltar"
+name = "Watchpoint: Gibraltar"
+mode = "escort"
+aliases = [
+    "gib",
+    "wpg",
+    "watchpointgibraltar",
+    "wg",
+    "wat",
+]
+
+[[map]]
+key = "aatlis"
+name = "Aatlis"
+mode = "flashpoint"
+aliases = [
+    "aatlis",
+    "aat",
+]
+
+[[map]]
+key = "new-junk-city"
+name = "New Junk City"
+mode = "flashpoint"
+aliases = [
+    "njc",
+    "newjunkcity",
+    "new",
+]
+
+[[map]]
+key = "suravasa"
+name = "Suravasa"
+mode = "flashpoint"
+aliases = [
+    "suravasa",
+    "sur",
+]
+
+[[map]]
+key = "blizzard-world"
+name = "Blizzard World"
+mode = "hybrid"
+aliases = [
+    "bw",
+    "blizz",
+    "blizzardworld",
+    "bli",
+]
+
+[[map]]
+key = "eichenwalde"
+name = "Eichenwalde"
+mode = "hybrid"
+aliases = [
+    "eichenwalde",
+    "eic",
+]
+
+[[map]]
+key = "hollywood"
+name = "Hollywood"
+mode = "hybrid"
+aliases = [
+    "hollywood",
+    "hol",
+]
+
+[[map]]
+key = "kings-row"
+name = "King’s Row"
+mode = "hybrid"
+aliases = [
+    "kr",
+    "kings",
+    "kingsrow",
+    "ksr",
+    "kin",
+]
+
+[[map]]
+key = "midtown"
+name = "Midtown"
+mode = "hybrid"
+aliases = [
+    "midtown",
+    "mid",
+]
+
+[[map]]
+key = "neon-junction"
+name = "Neon Junction"
+mode = "hybrid"
+aliases = [
+    "neonjunction",
+    "nj",
+    "neo",
+]
+
+[[map]]
+key = "numbani"
+name = "Numbani"
+mode = "hybrid"
+aliases = [
+    "numbani",
+    "num",
+]
+
+[[map]]
+key = "paraiso"
+name = "Paraíso"
+mode = "hybrid"
+aliases = [
+    "paraiso",
+    "par",
+]
+
+[[map]]
+key = "colosseo"
+name = "Colosseo"
+mode = "push"
+aliases = [
+    "colosseo",
+    "col",
+]
+
+[[map]]
+key = "esperanca"
+name = "Esperança"
+mode = "push"
+aliases = [
+    "esperanca",
+    "esp",
+]
+
+[[map]]
+key = "new-queen-street"
+name = "New Queen Street"
+mode = "push"
+aliases = [
+    "nqs",
+    "newqueenstreet",
+    "new",
+]
+
+[[map]]
+key = "place-lacroix"
+name = "Place Lacroix"
+mode = "push"
+aliases = [
+    "placelacroix",
+    "pl",
+    "pla",
+]
+
+[[map]]
+key = "redwood-dam"
+name = "Redwood Dam"
+mode = "push"
+aliases = [
+    "redwooddam",
+    "rd",
+    "red",
+]
+
+[[map]]
+key = "runasapi"
+name = "Runasapi"
+mode = "push"
+aliases = [
+    "runasapi",
+    "run",
+]
