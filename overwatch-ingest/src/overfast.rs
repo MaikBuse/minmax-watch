@@ -105,7 +105,7 @@ pub async fn fetch_maps(fetcher: &mut Fetcher, generated: &str) -> Result<MapsFi
         "no competitive maps survived filtering - has the OverFast schema changed?"
     );
 
-    maps.sort_by(|a, b| (a.mode.clone(), a.key.clone()).cmp(&(b.mode.clone(), b.key.clone())));
+    maps.sort_by_key(|a| (a.mode.clone(), a.key.clone()));
     report_collisions(
         "map",
         &maps

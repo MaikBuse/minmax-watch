@@ -7,11 +7,47 @@
         <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta charset="UTF-8">
-        <meta name="theme-color" content="#0f1115">
+        <meta name="description" content="Keyboard-first Overwatch 2 draft assistant. Scores every pick locally, so the network is never between a keystroke and an answer.">
+        <link rel="canonical" href="https://minmax.watch/">
+        <meta name="theme-color" content="#0B0D11">
+
+        <!-- Link preview. og.png is generated from og.svg by `just brand-icons`;
+             absolute rather than relative because scrapers do not all resolve
+             against the canonical URL. -->
+        <meta property="og:type" content="website">
+        <meta property="og:site_name" content="minmax.watch">
+        <meta property="og:url" content="https://minmax.watch/">
+        <meta property="og:title" content="MinMax — Overwatch 2 draft assistant">
+        <meta property="og:description" content="Keyboard-first Overwatch 2 draft assistant. Scores every pick locally, so the network is never between a keystroke and an answer.">
+        <meta property="og:image" content="https://minmax.watch/og.png">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta property="og:image:alt" content="minmax.watch — Overwatch 2 draft assistant">
+        <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="MinMax — Overwatch 2 draft assistant">
+        <meta name="twitter:description" content="Keyboard-first Overwatch 2 draft assistant. Scores every pick locally, so the network is never between a keystroke and an answer.">
+        <meta name="twitter:image" content="https://minmax.watch/og.png">
+
         <link rel="manifest" href="/manifest.json">
         <!-- Served from the bundle root, not through `asset!()`: manifest.json
-             references it by an absolute path and cannot know the hashed one. -->
+             references these by absolute path and cannot know the hashed ones.
+             `just build-web` copies each one; anything added here has to be
+             added to that recipe too or it never reaches the bundle. -->
         <link rel="icon" type="image/svg+xml" href="/icon.svg">
+        <link rel="icon" href="/favicon.ico" sizes="32x32">
+        <!-- iOS ignores both the manifest icons and SVG favicons; without this,
+             "add to home screen" saves a screenshot of the page. -->
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="MinMax">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+        <!-- The UI face, self-hosted. Preloaded rather than left to the
+             stylesheet: the CSS is itself a hashed asset the browser has to
+             fetch and parse first, and the draft screen is text the moment it
+             paints. `crossorigin` is required on a font preload even
+             same-origin, or the fetch happens twice. -->
+        <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
     </head>
     <body>
         <div id="main"></div>

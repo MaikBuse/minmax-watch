@@ -10,6 +10,7 @@
 mod aliases;
 mod art;
 mod blend;
+mod brand;
 mod cache;
 mod counterpickgg;
 mod counterwatch;
@@ -93,6 +94,11 @@ enum Command {
     Art,
     /// Everything.
     All,
+    /// Rasterise the brand SVGs into favicons, PWA icons and the OG card.
+    ///
+    /// Not part of `All`: it touches no upstream source, needs no network, and
+    /// only has anything to do when the artwork itself changes.
+    Brand,
 }
 
 struct Args {
@@ -110,6 +116,7 @@ fn parse_args() -> Result<Args> {
             "counters" => command = Command::Counters,
             "art" => command = Command::Art,
             "all" => command = Command::All,
+            "brand" => command = Command::Brand,
             "--refresh" | "-r" => refresh = true,
             "--help" | "-h" => {
                 print_usage();
@@ -123,12 +130,14 @@ fn parse_args() -> Result<Args> {
 }
 
 const USAGE: &str = "\
-usage: overwatch-ingest [roster|counters|art|all] [--refresh]
+usage: overwatch-ingest [roster|counters|art|all|brand] [--refresh]
 
   roster      regenerate heroes.toml and maps.toml from the OverFast API
   counters    regenerate matchups.toml, strength.toml and map_affinity.toml
   art         redownload hero portraits and map thumbnails into overwatch-web/assets
   all         all three (default)
+  brand       rasterise the brand SVGs into favicons, PWA icons and og.png
+              (local only - no network, and not included in `all`)
 
   --refresh   ignore the cache in data/sources and re-fetch everything";
 
@@ -143,6 +152,18 @@ async fn main() -> Result<()> {
     let root = workspace_root();
     let data_dir = root.join("data");
     let cache_dir = data_dir.join("sources");
+
+    // Handled before the fetcher exists: this step never goes near the network,
+    // and building one would create the source cache directory for nothing.
+    if args.command == Command::Brand {
+        let assets = root.join("overwatch-web").join("assets");
+        let changed = brand::generate(&assets)?;
+        match changed.len() {
+            0 => eprintln!("brand: already up to date"),
+            n => eprintln!("brand: wrote {n} file(s): {}", changed.join(", ")),
+        }
+        return Ok(());
+    }
 
     let mut fetcher = Fetcher::new(cache_dir, args.refresh)?;
     let generated = today();

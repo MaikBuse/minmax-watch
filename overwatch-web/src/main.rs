@@ -802,6 +802,8 @@ fn App() -> Element {
                     on_lock: move |hero: HeroId| { me.write().locked = Some(hero); },
                 }
             }
+
+            ui::Footer {}
         }
     }
 }

@@ -13,6 +13,7 @@ overwatch-data = { workspace = true }
 anyhow = { workspace = true }
 image = { workspace = true }
 reqwest = { workspace = true }
+resvg = { workspace = true }
 tokio = { workspace = true }
 scraper = { workspace = true }
 serde = { workspace = true }

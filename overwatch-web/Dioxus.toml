@@ -3,7 +3,7 @@ name = "overwatch-web"
 
 [web.app]
 # dx appends this into index.html's <title>, so index.html must not declare one.
-title = "Overwatch Picker"
+title = "MinMax — Overwatch 2 draft assistant"
 
 [web.watcher]
 reload_html = true

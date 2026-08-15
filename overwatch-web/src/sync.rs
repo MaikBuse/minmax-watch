@@ -23,7 +23,12 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{MessageEvent, WebSocket};
 
-const CLIENT_ID_KEY: &str = "overwatch-picker.client-id";
+const CLIENT_ID_KEY: &str = "minmax.client-id";
+
+/// The key this was stored under before the app was named. Migrated forward on
+/// read so a reload across the rename keeps its seat instead of joining the
+/// session again as a second, identical-looking person.
+const LEGACY_CLIENT_ID_KEY: &str = "overwatch-picker.client-id";
 
 /// First reconnect delay, in milliseconds.
 const BACKOFF_MIN_MS: i32 = 500;
@@ -111,6 +116,18 @@ pub fn client_id() -> String {
     {
         if !existing.is_empty() {
             return existing;
+        }
+    }
+
+    // Pre-rename identity. Claimed under the new key rather than left in place,
+    // so this runs once rather than on every load.
+    if let Some(storage) = storage.as_ref() {
+        if let Ok(Some(legacy)) = storage.get_item(LEGACY_CLIENT_ID_KEY) {
+            let _ = storage.remove_item(LEGACY_CLIENT_ID_KEY);
+            if !legacy.is_empty() {
+                let _ = storage.set_item(CLIENT_ID_KEY, &legacy);
+                return legacy;
+            }
         }
     }
 

@@ -1,0 +1,10 @@
+# minmax.watch — the whole site is one page, so there is nothing to disallow
+# and nothing a sitemap would add.
+#
+# The API and socket paths are listed because they are not pages: crawling them
+# achieves nothing and POSTs nothing, but a crawler wasting requests on them is
+# noise in the server log.
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /ws/

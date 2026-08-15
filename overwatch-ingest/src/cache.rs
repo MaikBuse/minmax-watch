@@ -13,9 +13,9 @@ use anyhow::{Context, Result};
 
 /// Identify ourselves honestly rather than pretending to be a browser.
 const USER_AGENT: &str = concat!(
-    "overwatch-picker/",
+    "minmax-watch/",
     env!("CARGO_PKG_VERSION"),
-    " (personal hero-draft tool; contact: maik.buse@sicore.de)"
+    " (draft assistant; +https://minmax.watch; contact: maik.buse@sicore.de)"
 );
 
 /// Politeness delay between live requests to the same host.
