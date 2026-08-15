@@ -1,0 +1,45 @@
+[workspace]
+resolver = "2"
+members = [
+    "overwatch-core",
+    "overwatch-data",
+    "overwatch-ingest",
+    "overwatch-server",
+    "overwatch-web",
+]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+rust-version = "1.88"
+
+[workspace.dependencies]
+overwatch-core = { path = "overwatch-core" }
+overwatch-data = { path = "overwatch-data" }
+
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+thiserror = "2.0"
+
+# ingest-only (not reachable from wasm targets)
+anyhow = "1.0"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "fs"] }
+scraper = "0.23"
+serde_json = "1.0"
+# Only the codecs we actually round-trip: portraits are PNG, map shots are JPEG.
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+time = { version = "0.3", features = ["formatting", "macros"] }
+
+[profile.dev]
+debug = true
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = "s"
+panic = "abort"
+
+# The scoring engine is the one place where speed is worth bytes.
+[profile.release.package.overwatch-core]
+opt-level = 3

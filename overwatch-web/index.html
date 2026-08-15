@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <!-- Deliberately empty: dx appends the title from Dioxus.toml *into*
+             this element, so any text here would end up duplicated. -->
+        <title></title>
+        <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta charset="UTF-8">
+        <meta name="theme-color" content="#0f1115">
+        <link rel="manifest" href="/manifest.json">
+        <!-- Served from the bundle root, not through `asset!()`: manifest.json
+             references it by an absolute path and cannot know the hashed one. -->
+        <link rel="icon" type="image/svg+xml" href="/icon.svg">
+    </head>
+    <body>
+        <div id="main"></div>
+        <script>
+            // Cache the shell so the app still opens when the LAN server is
+            // off. Scoring is local anyway, so a cached shell is a fully
+            // working single-player app rather than a degraded one.
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/sw.js').catch(() => {
+                        // Not being installable is not worth surfacing.
+                    });
+                });
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,18 @@
+{
+    "name": "Overwatch Picker",
+    "short_name": "Picker",
+    "description": "Keyboard-first hero picks for tank and support, scored locally.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#0f1115",
+    "theme_color": "#0f1115",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "/icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ]
+}

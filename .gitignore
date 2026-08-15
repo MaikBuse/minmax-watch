@@ -1,0 +1,13 @@
+/target
+
+# Cached raw scrape responses (~60 MB of HTML).
+#
+# The plan called for committing these as an audit trail, but that is too much
+# weight for a git repo. The audit trail that actually matters survives anyway:
+# every entry in data/matchups.toml records the per-source values it was blended
+# from, so a suspicious number can still be traced back to the site that
+# produced it. Re-fetching is one `just ingest --refresh`.
+/data/sources/
+
+# Personal match history. Uncomment to keep it out of the repo instead.
+# /data/matches.jsonl

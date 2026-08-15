@@ -1,0 +1,509 @@
+generated = "2026-08-15"
+source = "https://overfast-api.tekrop.fr/heroes"
+
+[[hero]]
+key = "ana"
+name = "Ana"
+role = "support"
+aliases = ["ana"]
+
+[[hero]]
+key = "anran"
+name = "Anran"
+role = "damage"
+aliases = [
+    "anran",
+    "anr",
+]
+
+[[hero]]
+key = "ashe"
+name = "Ashe"
+role = "damage"
+aliases = [
+    "ashe",
+    "ash",
+]
+
+[[hero]]
+key = "baptiste"
+name = "Baptiste"
+role = "support"
+aliases = [
+    "bap",
+    "bapt",
+    "baptiste",
+]
+
+[[hero]]
+key = "bastion"
+name = "Bastion"
+role = "damage"
+aliases = [
+    "bast",
+    "bastion",
+    "bas",
+]
+
+[[hero]]
+key = "brigitte"
+name = "Brigitte"
+role = "support"
+aliases = [
+    "brig",
+    "brigitte",
+    "bri",
+]
+
+[[hero]]
+key = "cassidy"
+name = "Cassidy"
+role = "damage"
+aliases = [
+    "cass",
+    "mccree",
+    "cassidy",
+    "cas",
+]
+
+[[hero]]
+key = "dmon"
+name = "D.Mon"
+role = "tank"
+aliases = [
+    "dmon",
+    "dm",
+    "dmo",
+]
+
+[[hero]]
+key = "domina"
+name = "Domina"
+role = "tank"
+aliases = [
+    "domina",
+    "dom",
+]
+
+[[hero]]
+key = "doomfist"
+name = "Doomfist"
+role = "tank"
+aliases = [
+    "doom",
+    "df",
+    "doomfist",
+    "doo",
+]
+
+[[hero]]
+key = "dva"
+name = "D.Va"
+role = "tank"
+aliases = [
+    "dva",
+    "dv",
+]
+
+[[hero]]
+key = "echo"
+name = "Echo"
+role = "damage"
+aliases = [
+    "echo",
+    "ech",
+]
+
+[[hero]]
+key = "emre"
+name = "Emre"
+role = "damage"
+aliases = [
+    "emre",
+    "emr",
+]
+
+[[hero]]
+key = "freja"
+name = "Freja"
+role = "damage"
+aliases = [
+    "freja",
+    "fre",
+]
+
+[[hero]]
+key = "genji"
+name = "Genji"
+role = "damage"
+aliases = [
+    "genji",
+    "gen",
+]
+
+[[hero]]
+key = "hanzo"
+name = "Hanzo"
+role = "damage"
+aliases = [
+    "hanzo",
+    "han",
+]
+
+[[hero]]
+key = "hazard"
+name = "Hazard"
+role = "tank"
+aliases = [
+    "haz",
+    "hazard",
+]
+
+[[hero]]
+key = "illari"
+name = "Illari"
+role = "support"
+aliases = [
+    "illari",
+    "ill",
+]
+
+[[hero]]
+key = "jetpack-cat"
+name = "Jetpack Cat"
+role = "support"
+aliases = [
+    "cat",
+    "jpc",
+    "jetpackcat",
+    "jc",
+    "jet",
+]
+
+[[hero]]
+key = "junker-queen"
+name = "Junker Queen"
+role = "tank"
+aliases = [
+    "jq",
+    "queen",
+    "junkerqueen",
+    "jun",
+]
+
+[[hero]]
+key = "junkrat"
+name = "Junkrat"
+role = "damage"
+aliases = [
+    "rat",
+    "junk",
+    "junkrat",
+    "jun",
+]
+
+[[hero]]
+key = "juno"
+name = "Juno"
+role = "support"
+aliases = [
+    "juno",
+    "jun",
+]
+
+[[hero]]
+key = "kiriko"
+name = "Kiriko"
+role = "support"
+aliases = [
+    "kiri",
+    "kiriko",
+    "kir",
+]
+
+[[hero]]
+key = "lifeweaver"
+name = "Lifeweaver"
+role = "support"
+aliases = [
+    "lw",
+    "weaver",
+    "lifeweaver",
+    "lif",
+]
+
+[[hero]]
+key = "lucio"
+name = "Lúcio"
+role = "support"
+aliases = [
+    "lucio",
+    "luc",
+]
+
+[[hero]]
+key = "mauga"
+name = "Mauga"
+role = "tank"
+aliases = [
+    "mauga",
+    "mau",
+]
+
+[[hero]]
+key = "mei"
+name = "Mei"
+role = "damage"
+aliases = ["mei"]
+
+[[hero]]
+key = "mercy"
+name = "Mercy"
+role = "support"
+aliases = [
+    "mercy",
+    "mer",
+]
+
+[[hero]]
+key = "mizuki"
+name = "Mizuki"
+role = "support"
+aliases = [
+    "miz",
+    "mizuki",
+]
+
+[[hero]]
+key = "moira"
+name = "Moira"
+role = "support"
+aliases = [
+    "moira",
+    "moi",
+]
+
+[[hero]]
+key = "orisa"
+name = "Orisa"
+role = "tank"
+aliases = [
+    "orisa",
+    "ori",
+]
+
+[[hero]]
+key = "pharah"
+name = "Pharah"
+role = "damage"
+aliases = [
+    "pharah",
+    "pha",
+]
+
+[[hero]]
+key = "ramattra"
+name = "Ramattra"
+role = "tank"
+aliases = [
+    "ram",
+    "ramattra",
+]
+
+[[hero]]
+key = "reaper"
+name = "Reaper"
+role = "damage"
+aliases = [
+    "reap",
+    "reaper",
+    "rea",
+]
+
+[[hero]]
+key = "reinhardt"
+name = "Reinhardt"
+role = "tank"
+aliases = [
+    "rein",
+    "rh",
+    "reinhardt",
+    "rei",
+]
+
+[[hero]]
+key = "roadhog"
+name = "Roadhog"
+role = "tank"
+aliases = [
+    "hog",
+    "road",
+    "roadhog",
+    "roa",
+]
+
+[[hero]]
+key = "shion"
+name = "Shion"
+role = "damage"
+aliases = [
+    "shion",
+    "shi",
+]
+
+[[hero]]
+key = "sierra"
+name = "Sierra"
+role = "damage"
+aliases = [
+    "sierra",
+    "sie",
+]
+
+[[hero]]
+key = "sigma"
+name = "Sigma"
+role = "tank"
+aliases = [
+    "sig",
+    "sigma",
+]
+
+[[hero]]
+key = "sojourn"
+name = "Sojourn"
+role = "damage"
+aliases = [
+    "soj",
+    "sojourn",
+]
+
+[[hero]]
+key = "soldier-76"
+name = "Soldier: 76"
+role = "damage"
+aliases = [
+    "76",
+    "s76",
+    "soldier",
+    "soldier76",
+    "s7",
+    "sol",
+]
+
+[[hero]]
+key = "sombra"
+name = "Sombra"
+role = "damage"
+aliases = [
+    "somb",
+    "sombra",
+    "som",
+]
+
+[[hero]]
+key = "symmetra"
+name = "Symmetra"
+role = "damage"
+aliases = [
+    "sym",
+    "symmetra",
+]
+
+[[hero]]
+key = "torbjorn"
+name = "Torbjörn"
+role = "damage"
+aliases = [
+    "torb",
+    "torbjorn",
+    "tor",
+]
+
+[[hero]]
+key = "tracer"
+name = "Tracer"
+role = "damage"
+aliases = [
+    "tracer",
+    "tra",
+]
+
+[[hero]]
+key = "vendetta"
+name = "Vendetta"
+role = "damage"
+aliases = [
+    "vendetta",
+    "ven",
+]
+
+[[hero]]
+key = "venture"
+name = "Venture"
+role = "damage"
+aliases = [
+    "vent",
+    "venture",
+    "ven",
+]
+
+[[hero]]
+key = "widowmaker"
+name = "Widowmaker"
+role = "damage"
+aliases = [
+    "widow",
+    "widowmaker",
+    "wid",
+]
+
+[[hero]]
+key = "winston"
+name = "Winston"
+role = "tank"
+aliases = [
+    "winston",
+    "monkey",
+    "win",
+]
+
+[[hero]]
+key = "wrecking-ball"
+name = "Wrecking Ball"
+role = "tank"
+aliases = [
+    "ball",
+    "hammond",
+    "wb",
+    "wreckingball",
+    "wre",
+]
+
+[[hero]]
+key = "wuyang"
+name = "Wuyang"
+role = "support"
+aliases = [
+    "wu",
+    "wuyang",
+    "wuy",
+]
+
+[[hero]]
+key = "zarya"
+name = "Zarya"
+role = "tank"
+aliases = [
+    "zar",
+    "zarya",
+]
+
+[[hero]]
+key = "zenyatta"
+name = "Zenyatta"
+role = "support"
+aliases = [
+    "zen",
+    "zenyatta",
+]

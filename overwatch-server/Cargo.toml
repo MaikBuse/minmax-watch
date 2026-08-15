@@ -1,0 +1,25 @@
+[package]
+name = "overwatch-server"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "LAN sync server: broadcasts draft state between the two clients and serves the wasm bundle."
+publish = false
+
+[dependencies]
+overwatch-core = { workspace = true }
+anyhow = { workspace = true }
+axum = { version = "0.8", features = ["ws"] }
+tokio = { workspace = true }
+tower-http = { version = "0.6", features = ["fs", "trace"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+# Test-only. The end-to-end test drives the real server over a real socket,
+# which is the only way to cover the parts that are not in `room.rs`: the route
+# table, the create/join split, and the id the socket forces onto a seat.
+[dev-dependencies]
+tokio-tungstenite = "0.24"
+futures-util = "0.3"

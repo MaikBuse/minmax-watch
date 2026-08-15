@@ -1,0 +1,858 @@
+//! The draft screen.
+//!
+//! Everything here is built around one constraint: hero select is seconds long,
+//! so nothing waits on a network round trip and nothing is more than one click
+//! away. The dataset is compiled in, scoring runs locally on every pick, and the
+//! sync socket (when connected) only carries the session state between the
+//! people drafting — it is never in the path between a click and seeing an
+//! answer.
+//!
+//! The draft this screen scores is *derived*, not stored. In a session the
+//! shared board and the roster are the state; `SessionState::draft_for` turns
+//! them into the [`Draft`] the scorer takes, so that everyone's teammates show
+//! up as their allies without anybody having to type them in. Alone, the same
+//! path runs over a one-seat session and produces exactly what the app produced
+//! before sessions existed.
+//!
+//! There are no modes. Every selectable thing is on screen at once, on a board
+//! that says what it is: your pool, the maps, the ally roster, the enemy roster.
+//! Which board you click *is* the answer to "which team", so there is nothing to
+//! switch between and nothing appears or disappears as picks land — a portrait
+//! stays where your hand learned it.
+
+mod icons;
+mod matchlog;
+mod profile;
+mod session;
+mod sync;
+mod ui;
+
+use std::rc::Rc;
+
+use dioxus::prelude::*;
+use overwatch_core::{
+    ban_recommendations, recommend, search_maps, BanBoard, BanSubject, Board, Dataset, Draft,
+    HeroId, MapId, Recommendation, Role, Seat, SessionState, Side, UserContext,
+};
+
+use crate::profile::Profile;
+use crate::session::Membership;
+use crate::ui::{BanRow, BoardRow, HeroChip, HeroTile, MapChip, MapTile, ModeChip, RosterRow};
+
+static CSS: Asset = asset!("/assets/style.css");
+
+fn main() {
+    dioxus::launch(App);
+}
+
+/// Everything the screen needs, recomputed on every pick.
+///
+/// For a 53-hero roster this is a few thousand `i8` lookups — microseconds — so
+/// there is no memoisation to get stale or wrong.
+struct Frame {
+    recommendations: Vec<Recommendation>,
+    bans: BanBoard,
+}
+
+/// The roster with this client's own seat as *it* believes it to be.
+///
+/// The server's copy of your seat is always at least one round trip behind your
+/// last click, and the derived draft is what the screen renders. Taking the
+/// local copy is what keeps locking a hero instant: the alternative is a pick
+/// that appears when the network says so, which is precisely the latency this
+/// app exists to avoid.
+///
+/// Alone — no session, so an empty roster — this yields a one-seat session, and
+/// `draft_for` over it reproduces exactly the solo behaviour.
+fn roster_including_me(seats: &[Seat], me: &Seat) -> Vec<Seat> {
+    let mut roster: Vec<Seat> = seats
+        .iter()
+        .filter(|seat| seat.id != me.id)
+        .cloned()
+        .collect();
+    roster.push(me.clone());
+    roster
+}
+
+/// Resolves a hero into the form the panels render: name and portrait together.
+///
+/// Every display site needs both, and both come from the same lookup, so they
+/// are produced together rather than threaded separately.
+fn hero_chip(dataset: &Dataset, hero: HeroId) -> HeroChip {
+    match dataset.hero(hero) {
+        Ok(entry) => HeroChip {
+            hero,
+            name: entry.name.clone(),
+            icon: icons::hero(&entry.key),
+        },
+        // An id with no hero behind it is a bug, not a draft state. Render it
+        // visibly rather than silently dropping a pick from the board.
+        Err(_) => HeroChip {
+            hero,
+            name: "?".to_owned(),
+            icon: String::new(),
+        },
+    }
+}
+
+fn map_chip(dataset: &Dataset, map: overwatch_core::MapId) -> Option<MapChip> {
+    dataset.map(map).ok().map(|entry| MapChip {
+        map,
+        name: entry.name.clone(),
+        icon: icons::map(&entry.key),
+    })
+}
+
+#[component]
+fn App() -> Element {
+    // The dataset is immutable and shared by every panel.
+    let dataset = use_hook(|| match overwatch_data::load() {
+        Ok(dataset) => Rc::new(dataset),
+        // A dataset that will not parse is a build-time mistake, not something
+        // to paper over at runtime — say so plainly instead of showing an empty
+        // hero list that looks like a bug in the game.
+        Err(err) => panic!("the compiled-in dataset is invalid: {err}"),
+    });
+
+    let mut profile = use_signal(|| Profile::load(&dataset));
+    // With no text input on the screen there is no natural focus sink, so the
+    // shortcuts hang off the root element and this is what keeps them reachable
+    // after a stray click.
+    let mut root_ref = use_signal(|| None::<Rc<MountedData>>);
+    // `Some(won)` after a result is recorded, so the keystroke has visible
+    // confirmation. Cleared by the next pick.
+    let mut logged = use_signal(|| None::<bool>);
+    // The map filter, and whether it currently holds focus. The shortcuts hang
+    // off the root element, so both root handlers have to stand down while it
+    // does or typing a map name fires them.
+    let mut map_query = use_signal(String::new);
+    let mut search_focused = use_signal(|| false);
+
+    // --- session ----------------------------------------------------------
+    //
+    // The state is split by who owns it. `board` is shared with everyone and
+    // last-writer-wins; `me` is this client's own seat and nobody else ever
+    // writes it; `seats` is the roster as the server last described it. The
+    // draft the scorer sees is derived from all three, so nothing here is
+    // stored twice.
+    let my_id = use_hook(sync::client_id);
+    let mut board = use_signal(Board::new);
+    let mut seats = use_signal(Vec::<Seat>::new);
+    let mut me = use_signal(|| {
+        let profile = profile.peek();
+        Seat {
+            id: my_id.clone(),
+            name: profile.name.clone(),
+            role: profile.role,
+            locked: None,
+            connected: true,
+        }
+    });
+
+    // Mirrors of what the server last told us, so the outbound effects can tell
+    // a local edit from the echo of a remote one.
+    let synced_board = use_signal(Board::new);
+    let synced_seat = use_signal(Seat::default);
+
+    let mut status = use_signal(|| sync::Status::Solo);
+    let mut membership = use_signal(Membership::default);
+    // Held in a signal rather than a hook so that joining and leaving can swap
+    // the socket without a page reload.
+    let mut connection = use_signal(|| sync::Connection::idle(my_id.clone()));
+    let mut qr_open = use_signal(|| false);
+    let mut join_entry = use_signal(String::new);
+
+    let sinks = sync::Sinks {
+        board,
+        seats,
+        synced_board,
+        status,
+    };
+
+    // Joining, in one place because three things reach for it: the deep link,
+    // the code box, and the create button.
+    let join = {
+        let ds = dataset.clone();
+        use_callback(move |code: String| {
+            let name = profile.peek().name.clone();
+            connection.peek().close();
+            connection.set(sync::connect(&code, &name, sinks));
+            membership.set(Membership::In(code.clone()));
+            status.set(sync::Status::Connecting);
+
+            // Persisted so a team drafting all evening types the code once.
+            let mut p = profile.write();
+            p.session = Some(code);
+            p.save(&ds);
+        })
+    };
+
+    let leave = {
+        let ds = dataset.clone();
+        use_callback(move |()| {
+            connection.peek().close();
+            connection.set(sync::Connection::idle(sync::client_id()));
+            membership.set(Membership::Alone);
+            status.set(sync::Status::Solo);
+            seats.set(Vec::new());
+            qr_open.set(false);
+
+            let mut p = profile.write();
+            p.session = None;
+            p.save(&ds);
+        })
+    };
+
+    // A session the server will not have is not one to sit in.
+    //
+    // Being rejected used to leave the bar showing the dead code with only a
+    // `leave` button to escape it, which is a trap rather than an error: the
+    // remembered code has been swept after its grace period, or was never
+    // minted at all, and neither is something the user did. Dropping to
+    // `Alone` puts `start a session` back on screen. The status pill keeps
+    // saying "no such session", so the failure is still stated rather than
+    // silently swallowed.
+    {
+        let ds = dataset.clone();
+        use_effect(move || {
+            if *status.read() != sync::Status::Rejected {
+                return;
+            }
+            if matches!(*membership.peek(), Membership::Alone) {
+                return;
+            }
+            connection.peek().close();
+            membership.set(Membership::Alone);
+            seats.set(Vec::new());
+            qr_open.set(false);
+
+            let mut p = profile.write();
+            p.session = None;
+            p.save(&ds);
+        });
+    }
+
+    // Open the session the URL or the profile names, once, on mount. A share
+    // link wins over the remembered session: following a link is an explicit
+    // act and the remembered one is not.
+    use_hook(|| {
+        let from_link = session::code_from_location();
+        if from_link.is_some() {
+            // The code outlives the session it names, so leaving it in the
+            // address bar would turn a bookmark into a broken rejoin later.
+            session::clear_query();
+        }
+        if let Some(code) = from_link.or_else(|| profile.peek().session.clone()) {
+            join.call(code);
+        }
+    });
+
+    // Publish local board edits only. A board that already equals what we last
+    // received came from another screen, and echoing it would fight with
+    // whatever they are typing.
+    use_effect(move || {
+        let current = board.read().clone();
+        let mut synced_board = synced_board;
+        if current != *synced_board.peek() {
+            synced_board.set(current.clone());
+            connection.peek().publish_board(&current);
+        }
+    });
+
+    // The same for this client's own seat. A seat has exactly one writer, so
+    // this can never conflict — the shadow exists only to keep the socket quiet
+    // when nothing actually changed.
+    use_effect(move || {
+        let current = me.read().clone();
+        let mut synced_seat = synced_seat;
+        if current != *synced_seat.peek() {
+            synced_seat.set(current.clone());
+            connection.peek().publish_seat(&current);
+        }
+    });
+
+    // --- the derived draft -------------------------------------------------
+    //
+    // Rebuilt from scratch every render, like the frame below it: one pass over
+    // at most five seats is far cheaper than the scoring it feeds, and there is
+    // no cached copy to go stale.
+    let state = SessionState {
+        board: board.read().clone(),
+        seats: roster_including_me(&seats.read(), &me.read()),
+    };
+    let draft = state.draft_for(&my_id);
+
+    let ds = dataset.clone();
+    let frame = {
+        let profile = profile.read();
+
+        let mut ctx = UserContext::new(profile.role, ds.hero_count());
+        ctx.overrides = profile.overrides.clone();
+        ctx.weights = profile.weights;
+
+        let recommendations = recommend(&ds, &draft, &ctx).unwrap_or_default();
+        // The ban list defends whoever you might end up on, which before you
+        // lock in is your whole pool rather than any one hero.
+        let bans = ban_recommendations(&ds, &draft, &ctx, &profile.pool(profile.role));
+
+        Frame {
+            recommendations,
+            bans,
+        }
+    };
+
+    // --- actions ----------------------------------------------------------
+
+    let ds_keys = dataset.clone();
+    // The derived draft as of this render. Event handlers are rebuilt every
+    // render, so this is never the stale copy it looks like — and taking it by
+    // value avoids borrowing a signal inside a handler that also writes one.
+    let draft_now = draft.clone();
+    let on_key = move |evt: Event<KeyboardData>| {
+        // Typing "route 66" must not fire ^R, and Escape belongs to the filter
+        // box while it has the caret.
+        if *search_focused.read() {
+            return;
+        }
+        let modified = evt.modifiers().ctrl() || evt.modifiers().meta();
+
+        match evt.key() {
+            Key::Escape => {
+                evt.prevent_default();
+                // Clears the picks but deliberately keeps the map, which does
+                // not change between rounds of the same match. In a session
+                // this clears it for everyone — which is what "next round"
+                // means when five people are looking at the same board — but it
+                // only ever unlocks *your own* hero. Reaching across and
+                // clearing a teammate's pick is not a thing one key should do.
+                board.write().clear_picks();
+                me.write().locked = None;
+            }
+            // Alt+W / Alt+L record the result. Modified rather than bare
+            // letters because they also clear the draft: a guard against a
+            // stray keypress costing you the picks you just entered.
+            Key::Character(c) if evt.modifiers().alt() => {
+                let won = match c.as_str() {
+                    "w" | "W" => true,
+                    "l" | "L" => false,
+                    _ => return,
+                };
+                evt.prevent_default();
+
+                let role = profile.read().role;
+                // Credited to the display name now that there is one. A log of
+                // random client ids is unreadable the moment more than one
+                // person is recording into it.
+                let who = me.read().display_name().to_owned();
+                let entry =
+                    matchlog::MatchRecord::from_draft(&ds_keys, &draft_now, role, &who, won);
+                match entry {
+                    Some(entry) => {
+                        matchlog::record(&entry);
+                        // The draft is over; the map usually is not, so it
+                        // survives into the next round.
+                        board.write().clear_picks();
+                        me.write().locked = None;
+                        logged.set(Some(won));
+                    }
+                    // Nothing was locked, so there is no hero to credit.
+                    None => logged.set(None),
+                }
+            }
+            Key::Character(c) if modified => {
+                match c.as_str() {
+                    // Lock the current top recommendation: this is the hero you
+                    // just picked in game, and it switches the list into
+                    // swap mode.
+                    "l" => {
+                        evt.prevent_default();
+                        let top = frame_top(&ds_keys, &draft_now, &profile.read());
+                        if let Some(hero) = top {
+                            // Your seat, not the board: locking in is the one
+                            // thing in a session that is nobody else's.
+                            me.write().locked = Some(hero);
+                        }
+                    }
+                    // Walk the pick modes in order, wrapping at the end. One key
+                    // for three modes rather than three keys, because the hand
+                    // already knows this one and a mode switch mid-draft is
+                    // rare enough that a second press costs nothing.
+                    "r" => {
+                        evt.prevent_default();
+                        let next = {
+                            let mut p = profile.write();
+                            let at = Role::PLAYABLE_MODES
+                                .iter()
+                                .position(|mode| *mode == p.role)
+                                .unwrap_or(0);
+                            p.role = Role::PLAYABLE_MODES[(at + 1) % Role::PLAYABLE_MODES.len()];
+                            p.save(&ds_keys);
+                            p.role
+                        };
+                        // The roster shows what everyone is playing, so a role
+                        // switch is news to the rest of the session.
+                        me.write().role = next;
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    };
+
+    let ds_view = dataset.clone();
+    let chip_of = move |hero: HeroId| hero_chip(&ds_view, hero);
+
+    let role = profile.read().role;
+    let pool = profile.read().pool(role);
+    let map = draft.map.and_then(|m| map_chip(&dataset, m));
+
+    // Every mode carries its own pool count, so how much of a role you have
+    // marked as yours is legible for the modes you are not currently in.
+    let modes: Vec<ModeChip> = Role::PLAYABLE_MODES
+        .into_iter()
+        .map(|mode| ModeChip {
+            role: mode,
+            label: mode.label().to_owned(),
+            pool_size: profile.read().pool(mode).len(),
+            roster_size: dataset.heroes_in_role(mode).count(),
+        })
+        .collect();
+
+    // --- the boards -------------------------------------------------------
+
+    let picked_map = draft.map;
+    // `search_maps` returns everything for an empty query and is already ranked
+    // best-first, so the board reads as a filtered board rather than a result
+    // list — same tiles, fewer of them.
+    let query = map_query.read().clone();
+    let map_tiles: Vec<MapTile> = search_maps(&dataset, &query, dataset.maps().len())
+        .into_iter()
+        .filter_map(|m| {
+            map_chip(&dataset, m.map).map(|chip| MapTile {
+                map: m.map,
+                name: chip.name,
+                icon: chip.icon,
+                selected: picked_map == Some(m.map),
+            })
+        })
+        .collect();
+
+    // Attack/defend only means something on the payload modes.
+    let sides_apply = picked_map
+        .and_then(|id| dataset.map(id).ok())
+        .is_some_and(|m| m.mode.has_sides());
+
+    let enemy_board = {
+        let enemies = &draft.enemies;
+        let full = enemies.len() >= Draft::TEAM_SIZE_5V5;
+        roster(&dataset, |hero| enemies.contains(&hero), |_| full)
+    };
+
+    // Which allies came from a teammate's seat rather than from this board.
+    //
+    // They are shown as picked but cannot be clicked: the hero is theirs, and a
+    // click here would silently do nothing to it. Better to draw it as
+    // something that is not yours to change than to accept a click and discard
+    // it — the second is how a board starts feeling broken.
+    let seated_allies: Vec<HeroId> = state
+        .seats
+        .iter()
+        .filter(|seat| seat.id != my_id)
+        .filter_map(|seat| seat.locked)
+        .collect();
+
+    let ally_board = {
+        let allies = &draft.allies;
+        let full = allies.len() >= Draft::TEAM_SIZE_5V5 - 1;
+        let locked = draft.locked;
+        // Your own locked hero is blocked too: a team cannot run duplicates,
+        // and `add_ally` would refuse it anyway.
+        roster(
+            &dataset,
+            |hero| allies.contains(&hero),
+            |hero| full || locked == Some(hero) || seated_allies.contains(&hero),
+        )
+    };
+
+    // The roster panel, resolved into plain values for the view.
+    let roster_rows: Vec<RosterRow> = session::order_roster(&state.seats, &my_id)
+        .into_iter()
+        .map(|seat| {
+            let chip = seat.locked.map(|hero| hero_chip(&dataset, hero));
+            RosterRow {
+                name: seat.display_name().to_owned(),
+                role_label: seat.role.label().to_owned(),
+                hero: chip.as_ref().map(|c| c.name.clone()),
+                icon: chip.map(|c| c.icon),
+                connected: seat.connected,
+                is_me: seat.id == my_id,
+            }
+        })
+        .collect();
+
+    // Only the role you are picking for: the pool marks the heroes the list
+    // will highlight, and nothing recommends a hero outside your role.
+    let pool_board = vec![BoardRow {
+        role,
+        label: role.label().to_owned(),
+        tiles: dataset
+            .heroes_in_role(role)
+            .map(|hero| tile_of(&dataset, hero, pool.contains(hero), false))
+            .collect(),
+    }];
+
+    // What the ban list is defending, named rather than left to be inferred:
+    // the number on every row means a different thing in each case.
+    let ban_subject = match frame.bans.subject {
+        BanSubject::Locked(_) => "vs your pick".to_owned(),
+        BanSubject::Pool => format!("vs your pool · {} {}", pool.len(), role.label()),
+        BanSubject::Role(role) => format!("vs every {}", role.label()),
+    };
+    let locked_subject = matches!(frame.bans.subject, BanSubject::Locked(_));
+
+    // The link to hand a teammate, and its QR. Both derived from the code, and
+    // both `None` when drafting alone. The QR is only built while the panel is
+    // open — it is a few hundred modules of string formatting, which is nothing
+    // next to scoring, but there is no reason to do it on every keystroke.
+    let share_link = membership
+        .read()
+        .code()
+        .zip(session::origin())
+        .map(|(code, origin)| session::share_url(&origin, code));
+    let qr_image = qr_open()
+        .then(|| share_link.as_deref().and_then(session::qr_data_url))
+        .flatten();
+
+    rsx! {
+        document::Stylesheet { href: CSS }
+
+        div {
+            class: "app",
+            // There is no text input to hold focus any more, so the shortcuts
+            // live on the root and this keeps them reachable: a click on a
+            // board button moves focus to that button, and any click at all
+            // hands it straight back.
+            tabindex: "0",
+            onmounted: move |evt| {
+                let node = evt.data();
+                root_ref.set(Some(node.clone()));
+                spawn(async move { let _ = node.set_focus(true).await; });
+            },
+            onkeydown: on_key,
+            onclick: move |_| {
+                // Grabbing focus back is what keeps the shortcuts alive after a
+                // stray click, but doing it mid-word would empty the filter box
+                // of its caret.
+                if *search_focused.read() {
+                    return;
+                }
+                if let Some(node) = root_ref.read().clone() {
+                    spawn(async move { let _ = node.set_focus(true).await; });
+                }
+            },
+
+            ui::Header {
+                role,
+                map: map.clone(),
+                sides_apply,
+                side: draft.side,
+                modes,
+                generated: dataset.generated.clone(),
+                sync_status: status.read().label(),
+                on_role: {
+                    let ds = dataset.clone();
+                    move |next: Role| {
+                        {
+                            let mut p = profile.write();
+                            p.role = next;
+                            p.save(&ds);
+                        }
+                        me.write().role = next;
+                    }
+                },
+                on_side: move |next: Option<Side>| { board.write().side = next; },
+                on_reset_all: move |_| {
+                    logged.set(None);
+                    map_query.set(String::new());
+                    // "New match" clears the shared board for everyone, and
+                    // your own pick with it — but not anyone else's, which is
+                    // theirs to take back.
+                    board.write().clear_all();
+                    me.write().locked = None;
+                },
+            }
+
+            div { class: "statusbar",
+                span { class: "hint", "^L lock · ^R role · ⌥W/⌥L result · Esc clear · click a portrait to pick, click it again to take it back" }
+                match *logged.read() {
+                    Some(true) => rsx! { span { class: "logged win", "win recorded" } },
+                    Some(false) => rsx! { span { class: "logged loss", "loss recorded" } },
+                    None => rsx! {},
+                }
+            }
+
+            ui::SessionBar {
+                code: membership.read().code().map(str::to_owned),
+                share_url: share_link.clone(),
+                qr: qr_image.clone(),
+                qr_open: qr_open(),
+                status: status.read().label(),
+                name: profile.read().name.clone(),
+                entry: join_entry(),
+                on_entry: move |next: String| join_entry.set(next),
+                on_name: {
+                    let ds = dataset.clone();
+                    move |next: String| {
+                        {
+                            let mut p = profile.write();
+                            p.name = next.clone();
+                            p.save(&ds);
+                        }
+                        // The roster is showing this to four other people, so it
+                        // travels with the seat rather than waiting for a reload.
+                        me.write().name = next;
+                    }
+                },
+                on_focus: move |focused: bool| search_focused.set(focused),
+                on_create: move |_| {
+                    spawn(async move {
+                        if let Some(code) = session::create().await {
+                            join.call(code);
+                        }
+                        // No server means no session, and nothing to say about
+                        // it: the app carries on exactly as it did before.
+                    });
+                },
+                on_join: move |_| {
+                    if let Some(code) = session::parse_code(&join_entry()) {
+                        join_entry.set(String::new());
+                        join.call(code);
+                    }
+                },
+                on_leave: move |_| leave.call(()),
+                on_copy: {
+                    let share = share_link.clone();
+                    move |_| {
+                        if let Some(url) = &share {
+                            session::copy_to_clipboard(url);
+                        }
+                    }
+                },
+                on_qr: move |_| {
+                    let open = qr_open();
+                    qr_open.set(!open);
+                },
+            }
+
+            if !roster_rows.is_empty() && status.read().is_live() {
+                ui::Roster { rows: roster_rows }
+            }
+
+            // Above the map, because this is the one board that is not about the
+            // match in front of you: it is who you play, set once and then left
+            // alone, so it sits where you configure rather than where you draft.
+            ui::HeroBoard {
+                title: format!("my pool · {}", role.label()),
+                side: "pool".to_owned(),
+                rows: pool_board,
+                // Your pool is weeks of accumulated configuration, not draft
+                // state, so this one asks before it throws it away.
+                reset_confirm: true,
+                on_toggle: {
+                    let ds = dataset.clone();
+                    move |hero: HeroId| {
+                        let mut p = profile.write();
+                        let _ = p.pool_mut(role).toggle(hero);
+                        p.save(&ds);
+                    }
+                },
+                on_reset: {
+                    let ds = dataset.clone();
+                    move |_| {
+                        let mut p = profile.write();
+                        *p.pool_mut(role) = overwatch_core::HeroSet::empty();
+                        p.save(&ds);
+                    }
+                },
+            }
+
+            ui::MapBoard {
+                maps: map_tiles,
+                query: map_query.read().clone(),
+                on_query: move |next: String| map_query.set(next),
+                on_submit: {
+                    let ds = dataset.clone();
+                    move |_| {
+                        // Enter takes the best match, which is the whole point
+                        // of typing rather than hunting for the tile.
+                        let Some(id) = overwatch_core::resolve_map(&ds, &map_query.read()) else {
+                            return;
+                        };
+                        logged.set(None);
+                        board.write().map = Some(id);
+                        map_query.set(String::new());
+                    }
+                },
+                on_focus: move |focused: bool| search_focused.set(focused),
+                on_pick: {
+                    let ds = dataset.clone();
+                    move |id: MapId| {
+                        logged.set(None);
+                        let mut b = board.write();
+                        // Clicking the map you are on clears it, the same way
+                        // clicking a picked hero takes the pick back.
+                        b.map = if b.map == Some(id) { None } else { Some(id) };
+                        // A side is a property of the map you are on; carrying
+                        // one over to a mode that has no sides would leave it
+                        // set and invisible.
+                        let keeps_side = b
+                            .map
+                            .and_then(|id| ds.map(id).ok())
+                            .is_some_and(|m| m.mode.has_sides());
+                        if !keeps_side {
+                            b.side = None;
+                        }
+                    }
+                },
+                on_reset: move |_| {
+                    map_query.set(String::new());
+                    let mut b = board.write();
+                    b.map = None;
+                    b.side = None;
+                },
+            }
+
+            // Ally on the left, enemy on the right. Swapped in source order
+            // rather than with a CSS `order`, so tab order still follows what
+            // you see.
+            div { class: "boards",
+                ui::HeroBoard {
+                    title: "ally".to_owned(),
+                    side: "ally".to_owned(),
+                    rows: ally_board,
+                    // Edits the hand-typed list only. A teammate's own lock
+                    // arrives from their seat and is drawn unclickable, so a
+                    // click here can only ever be about someone who is not in
+                    // the session.
+                    on_toggle: move |hero: HeroId| {
+                        logged.set(None);
+                        board.write().toggle_extra_ally(hero);
+                    },
+                    on_reset: move |_| { board.write().extra_allies.clear(); },
+                }
+
+                ui::HeroBoard {
+                    title: "enemy".to_owned(),
+                    side: "enemy".to_owned(),
+                    rows: enemy_board,
+                    on_toggle: move |hero: HeroId| {
+                        logged.set(None);
+                        board.write().toggle_enemy(hero);
+                    },
+                    on_reset: move |_| { board.write().enemies.clear(); },
+                }
+            }
+
+            div { class: "columns",
+                ui::BanPanel {
+                    subject: ban_subject,
+                    items: frame.bans.candidates
+                        .iter()
+                        .take(8)
+                        .map(|ban| {
+                            let chip = chip_of(ban.hero);
+                            BanRow {
+                                hero: ban.hero,
+                                name: chip.name,
+                                icon: chip.icon,
+                                // The weighted score rather than the raw
+                                // matchup, because this is the number the list
+                                // is *sorted* by and a column ordered by one
+                                // figure while displaying another reads as
+                                // broken. Negated so it carries the same sign
+                                // as every other number on screen: below zero
+                                // is losing, exactly as in the pick column,
+                                // whose score is a weighted sum too.
+                                score: format!("{:+.0}", ban.score * -100.0),
+                                // With one hero to defend, "hardest on" can only
+                                // name that hero back at you.
+                                worst: (!locked_subject).then(|| chip_of(ban.worst).name),
+                                text: ban.text.clone(),
+                                in_pool: pool.contains(ban.hero),
+                            }
+                        })
+                        .collect::<Vec<_>>(),
+                }
+
+                ui::Recommendations {
+                    items: frame.recommendations
+                        .iter()
+                        .take(8)
+                        .map(|rec| {
+                            ui::RecRow::build(
+                                rec,
+                                &dataset,
+                                draft.locked.is_some(),
+                                pool.contains(rec.hero),
+                            )
+                        })
+                        .collect::<Vec<_>>(),
+                    swap_mode: draft.locked.is_some(),
+                    on_lock: move |hero: HeroId| { me.write().locked = Some(hero); },
+                }
+            }
+        }
+    }
+}
+
+/// One roster board's rows: every hero the game has, grouped by role.
+///
+/// `picked` and `blocked` are asked per board rather than per hero, because the
+/// same hero can be a live enemy pick, an untaken ally slot, and one of yours at
+/// the same time — which is the whole reason the boards are separate rather than
+/// one list with a mode.
+fn roster(
+    dataset: &Dataset,
+    picked: impl Fn(HeroId) -> bool,
+    blocked: impl Fn(HeroId) -> bool,
+) -> Vec<BoardRow> {
+    Role::ALL
+        .into_iter()
+        .map(|role| BoardRow {
+            role,
+            label: role.label().to_owned(),
+            tiles: dataset
+                .heroes_in_role(role)
+                .map(|hero| {
+                    let selected = picked(hero);
+                    tile_of(dataset, hero, selected, !selected && blocked(hero))
+                })
+                .collect(),
+        })
+        .collect()
+}
+
+/// One board tile, with the portrait and the name already resolved.
+fn tile_of(dataset: &Dataset, hero: HeroId, selected: bool, disabled: bool) -> HeroTile {
+    let chip = hero_chip(dataset, hero);
+    HeroTile {
+        hero,
+        name: chip.name,
+        icon: chip.icon,
+        selected,
+        disabled,
+    }
+}
+
+/// The hero the "lock" shortcut should snap to: the current best suggestion.
+fn frame_top(dataset: &Dataset, draft: &Draft, profile: &Profile) -> Option<HeroId> {
+    let mut ctx = UserContext::new(profile.role, dataset.hero_count());
+    ctx.overrides = profile.overrides.clone();
+    ctx.weights = profile.weights;
+
+    recommend(dataset, draft, &ctx)
+        .ok()?
+        .first()
+        .map(|rec| rec.hero)
+}

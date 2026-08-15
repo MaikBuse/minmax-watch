@@ -1,0 +1,43 @@
+[package]
+name = "overwatch-web"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Keyboard-first draft screen. Scores locally; the network is never between a keystroke and an answer."
+publish = false
+
+[dependencies]
+overwatch-core = { workspace = true }
+overwatch-data = { workspace = true }
+dioxus = { version = "0.7", features = ["web"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+# Pure Rust, no dependencies of its own, and no allocation beyond the symbol
+# itself. A QR is how someone gets the share link onto a phone without typing an
+# IP address, and this is the smallest way to draw one in a bundle whose release
+# profile is tuned for size.
+qrcodegen = "1.8"
+# Only used to read the one `{ "code": ... }` body back from `POST /api/session`.
+serde-wasm-bindgen = "0.6"
+web-sys = { version = "0.3", features = [
+    "Window",
+    "Storage",
+    "HtmlElement",
+    "Element",
+    "Location",
+    "History",
+    "Navigator",
+    "Clipboard",
+    "WebSocket",
+    "MessageEvent",
+    "CloseEvent",
+    "Event",
+    "Request",
+    "RequestInit",
+    "Headers",
+    "Response",
+] }
