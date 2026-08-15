@@ -23,3 +23,8 @@ thiserror = { workspace = true }
 [dev-dependencies]
 tokio-tungstenite = "0.24"
 futures-util = "0.3"
+# The end-to-end test derives a draft, and deriving one needs the roster to know
+# what role a pick is. The real dataset rather than a fixture: the server does
+# not otherwise hold one, and a hand-built roster here would be a second thing to
+# keep in step with `data/`.
+overwatch-data = { workspace = true }

@@ -26,6 +26,16 @@ use crate::map::{MapId, Side};
 /// only one of it. The 2.2 on the tank-vs-tank cell buys the enemy tank about a
 /// third of the counter signal instead of a fifth.
 ///
+/// *And these numbers assume that team.* [`crate::format::Format`] can now say
+/// 6v6, where there are two enemy tanks and each still carries the 2.2 — taking
+/// the tank share of the counter term from roughly a third to roughly a half.
+/// That may well be right, since two tank duels really are two duels, but it is
+/// untested and it was not what the figure was chosen for. Left alone
+/// deliberately: retuning it means inventing a second table with no 6v6 corpus
+/// behind it. [`Weights::enemy_roles`] is already per-user and serde-defaulted,
+/// so a format-aware table stays an additive change whenever there is evidence
+/// for one.
+///
 /// These are judgement calls informed by the matchup spread, not fits to a
 /// win-rate corpus — there is no match log large enough to fit against yet.
 /// All-ones reproduces a uniform average, which is what this replaced.
@@ -652,5 +662,38 @@ pub fn ban_recommendations(
     BanBoard {
         subject,
         candidates,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::format::{Format, Queue, TeamSize};
+
+    /// What the counter term actually gives the enemy tanks, in each format.
+    fn tank_share(format: Format, yours: Role) -> f32 {
+        let weights = EnemyRoleWeights::default();
+        let total: f32 = Role::ALL
+            .iter()
+            .map(|theirs| weights.get(yours, *theirs) * format.slots(*theirs) as f32)
+            .sum();
+        weights.get(yours, Role::Tank) * format.slots(Role::Tank) as f32 / total
+    }
+
+    /// Pins the arithmetic the format changes, so that re-tuning for 6v6 is a
+    /// decision somebody makes rather than a number that moved.
+    ///
+    /// The 2.2 on the tank cell was chosen for a team with *one* tank in it: it
+    /// buys the enemy tank about a third of the counter signal instead of the
+    /// fifth a plain average would give it. In 6v6 the same weight is paid twice
+    /// and the tanks take about half. See [`EnemyRoleWeights`] for why that is
+    /// left alone rather than guessed at.
+    #[test]
+    fn the_enemy_tanks_take_half_the_counter_signal_in_6v6() {
+        let five = tank_share(Format::new(TeamSize::FiveVFive, Queue::Role), Role::Tank);
+        let six = tank_share(Format::new(TeamSize::SixVSix, Queue::Role), Role::Tank);
+
+        assert!((five - 0.355).abs() < 0.005, "5v5 tank share was {five}");
+        assert!((six - 0.524).abs() < 0.005, "6v6 tank share was {six}");
     }
 }

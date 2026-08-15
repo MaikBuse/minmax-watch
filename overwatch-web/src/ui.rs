@@ -5,7 +5,9 @@
 //! re-renderable from one recomputed frame.
 
 use dioxus::prelude::*;
-use overwatch_core::{Dataset, HeroId, MapId, ReasonKind, Recommendation, Role, Side};
+use overwatch_core::{
+    Dataset, Format, HeroId, MapId, Queue, ReasonKind, Recommendation, Role, Side, TeamSize,
+};
 
 /// A reset that asks first, for the ones that throw away configuration rather
 /// than match state.
@@ -237,6 +239,12 @@ pub struct HeroTile {
 pub struct BoardRow {
     pub role: Role,
     pub label: String,
+    /// How many of this role the team can still take, or `None` on a board that
+    /// is not a team and has nothing to be out of.
+    ///
+    /// Without it a greyed-out row is unexplained: the only other feedback that
+    /// a cap exists is a click that does nothing.
+    pub capacity: Option<usize>,
     pub tiles: Vec<HeroTile>,
 }
 
@@ -343,7 +351,14 @@ pub fn HeroBoard(
             }
             for row in rows.iter() {
                 div { key: "{row.label}", class: "board-row",
-                    span { class: format!("board-role {}", role_class(row.role)), "{row.label}" }
+                    span { class: format!("board-role {}", role_class(row.role)),
+                        "{row.label}"
+                        // A zero here is the answer to "why can I not click
+                        // this", which a disabled tile alone does not give.
+                        if let Some(free) = row.capacity {
+                            span { class: "board-free", "{free}" }
+                        }
+                    }
                     div { class: "tiles",
                         for tile in row.tiles.iter() {
                             button {
@@ -366,6 +381,57 @@ pub fn HeroBoard(
                                 },
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Which queue this match is in: how many a team fields, and whether the roles
+/// are held to a split.
+///
+/// Two controls rather than one four-way switch, because the two questions are
+/// independent — the game asks them separately, and a combined control would
+/// make "same size, other queue" a hunt rather than a click. Shaped like
+/// [`SideToggle`] rather than like [`ModeSwitch`], because it is the same kind
+/// of statement as the side: a small either/or about the match in front of you,
+/// not a mode the app is in.
+///
+/// No keyboard shortcut, deliberately. The four that exist are all things done
+/// repeatedly inside a draft; this changes when you change queue, once an
+/// evening. A fifth chord would dilute the four that matter and lengthen a hint
+/// line already at capacity.
+#[component]
+fn FormatSwitch(format: Format, on_format: EventHandler<Format>) -> Element {
+    rsx! {
+        div { class: "format-bar",
+            div { class: "formats", role: "group", aria_label: "team size",
+                for option in TeamSize::BOTH {
+                    button {
+                        key: "{option.as_str()}",
+                        class: if format.size == option { "format active" } else { "format" },
+                        aria_pressed: "{format.size == option}",
+                        // Unlike the side toggle there is no click-to-clear: a
+                        // match always has a size, so there is nothing for an
+                        // empty state to mean.
+                        onclick: move |_| on_format.call(Format { size: option, ..format }),
+                        "{option.label()}"
+                    }
+                }
+            }
+            div { class: "queues", role: "group", aria_label: "queue",
+                for option in Queue::BOTH {
+                    button {
+                        key: "{option.as_str()}",
+                        class: if format.queue == option { "queue active" } else { "queue" },
+                        aria_pressed: "{format.queue == option}",
+                        // The segment says "role"; what that costs you is two
+                        // words too long for the header and exactly right here.
+                        title: "{option.description()}",
+                        aria_label: "{option.description()}",
+                        onclick: move |_| on_format.call(Format { queue: option, ..format }),
+                        "{option.label()}"
                     }
                 }
             }
@@ -455,6 +521,8 @@ fn ModeSwitch(role: Role, modes: Vec<ModeChip>, on_role: EventHandler<Role>) -> 
 #[component]
 pub fn Header(
     role: Role,
+    /// The queue the room is in: team size and whether roles are split.
+    format: Format,
     map: Option<MapChip>,
     /// `None` on a symmetric mode, or when no map is picked yet.
     sides_apply: bool,
@@ -464,6 +532,7 @@ pub fn Header(
     generated: String,
     sync_status: String,
     on_role: EventHandler<Role>,
+    on_format: EventHandler<Format>,
     on_side: EventHandler<Option<Side>>,
     on_reset_all: EventHandler<()>,
 ) -> Element {
@@ -480,6 +549,11 @@ pub fn Header(
             }
             ModeSwitch { role, modes, on_role }
             div { class: "context",
+                // First, because it is the widest-scope fact about the match —
+                // queue, then map, then side — and because unlike the side
+                // toggle it never disappears, so the cluster keeps a stable
+                // left edge as picks land.
+                FormatSwitch { format, on_format }
                 match map {
                     Some(map) => rsx! {
                         span { class: "map-thumb", style: art(&map.icon) }

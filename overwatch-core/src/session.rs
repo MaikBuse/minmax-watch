@@ -19,7 +19,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::draft::Draft;
+use crate::dataset::Dataset;
+use crate::draft::{capacity_after, fit_to_format, role_of, Draft};
+use crate::format::{Capacity, Format};
 use crate::hero::{HeroId, Role};
 use crate::map::{MapId, Side};
 
@@ -29,6 +31,15 @@ use crate::map::{MapId, Side};
 /// whole feature: four people stop retyping the enemy team.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Board {
+    /// Which queue the room is in. Shared for the same reason the map is:
+    /// everybody in a session is in one lobby, so one person setting it has set
+    /// it for all of them.
+    ///
+    /// Absent from a board written before formats existed, and
+    /// [`Format::default`] — 5v5 role queue — is what such a board meant. That
+    /// is a compatibility reading, not a claim about which queue people play.
+    #[serde(default)]
+    pub format: Format,
     #[serde(default)]
     pub map: Option<MapId>,
     /// Only meaningful when the map's mode
@@ -52,10 +63,26 @@ impl Board {
         Self::default()
     }
 
-    /// Adds an enemy pick, ignoring duplicates and refusing to overfill the
-    /// team. Returns whether the board actually changed.
-    pub fn add_enemy(&mut self, hero: HeroId) -> bool {
-        if self.enemies.contains(&hero) || self.enemies.len() >= Draft::TEAM_SIZE_5V5 {
+    /// What the enemy team can still take, per role.
+    ///
+    /// The board the screen draws from, so that a tile is disabled exactly when
+    /// [`Self::add_enemy`] would refuse it.
+    pub fn enemy_capacity(&self, dataset: &Dataset) -> Capacity {
+        capacity_after(dataset, self.format, &self.enemies)
+    }
+
+    /// Adds an enemy pick, ignoring duplicates and refusing to overfill the team
+    /// or any one of its roles. Returns whether the board actually changed.
+    ///
+    /// Unlike the ally side this is capped here, at entry. An enemy pick has
+    /// nowhere else to be decided: there are no seats holding enemy slots open
+    /// and nothing arrives about them from anybody else, so what is typed is the
+    /// whole story.
+    pub fn add_enemy(&mut self, dataset: &Dataset, hero: HeroId) -> bool {
+        if self.enemies.contains(&hero) {
+            return false;
+        }
+        if !self.enemy_capacity(dataset).fits(role_of(dataset, hero)) {
             return false;
         }
         self.enemies.push(hero);
@@ -68,12 +95,29 @@ impl Board {
 
     /// Adds an enemy pick, or takes it back if it is already there. Returns
     /// whether the hero is on the enemy team afterwards.
-    pub fn toggle_enemy(&mut self, hero: HeroId) -> bool {
+    pub fn toggle_enemy(&mut self, dataset: &Dataset, hero: HeroId) -> bool {
         if self.enemies.contains(&hero) {
             self.remove_enemy(hero);
             return false;
         }
-        self.add_enemy(hero)
+        self.add_enemy(dataset, hero)
+    }
+
+    /// Switches the format, dropping the picks the new one has no room for.
+    ///
+    /// The pruning is not tidiness. The boards draw their picked tiles from the
+    /// *derived* draft, so a pick left here that the derivation refuses would
+    /// render as an unlit tile that nonetheless un-picks when clicked — state
+    /// you cannot see that still eats a click. Shrinking the format is a
+    /// deliberate act, so the loss is attributable and happens under the cursor;
+    /// growing one never drops anything.
+    pub fn set_format(&mut self, dataset: &Dataset, format: Format) {
+        self.format = format;
+        self.enemies = fit_to_format(dataset, format, &self.enemies);
+        // Best-effort for the typed allies: this ignores the seats, so it can
+        // only ever be too generous, and the derived draft stays the authority
+        // on which of them actually land.
+        self.extra_allies = fit_to_format(dataset, format, &self.extra_allies);
     }
 
     /// Adds an unseated ally, ignoring duplicates.
@@ -102,9 +146,9 @@ impl Board {
         self.add_extra_ally(hero)
     }
 
-    /// Clears the picks but keeps the map and side, matching
+    /// Clears the picks but keeps the map, the side and the format, matching
     /// [`Draft::clear_picks`]: one map is played across many rounds of
-    /// re-picking.
+    /// re-picking, and the queue outlasts even the match.
     pub fn clear_picks(&mut self) {
         self.enemies.clear();
         self.extra_allies.clear();
@@ -117,6 +161,13 @@ impl Board {
         self.side = None;
     }
 
+    /// Whether the board holds any of the draft itself.
+    ///
+    /// Deliberately blind to the format: a room that has only said "6v6" holds
+    /// nothing worth adopting over a draft already in progress, which is what
+    /// this is asked. The format still has to reach a joiner — see the snapshot
+    /// handling in the client, which takes it separately for exactly this
+    /// reason.
     pub fn is_empty(&self) -> bool {
         self.map.is_none() && self.enemies.is_empty() && self.extra_allies.is_empty()
     }
@@ -208,41 +259,104 @@ impl SessionState {
     /// - `locked` from *my* seat;
     /// - `allies` from everyone *else's* locks, then the hand-typed extras.
     ///
-    /// Seated picks come first deliberately. The four ally slots are contested
-    /// once a team is more than half seated, and a teammate who is actually in
-    /// the session and has actually locked in is better evidence than a name
+    /// Seated picks come first deliberately. The ally slots are contested once a
+    /// team is more than half seated, and a teammate who is actually in the
+    /// session and has actually locked in is better evidence than a name
     /// somebody typed. Both lists are filtered through [`Draft::add_ally`], so
-    /// the duplicate and capacity rules are the same ones a solo draft obeys
-    /// rather than a second implementation that can drift from them.
+    /// the duplicate and size rules are the same ones a solo draft obeys rather
+    /// than a second implementation that can drift from them; the per-role caps
+    /// come from [`Self::assemble_allies`], which is the only thing that can see
+    /// them.
     ///
     /// An `me` that matches no seat is not an error: it is what a spectator, or
     /// a client whose own seat has not yet come back from the server, looks
-    /// like. They get every lock as an ally and no `locked` of their own.
-    pub fn draft_for(&self, me: &str) -> Draft {
-        let mut draft = Draft {
+    /// like. They get every lock as an ally and no `locked` of their own, and
+    /// they hold no slot open, since there is no seat of theirs to hold one for.
+    pub fn draft_for(&self, dataset: &Dataset, me: &str) -> Draft {
+        let (allies, _) = self.assemble_allies(dataset, me);
+
+        Draft {
+            format: self.board.format,
             map: self.board.map,
             side: self.board.side,
-            enemies: Vec::new(),
-            allies: Vec::new(),
+            // Trimmed rather than copied. A board arrives from whoever typed it,
+            // which may be a client in a bigger format than this one.
+            enemies: fit_to_format(dataset, self.board.format, &self.board.enemies),
+            allies,
             locked: self.seat(me).and_then(|seat| seat.locked),
-        };
+        }
+    }
 
-        for enemy in &self.board.enemies {
-            draft.add_enemy(*enemy);
+    /// Room left on my team for one more hand-typed ally, per role.
+    ///
+    /// What the ally board disables its tiles from. It comes out of the same
+    /// pass as the ally list itself, so the tiles you can click and the picks
+    /// that reach the scorer cannot disagree.
+    pub fn ally_capacity(&self, dataset: &Dataset, me: &str) -> Capacity {
+        self.assemble_allies(dataset, me).1
+    }
+
+    /// My team as it stands, and the room left for one more typed ally.
+    ///
+    /// The one place the ally arithmetic lives, and the order of it is the rule:
+    ///
+    /// 1. **Locked seats, mine included.** A hero picked in game costs its own
+    ///    role's slot whatever anybody declared. These are never gated — a
+    ///    teammate's pick is a fact, and a cap that could refuse it would delete
+    ///    a hero from a team that really has it.
+    /// 2. **Typed extras, in entry order**, each refused if its role is full.
+    ///    This is the only gate, so it can only ever turn away the newest.
+    /// 3. **Reservations**: every seat that has *not* locked, mine included,
+    ///    holds a slot in the role it declared. This is what closes the ally
+    ///    tank row in 5v5 when you are the tank, and what stops a typed name
+    ///    taking the slot a seated teammate is about to fill.
+    ///
+    /// Reservations come last, and spend saturating, so that a role switch
+    /// mid-draft can never evict a pick that already landed: the reservation
+    /// that no longer has room is simply absorbed and the row reads as full.
+    /// Caps gate what can be added; they never take anything back. The same
+    /// saturation is why an over-full room — six people in a 5v5 lobby — reads
+    /// as full rather than going wrong.
+    ///
+    /// A seat holds its slot whether or not it is `connected`. A seat already
+    /// outlives its socket so that a reload does not empty a slot mid-draft, and
+    /// handing its slot to somebody else's typing the moment the wifi blinks
+    /// would only take it back again.
+    fn assemble_allies(&self, dataset: &Dataset, me: &str) -> (Vec<HeroId>, Capacity) {
+        let mut draft = Draft::in_format(self.board.format);
+        draft.locked = self.seat(me).and_then(|seat| seat.locked);
+        let mut room = Capacity::of(self.board.format);
+
+        for seat in &self.seats {
+            let Some(hero) = seat.locked else { continue };
+            // `add_ally` refuses a hero equal to `locked`, which is what keeps
+            // my own pick from also counting as one of my allies — and what
+            // stops two people who put the same hero up before the game stopped
+            // them being charged for it twice.
+            let landed = if seat.id == me {
+                true
+            } else {
+                draft.add_ally(hero)
+            };
+            if landed {
+                room.take(role_of(dataset, hero));
+            }
         }
 
-        // `add_ally` already refuses a hero equal to `locked`, which is what
-        // keeps my own pick from also counting as one of my allies.
-        let seated = self
-            .seats
-            .iter()
-            .filter(|seat| seat.id != me)
-            .filter_map(|seat| seat.locked);
-        for ally in seated.chain(self.board.extra_allies.iter().copied()) {
-            draft.add_ally(ally);
+        for hero in &self.board.extra_allies {
+            let role = role_of(dataset, *hero);
+            if room.fits(role) && draft.add_ally(*hero) {
+                room.take(role);
+            }
         }
 
-        draft
+        for seat in &self.seats {
+            if seat.locked.is_none() {
+                room.take(Some(seat.role));
+            }
+        }
+
+        (draft.allies, room)
     }
 
     /// Whether the session holds anything worth adopting.
@@ -258,13 +372,18 @@ impl SessionState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dataset::Dataset;
+    use crate::fixture::{
+        self, ANA, ASHE, KIRIKO, LUCIO, NOBODY, REINHARDT, SIGMA, SOJOURN, TRACER, WINSTON,
+    };
+    use crate::format::{Queue, TeamSize};
 
-    fn seated(id: &str, locked: Option<u16>) -> Seat {
+    fn seated(id: &str, role: Role, locked: Option<HeroId>) -> Seat {
         Seat {
             id: id.to_owned(),
             name: id.to_owned(),
-            role: Role::Tank,
-            locked: locked.map(HeroId),
+            role,
+            locked,
             connected: true,
         }
     }
@@ -276,101 +395,142 @@ mod tests {
         }
     }
 
+    fn six_v_six() -> Format {
+        Format::new(TeamSize::SixVSix, Queue::Role)
+    }
+
+    /// The room left for one more typed ally, as a triple in `Role::ALL` order.
+    /// Reads as the shape of the team, which is what these tests are about.
+    fn room(state: &SessionState, ds: &Dataset, me: &str) -> [usize; 3] {
+        let room = state.ally_capacity(ds, me);
+        [
+            room.free_in(Role::Tank),
+            room.free_in(Role::Damage),
+            room.free_in(Role::Support),
+        ]
+    }
+
     #[test]
     fn a_members_allies_are_the_other_seats_locks() {
+        let ds = fixture::dataset();
         let state = session(vec![
-            seated("me", Some(1)),
-            seated("mika", Some(2)),
-            seated("sam", Some(3)),
+            seated("me", Role::Tank, Some(SIGMA)),
+            seated("mika", Role::Damage, Some(TRACER)),
+            seated("sam", Role::Support, Some(ANA)),
         ]);
 
-        let draft = state.draft_for("me");
-        assert_eq!(draft.locked, Some(HeroId(1)), "my own seat is my lock");
-        assert_eq!(draft.allies, vec![HeroId(2), HeroId(3)]);
+        let draft = state.draft_for(&ds, "me");
+        assert_eq!(draft.locked, Some(SIGMA), "my own seat is my lock");
+        assert_eq!(draft.allies, vec![TRACER, ANA]);
     }
 
     #[test]
     fn my_own_lock_is_never_also_one_of_my_allies() {
-        let state = session(vec![seated("me", Some(7)), seated("mika", Some(9))]);
+        let ds = fixture::dataset();
+        let state = session(vec![
+            seated("me", Role::Tank, Some(SIGMA)),
+            seated("mika", Role::Support, Some(ANA)),
+        ]);
 
-        let draft = state.draft_for("me");
+        let draft = state.draft_for(&ds, "me");
         assert!(
-            !draft.allies.contains(&HeroId(7)),
+            !draft.allies.contains(&SIGMA),
             "your own pick belongs in `locked` and nowhere else"
         );
-        assert_eq!(draft.allies, vec![HeroId(9)]);
+        assert_eq!(draft.allies, vec![ANA]);
     }
 
     #[test]
-    fn a_seat_that_has_not_picked_yet_takes_up_no_ally_slot() {
+    fn a_seat_that_has_not_picked_yet_is_not_one_of_your_allies() {
+        let ds = fixture::dataset();
         let state = session(vec![
-            seated("me", Some(1)),
-            seated("mika", None),
-            seated("sam", Some(3)),
+            seated("me", Role::Tank, Some(SIGMA)),
+            seated("mika", Role::Damage, None),
+            seated("sam", Role::Support, Some(ANA)),
         ]);
 
-        assert_eq!(state.draft_for("me").allies, vec![HeroId(3)]);
+        assert_eq!(state.draft_for(&ds, "me").allies, vec![ANA]);
     }
 
     #[test]
     fn extra_allies_fill_in_behind_the_seated_ones() {
-        let mut state = session(vec![seated("me", Some(1)), seated("mika", Some(2))]);
-        state.board.extra_allies = vec![HeroId(5), HeroId(6)];
+        let ds = fixture::dataset();
+        let mut state = session(vec![
+            seated("me", Role::Tank, Some(SIGMA)),
+            seated("mika", Role::Damage, Some(TRACER)),
+        ]);
+        state.board.extra_allies = vec![ANA, LUCIO];
 
         assert_eq!(
-            state.draft_for("me").allies,
-            vec![HeroId(2), HeroId(5), HeroId(6)],
+            state.draft_for(&ds, "me").allies,
+            vec![TRACER, ANA, LUCIO],
             "a teammate who actually locked in outranks a typed-in name"
         );
     }
 
-    /// The four ally slots are contested once seats and typed names together
-    /// exceed them. The seated picks are the ones that survive.
+    /// The ally slots are contested once seats and typed names together exceed
+    /// them. The seated picks are the ones that survive.
     #[test]
     fn a_full_team_stops_taking_allies() {
+        let ds = fixture::dataset();
         let mut state = session(vec![
-            seated("me", Some(1)),
-            seated("a", Some(2)),
-            seated("b", Some(3)),
-            seated("c", Some(4)),
-            seated("d", Some(5)),
+            seated("me", Role::Tank, Some(REINHARDT)),
+            seated("a", Role::Damage, Some(TRACER)),
+            seated("b", Role::Damage, Some(SOJOURN)),
+            seated("c", Role::Support, Some(ANA)),
+            seated("d", Role::Support, Some(LUCIO)),
         ]);
-        state.board.extra_allies = vec![HeroId(9)];
+        state.board.extra_allies = vec![KIRIKO];
 
-        let draft = state.draft_for("me");
+        let draft = state.draft_for(&ds, "me");
         assert_eq!(
             draft.allies,
-            vec![HeroId(2), HeroId(3), HeroId(4), HeroId(5)],
+            vec![TRACER, SOJOURN, ANA, LUCIO],
             "four allies plus yourself is a full 5v5 team"
         );
         assert!(
-            !draft.allies.contains(&HeroId(9)),
+            !draft.allies.contains(&KIRIKO),
             "the typed-in name is the one that loses the contested slot"
         );
     }
 
     #[test]
     fn a_duplicate_pick_appears_once() {
-        let mut state = session(vec![seated("me", Some(1)), seated("mika", Some(4))]);
+        let ds = fixture::dataset();
+        let mut state = session(vec![
+            seated("me", Role::Tank, Some(SIGMA)),
+            seated("mika", Role::Support, Some(ANA)),
+        ]);
         // Two people can put the same hero up before the game stops them, and
         // the board can name someone a seat already covers.
-        state.board.extra_allies = vec![HeroId(4)];
+        state.board.extra_allies = vec![ANA];
 
-        assert_eq!(state.draft_for("me").allies, vec![HeroId(4)]);
+        assert_eq!(state.draft_for(&ds, "me").allies, vec![ANA]);
+        assert_eq!(
+            room(&state, &ds, "me")[Role::Support.index()],
+            1,
+            "and it costs the team one support, not two"
+        );
     }
 
     #[test]
     fn the_board_reaches_every_member_unchanged() {
-        let mut state = session(vec![seated("me", None), seated("mika", None)]);
-        state.board.map = Some(MapId(3));
+        let ds = fixture::dataset();
+        let mut state = session(vec![
+            seated("me", Role::Tank, None),
+            seated("mika", Role::Damage, None),
+        ]);
+        state.board.format = six_v_six();
+        state.board.map = Some(fixture::KINGS_ROW);
         state.board.side = Some(Side::Attack);
-        state.board.enemies = vec![HeroId(10), HeroId(11)];
+        state.board.enemies = vec![SIGMA, TRACER];
 
         for who in ["me", "mika"] {
-            let draft = state.draft_for(who);
-            assert_eq!(draft.map, Some(MapId(3)));
+            let draft = state.draft_for(&ds, who);
+            assert_eq!(draft.format, six_v_six(), "one lobby, one format");
+            assert_eq!(draft.map, Some(fixture::KINGS_ROW));
             assert_eq!(draft.side, Some(Side::Attack));
-            assert_eq!(draft.enemies, vec![HeroId(10), HeroId(11)]);
+            assert_eq!(draft.enemies, vec![SIGMA, TRACER]);
         }
     }
 
@@ -378,60 +538,322 @@ mod tests {
     /// one has to score exactly like the single-player app it replaces.
     #[test]
     fn a_session_of_one_scores_exactly_like_a_solo_draft() {
-        let mut state = session(vec![seated("me", Some(2))]);
-        state.board.map = Some(MapId(1));
-        state.board.enemies = vec![HeroId(8)];
-        state.board.extra_allies = vec![HeroId(3), HeroId(4)];
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Tank, Some(SIGMA))]);
+        state.board.map = Some(fixture::KINGS_ROW);
+        state.board.enemies = vec![TRACER];
+        state.board.extra_allies = vec![ANA, LUCIO];
 
         let mut expected = Draft::new();
-        expected.map = Some(MapId(1));
-        expected.locked = Some(HeroId(2));
-        expected.add_enemy(HeroId(8));
-        expected.add_ally(HeroId(3));
-        expected.add_ally(HeroId(4));
+        expected.map = Some(fixture::KINGS_ROW);
+        expected.locked = Some(SIGMA);
+        expected.add_enemy(TRACER);
+        expected.add_ally(ANA);
+        expected.add_ally(LUCIO);
 
-        assert_eq!(state.draft_for("me"), expected);
+        assert_eq!(state.draft_for(&ds, "me"), expected);
     }
 
+    /// The compatibility contract for the whole change: one unlocked seat holds
+    /// exactly one slot, so the count that reaches the scorer is the four it has
+    /// always been.
     #[test]
-    fn a_stranger_sees_every_lock_as_an_ally_and_none_as_their_own() {
-        let state = session(vec![seated("a", Some(1)), seated("b", Some(2))]);
-
-        let draft = state.draft_for("nobody");
-        assert_eq!(draft.locked, None);
-        assert_eq!(draft.allies, vec![HeroId(1), HeroId(2)]);
-    }
-
-    #[test]
-    fn the_enemy_team_is_capped_the_way_a_solo_draft_caps_it() {
-        let mut state = session(vec![seated("me", None)]);
-        state.board.enemies = (1..=8).map(HeroId).collect();
+    fn a_session_of_one_caps_allies_exactly_as_it_always_did() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Tank, None)]);
+        state.board.extra_allies = vec![TRACER, SOJOURN, ANA, LUCIO, KIRIKO];
 
         assert_eq!(
-            state.draft_for("me").enemies.len(),
-            Draft::TEAM_SIZE_5V5,
-            "a board carrying junk must not produce an illegal draft"
+            state.draft_for(&ds, "me").allies,
+            vec![TRACER, SOJOURN, ANA, LUCIO],
+            "your own slot stays free, and the fifth name has nowhere to go"
         );
     }
 
     #[test]
+    fn a_stranger_sees_every_lock_as_an_ally_and_none_as_their_own() {
+        let ds = fixture::dataset();
+        let state = session(vec![
+            seated("a", Role::Tank, Some(SIGMA)),
+            seated("b", Role::Damage, Some(TRACER)),
+        ]);
+
+        let draft = state.draft_for(&ds, "nobody");
+        assert_eq!(draft.locked, None);
+        assert_eq!(draft.allies, vec![SIGMA, TRACER]);
+    }
+
+    #[test]
+    fn the_enemy_team_is_capped_the_way_a_solo_draft_caps_it() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Tank, None)]);
+        state.board.enemies = vec![SIGMA, WINSTON, TRACER, SOJOURN, ASHE, ANA, LUCIO, KIRIKO];
+
+        assert_eq!(
+            state.draft_for(&ds, "me").enemies,
+            vec![SIGMA, TRACER, SOJOURN, ANA, LUCIO],
+            "a board carrying junk must not produce an illegal draft"
+        );
+    }
+
+    // --- the room your own team has left ----------------------------------
+
+    /// The rule the feature was asked for: in 5v5 role queue you are the tank,
+    /// so no teammate of yours is.
+    #[test]
+    fn my_own_role_holds_a_slot_open_on_my_team() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Tank, None)]);
+
+        assert_eq!(room(&state, &ds, "me"), [0, 2, 2]);
+
+        // The same seat in another pick mode holds another slot.
+        state.seats[0].role = Role::Damage;
+        assert_eq!(room(&state, &ds, "me"), [1, 1, 2]);
+    }
+
+    #[test]
+    fn a_teammate_who_has_not_picked_still_holds_their_role_open() {
+        let ds = fixture::dataset();
+        let state = session(vec![
+            seated("me", Role::Tank, None),
+            seated("mika", Role::Support, None),
+        ]);
+
+        assert_eq!(
+            room(&state, &ds, "me"),
+            [0, 2, 1],
+            "the support they are about to pick is not a slot you can type into"
+        );
+    }
+
+    #[test]
+    fn a_teammate_who_has_locked_spends_their_hero_and_not_their_declared_role() {
+        let ds = fixture::dataset();
+        // Declared tank, actually picked a support: it happens, and the hero is
+        // the fact.
+        let state = session(vec![
+            seated("me", Role::Damage, None),
+            seated("mika", Role::Tank, Some(ANA)),
+        ]);
+
+        assert_eq!(
+            room(&state, &ds, "me"),
+            [1, 1, 1],
+            "their tank slot went back to the team; their support slot went"
+        );
+    }
+
+    /// A cap must never delete a hero from a team that really has it.
+    #[test]
+    fn a_seated_lock_is_never_refused_by_a_cap() {
+        let ds = fixture::dataset();
+        let state = session(vec![
+            seated("me", Role::Tank, Some(REINHARDT)),
+            seated("mika", Role::Tank, Some(SIGMA)),
+        ]);
+
+        let draft = state.draft_for(&ds, "me");
+        assert_eq!(
+            draft.allies,
+            vec![SIGMA],
+            "two tanks in 5v5 cannot happen, but if it has, it has"
+        );
+        assert_eq!(room(&state, &ds, "me"), [0, 2, 2], "and it saturates");
+    }
+
+    /// Caps gate what can be added. They never take back something that landed.
+    #[test]
+    fn a_pick_already_entered_survives_a_role_switch_beside_it() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Damage, None)]);
+        state.board.extra_allies = vec![SIGMA];
+
+        assert_eq!(state.draft_for(&ds, "me").allies, vec![SIGMA]);
+
+        // I switch to tank with a tank already typed on my team.
+        state.seats[0].role = Role::Tank;
+        assert_eq!(
+            state.draft_for(&ds, "me").allies,
+            vec![SIGMA],
+            "the pick stays; my reservation is the thing that gives way"
+        );
+        assert_eq!(
+            room(&state, &ds, "me")[Role::Tank.index()],
+            0,
+            "and the row simply reads as full"
+        );
+    }
+
+    #[test]
+    fn a_typed_ally_loses_the_contested_slot_to_a_seated_lock_in_its_own_role() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![
+            seated("me", Role::Tank, None),
+            seated("mika", Role::Support, Some(ANA)),
+        ]);
+        state.board.extra_allies = vec![LUCIO, KIRIKO];
+
+        let draft = state.draft_for(&ds, "me");
+        assert_eq!(draft.allies, vec![ANA, LUCIO]);
+        assert!(
+            !draft.allies.contains(&KIRIKO),
+            "a team fields two supports, and both are spoken for"
+        );
+    }
+
+    #[test]
+    fn six_v_six_takes_a_second_ally_tank_and_5v5_does_not() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Damage, None)]);
+        state.board.extra_allies = vec![SIGMA, WINSTON];
+
+        assert_eq!(state.draft_for(&ds, "me").allies, vec![SIGMA]);
+
+        state.board.format = six_v_six();
+        assert_eq!(state.draft_for(&ds, "me").allies, vec![SIGMA, WINSTON]);
+    }
+
+    #[test]
+    fn open_queue_fields_whatever_it_likes_up_to_the_team_size() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Tank, None)]);
+        state.board.extra_allies = vec![ANA, LUCIO, KIRIKO, TRACER];
+
+        assert_eq!(
+            state.draft_for(&ds, "me").allies,
+            vec![ANA, LUCIO, TRACER],
+            "role queue fields two supports"
+        );
+
+        state.board.format = Format::new(TeamSize::FiveVFive, Queue::Open);
+        assert_eq!(
+            state.draft_for(&ds, "me").allies,
+            vec![ANA, LUCIO, KIRIKO, TRACER],
+            "open queue only counts bodies"
+        );
+    }
+
+    /// The invariant that keeps the screen honest: every pick the board offers
+    /// actually lands. Checked over the whole roster, because it is the
+    /// disagreement that is the bug, not any one hero.
+    ///
+    /// A tile you can click for a pick that then quietly vanishes is the failure
+    /// this rules out. The converse is deliberately *not* asserted — see below.
+    #[test]
+    fn every_pick_the_board_offers_actually_lands() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![
+            seated("me", Role::Tank, None),
+            seated("mika", Role::Support, Some(ANA)),
+        ]);
+        state.board.extra_allies = vec![LUCIO];
+
+        let offered = state.ally_capacity(&ds, "me");
+        for hero in (0..ds.hero_count()).map(|i| HeroId(i as u16)) {
+            if hero == ANA || hero == LUCIO {
+                continue; // already on the team; the duplicate rule owns these
+            }
+            let role = ds.hero(hero).map(|entry| entry.role).ok();
+
+            let mut with_hero = state.clone();
+            with_hero.board.extra_allies.push(hero);
+            let landed = with_hero.draft_for(&ds, "me").allies.contains(&hero);
+
+            assert!(
+                !offered.fits(role) || landed,
+                "the board offered {hero:?} and the draft dropped it"
+            );
+        }
+    }
+
+    /// The one direction the two are allowed to differ, and it is the
+    /// no-eviction rule seen from the other side.
+    ///
+    /// The room the board offers holds a slot for every seat that has not
+    /// picked, so it is stricter than the derivation, which charges reservations
+    /// last and will not throw away a pick that is already there. Nothing can
+    /// reach that gap by clicking — the tile is disabled on every screen in the
+    /// session, because the reservation is charged for all of the seats, not
+    /// just yours. It is reachable by switching your role with the pick already
+    /// entered, which is exactly when keeping the pick is the right answer.
+    #[test]
+    fn a_held_slot_closes_the_board_without_evicting_what_is_already_there() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Tank, None)]);
+
+        assert_eq!(
+            room(&state, &ds, "me")[Role::Tank.index()],
+            0,
+            "my own seat holds the tank slot, so the board offers none"
+        );
+
+        state.board.extra_allies = vec![SIGMA];
+        assert_eq!(
+            state.draft_for(&ds, "me").allies,
+            vec![SIGMA],
+            "but a tank that got there anyway stays on the team"
+        );
+    }
+
+    #[test]
+    fn the_enemy_board_refuses_exactly_what_its_capacity_says() {
+        let ds = fixture::dataset();
+        let mut board = Board::new();
+        board.enemies = vec![SIGMA, TRACER];
+
+        let offered = board.enemy_capacity(&ds);
+        for hero in (0..ds.hero_count()).map(|i| HeroId(i as u16)) {
+            if board.enemies.contains(&hero) {
+                continue;
+            }
+            let role = ds.hero(hero).map(|entry| entry.role).ok();
+            assert_eq!(
+                offered.fits(role),
+                board.clone().add_enemy(&ds, hero),
+                "the board and its own capacity disagree about {hero:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn more_seats_than_slots_does_not_underflow() {
+        let ds = fixture::dataset();
+        let state = session(
+            ["a", "b", "c", "d", "e", "f"]
+                .into_iter()
+                .map(|id| seated(id, Role::Tank, None))
+                .collect(),
+        );
+
+        assert_eq!(
+            room(&state, &ds, "a"),
+            [0, 0, 0],
+            "an over-full room is full"
+        );
+        assert!(state.ally_capacity(&ds, "a").is_full());
+    }
+
+    // --- the board --------------------------------------------------------
+
+    #[test]
     fn upserting_a_seat_keeps_its_place_in_the_roster() {
         let mut state = session(vec![
-            seated("a", None),
-            seated("b", None),
-            seated("c", None),
+            seated("a", Role::Tank, None),
+            seated("b", Role::Damage, None),
+            seated("c", Role::Support, None),
         ]);
-        state.upsert_seat(seated("b", Some(4)));
+        state.upsert_seat(seated("b", Role::Damage, Some(TRACER)));
 
         let ids: Vec<&str> = state.seats.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(ids, vec!["a", "b", "c"], "the roster must not reorder");
-        assert_eq!(state.seat("b").and_then(|s| s.locked), Some(HeroId(4)));
+        assert_eq!(state.seat("b").and_then(|s| s.locked), Some(TRACER));
     }
 
     #[test]
     fn an_unnamed_seat_still_has_something_to_call_it() {
         assert_eq!(Seat::new("c0ffee").display_name(), "c0ffee");
-        assert_eq!(seated("mika", None).display_name(), "mika");
+        assert_eq!(seated("mika", Role::Tank, None).display_name(), "mika");
 
         let blank = Seat {
             name: "   ".to_owned(),
@@ -442,38 +864,85 @@ mod tests {
 
     #[test]
     fn a_session_nobody_has_touched_is_empty() {
-        let mut state = session(vec![seated("me", None)]);
+        let mut state = session(vec![seated("me", Role::Tank, None)]);
         assert!(state.is_empty(), "seats alone are not state worth adopting");
 
-        state.board.map = Some(MapId(1));
+        state.board.format = six_v_six();
+        assert!(
+            state.is_empty(),
+            "nor is a room that has only named its queue"
+        );
+
+        state.board.map = Some(fixture::KINGS_ROW);
         assert!(!state.is_empty());
     }
 
     #[test]
     fn the_board_toggles_the_way_the_boards_it_replaces_did() {
+        let ds = fixture::dataset();
         let mut board = Board::new();
-        assert!(board.toggle_enemy(HeroId(1)));
+        assert!(board.toggle_enemy(&ds, SIGMA));
         assert!(
-            !board.toggle_enemy(HeroId(1)),
+            !board.toggle_enemy(&ds, SIGMA),
             "a second click takes it back"
         );
         assert!(board.enemies.is_empty());
 
-        assert!(board.toggle_extra_ally(HeroId(2)));
-        assert!(!board.toggle_extra_ally(HeroId(2)));
+        assert!(board.toggle_extra_ally(TRACER));
+        assert!(!board.toggle_extra_ally(TRACER));
         assert!(board.extra_allies.is_empty());
     }
 
     #[test]
-    fn clearing_picks_keeps_the_map() {
+    fn the_enemy_board_refuses_a_second_tank_in_5v5() {
+        let ds = fixture::dataset();
         let mut board = Board::new();
-        board.map = Some(MapId(2));
+
+        assert!(board.add_enemy(&ds, SIGMA));
+        assert!(!board.add_enemy(&ds, WINSTON), "5v5 fields one tank");
+        assert!(board.add_enemy(&ds, TRACER), "and the other rows are open");
+
+        board.format = six_v_six();
+        assert!(board.add_enemy(&ds, WINSTON), "6v6 has room for the second");
+    }
+
+    #[test]
+    fn switching_format_drops_the_picks_the_new_one_cannot_hold() {
+        let ds = fixture::dataset();
+        let mut board = Board {
+            format: six_v_six(),
+            enemies: vec![SIGMA, WINSTON, TRACER, ANA],
+            extra_allies: vec![REINHARDT, LUCIO],
+            ..Board::new()
+        };
+
+        board.set_format(&ds, Format::default());
+        assert_eq!(board.format, Format::default());
+        assert_eq!(
+            board.enemies,
+            vec![SIGMA, TRACER, ANA],
+            "the second tank goes, and the one entered first stays"
+        );
+        assert_eq!(board.extra_allies, vec![REINHARDT, LUCIO]);
+
+        // Growing costs nothing.
+        let before = board.clone();
+        board.set_format(&ds, six_v_six());
+        assert_eq!(board.enemies, before.enemies);
+        assert_eq!(board.extra_allies, before.extra_allies);
+    }
+
+    #[test]
+    fn clearing_picks_keeps_the_map_and_the_format() {
+        let mut board = Board::new();
+        board.format = six_v_six();
+        board.map = Some(fixture::KINGS_ROW);
         board.side = Some(Side::Defend);
-        board.enemies = vec![HeroId(1)];
-        board.extra_allies = vec![HeroId(2)];
+        board.enemies = vec![SIGMA];
+        board.extra_allies = vec![TRACER];
 
         board.clear_picks();
-        assert_eq!(board.map, Some(MapId(2)), "one map, many rounds");
+        assert_eq!(board.map, Some(fixture::KINGS_ROW), "one map, many rounds");
         assert_eq!(board.side, Some(Side::Defend));
         assert!(board.enemies.is_empty());
         assert!(board.extra_allies.is_empty());
@@ -481,6 +950,11 @@ mod tests {
         board.clear_all();
         assert_eq!(board.map, None);
         assert_eq!(board.side, None);
+        assert_eq!(
+            board.format,
+            six_v_six(),
+            "the queue outlasts even a new match"
+        );
     }
 
     /// Both screens in a session are separate installs and can be on different
@@ -491,14 +965,15 @@ mod tests {
     fn state_from_a_newer_client_still_parses() {
         let newer = r#"{
             "board": {
-                "map": 3,
+                "format": {"size": "6v6", "queue": "open", "ranked": true},
+                "map": 0,
                 "side": "attack",
-                "enemies": [1, 2],
-                "extra_allies": [4],
+                "enemies": [1, 3],
+                "extra_allies": [6],
                 "bans": [9]
             },
             "seats": [
-                {"id": "a", "name": "era", "role": "tank", "locked": 5,
+                {"id": "a", "name": "era", "role": "tank", "locked": 1,
                  "connected": true, "ready": false}
             ],
             "phase": "picking"
@@ -506,13 +981,29 @@ mod tests {
 
         let state: SessionState =
             serde_json::from_str(newer).expect("an unknown field must not break the session");
-        assert_eq!(state.board.enemies, vec![HeroId(1), HeroId(2)]);
+        assert_eq!(
+            state.board.format,
+            Format::new(TeamSize::SixVSix, Queue::Open),
+            "including one inside the format"
+        );
+        assert_eq!(state.board.enemies, vec![SIGMA, TRACER]);
         assert_eq!(state.seats.len(), 1);
-        assert_eq!(state.seats[0].locked, Some(HeroId(5)));
+        assert_eq!(state.seats[0].locked, Some(SIGMA));
     }
 
-    /// The other direction: a seat written by a client that predates a field
-    /// this build now expects has to load with the rest of it intact.
+    /// The other direction: a board written by a client that predates the
+    /// format has to read as the shape it was drafted in.
+    #[test]
+    fn a_board_from_a_client_that_had_no_format_reads_as_5v5() {
+        let older = r#"{"map": 0, "enemies": [1], "extra_allies": []}"#;
+
+        let board: Board = serde_json::from_str(older).expect("the format is optional");
+        assert_eq!(board.format, Format::default());
+        assert_eq!(board.format.team_size(), 5);
+    }
+
+    /// A seat written by a client that predates a field this build now expects
+    /// has to load with the rest of it intact.
     #[test]
     fn a_seat_missing_every_optional_field_still_parses() {
         let sparse = r#"{"id": "c1234"}"#;
@@ -525,12 +1016,30 @@ mod tests {
 
     #[test]
     fn a_session_round_trips_as_json() {
-        let mut state = session(vec![seated("me", Some(1)), seated("mika", None)]);
-        state.board.map = Some(MapId(4));
-        state.board.enemies = vec![HeroId(7)];
+        let mut state = session(vec![
+            seated("me", Role::Tank, Some(SIGMA)),
+            seated("mika", Role::Damage, None),
+        ]);
+        state.board.format = six_v_six();
+        state.board.map = Some(fixture::KINGS_ROW);
+        state.board.enemies = vec![ANA];
 
         let json = serde_json::to_string(&state).expect("serialises");
         let back: SessionState = serde_json::from_str(&json).expect("deserialises");
         assert_eq!(back, state);
+    }
+
+    #[test]
+    fn an_unknown_hero_on_the_board_still_costs_the_team_a_body() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Tank, None)]);
+        state.board.extra_allies = vec![NOBODY, TRACER, SOJOURN, ANA, LUCIO];
+
+        let draft = state.draft_for(&ds, "me");
+        assert_eq!(
+            draft.allies,
+            vec![NOBODY, TRACER, SOJOURN, ANA],
+            "it takes a slot it cannot name a role for, and the last name loses"
+        );
     }
 }

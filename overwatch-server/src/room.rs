@@ -273,6 +273,9 @@ impl Rooms {
     /// a client that had no idea seats existed.
     pub fn publish_legacy_draft(&self, code: &str, draft: Draft, from: &str) {
         let board = Board {
+            // A client old enough to send a whole draft sends no format either,
+            // so this is 5v5 — which is the only shape that client ever had.
+            format: draft.format,
             map: draft.map,
             side: draft.side,
             enemies: draft.enemies,
@@ -397,7 +400,7 @@ mod tests {
         let (code, _first) = open(&rooms, "era");
 
         let mut board = Board::new();
-        board.add_enemy(HeroId(3));
+        board.enemies.push(HeroId(3));
         board.map = Some(MapId(2));
         rooms.publish_board(&code, board.clone(), "era");
         rooms.publish_seat(
@@ -459,7 +462,7 @@ mod tests {
         let _second = rooms.join(&code, "mika", "mika").expect("joins");
 
         let mut board = Board::new();
-        board.add_enemy(HeroId(7));
+        board.enemies.push(HeroId(7));
         rooms.publish_board(&code, board.clone(), "mika");
 
         // Both joins announced themselves, so skip the roster traffic rather
@@ -543,7 +546,7 @@ mod tests {
         let (theirs, _them) = open(&rooms, "someone");
 
         let mut board = Board::new();
-        board.add_enemy(HeroId(1));
+        board.enemies.push(HeroId(1));
         rooms.publish_board(&ours, board, "era");
 
         let other = rooms.state_of(&theirs).expect("the other session");
@@ -653,7 +656,7 @@ mod tests {
     #[test]
     fn messages_round_trip_as_json() {
         let mut board = Board::new();
-        board.add_enemy(HeroId(2));
+        board.enemies.push(HeroId(2));
 
         let message = RoomMessage::Board {
             board,

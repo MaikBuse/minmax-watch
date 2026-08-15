@@ -530,8 +530,8 @@ mod e2e {
 
         // Whoever reads the enemy comp first types it once...
         let mut board = Board::new();
-        board.add_enemy(HeroId(3));
-        board.add_enemy(HeroId(4));
+        board.enemies.push(HeroId(3));
+        board.enemies.push(HeroId(4));
         send(
             &mut era,
             &RoomMessage::Board {
@@ -628,8 +628,9 @@ mod e2e {
             board: Board::new(),
             seats,
         };
+        let dataset = overwatch_data::load().expect("the committed dataset loads");
         assert_eq!(
-            state.draft_for("era").allies,
+            state.draft_for(&dataset, "era").allies,
             vec![HeroId(11)],
             "a teammate locking in becomes your ally without you typing it"
         );
@@ -644,7 +645,7 @@ mod e2e {
         let _ = next_of_interest(&mut era).await;
 
         let mut board = Board::new();
-        board.add_enemy(HeroId(2));
+        board.enemies.push(HeroId(2));
         send(
             &mut era,
             &RoomMessage::Board {
