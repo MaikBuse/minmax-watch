@@ -402,8 +402,12 @@ body {
 }
 
 /* Wide enough for "support", so every row's tiles start on one column. */
+/* Fixed width so the tile grids of all three rows start on the same column —
+   the portraits are found by position, and a ragged left edge would move them.
+   Wide enough for the longest label *and* its count: "SUPPORT 2" is what sets
+   this number, not "SUPPORT". */
 .board-role {
-    width: 52px;
+    width: 66px;
     flex-shrink: 0;
     font-size: var(--fs-micro);
     font-weight: 700;
@@ -837,12 +841,31 @@ body {
 /* --- attack / defend ---
    Only rendered on the payload modes, so its absence is information too. */
 
-.sides {
+/* Attack/defend, team size and queue are one control language: a small either/or
+   about the match in front of you. They share these rules rather than each
+   growing a look of its own, so that changing how an either/or reads changes all
+   of them. Deliberately not the .modes segmented control above — that one
+   belongs to the role you are picking as, and borrowing it here would claim the
+   two are the same kind of choice. */
+
+.sides,
+.formats,
+.queues {
     display: inline-flex;
     gap: 0.25rem;
 }
 
-.side {
+/* The size and the queue are two questions about one thing, so they sit closer
+   to each other than to the map beside them. */
+.format-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.side,
+.format,
+.queue {
     padding: 0.2rem 0.6rem;
     font: inherit;
     font-size: var(--fs-xs);
@@ -853,15 +876,37 @@ body {
     cursor: pointer;
 }
 
-.side:hover {
+.side:hover,
+.format:hover,
+.queue:hover {
     color: var(--text);
 }
 
-.side.active {
+.side.active,
+.format.active,
+.queue.active {
     color: var(--on-color);
     background: var(--accent);
     border-color: var(--accent);
     font-weight: 700;
+}
+
+.side:focus-visible,
+.format:focus-visible,
+.queue:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* How many of the row's role the team can still take. Sits on the role label
+   because that is what it is counting, and reads as a countdown: a zero is the
+   answer to "why can I not click any of these". */
+.board-free {
+    margin-left: 0.35rem;
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
 }
 
 /* --- my pool ---

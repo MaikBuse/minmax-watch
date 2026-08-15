@@ -31,8 +31,8 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 use overwatch_core::{
-    ban_recommendations, recommend, search_maps, BanBoard, BanSubject, Board, Dataset, Draft,
-    HeroId, MapId, Recommendation, Role, Seat, SessionState, Side, UserContext,
+    ban_recommendations, recommend, search_maps, BanBoard, BanSubject, Board, Capacity, Dataset,
+    Draft, Format, HeroId, MapId, Recommendation, Role, Seat, SessionState, Side, UserContext,
 };
 
 use crate::profile::Profile;
@@ -136,7 +136,13 @@ fn App() -> Element {
     // draft the scorer sees is derived from all three, so nothing here is
     // stored twice.
     let my_id = use_hook(sync::client_id);
-    let mut board = use_signal(Board::new);
+    // Seeded from the profile, which remembers the format you were last in. A
+    // session you join overwrites it with the room's, the same way the map
+    // arrives.
+    let mut board = use_signal(|| Board {
+        format: profile.peek().format,
+        ..Board::new()
+    });
     let mut seats = use_signal(Vec::<Seat>::new);
     let mut me = use_signal(|| {
         let profile = profile.peek();
@@ -280,9 +286,9 @@ fn App() -> Element {
         board: board.read().clone(),
         seats: roster_including_me(&seats.read(), &me.read()),
     };
-    let draft = state.draft_for(&my_id);
-
     let ds = dataset.clone();
+    let draft = state.draft_for(&ds, &my_id);
+
     let frame = {
         let profile = profile.read();
 
@@ -443,10 +449,20 @@ fn App() -> Element {
         .and_then(|id| dataset.map(id).ok())
         .is_some_and(|m| m.mode.has_sides());
 
+    // Both boards block per role rather than per team: a team with both its dps
+    // can still take a tank, and a board that greyed out everything the moment
+    // one row filled would be lying about four of the five slots.
     let enemy_board = {
         let enemies = &draft.enemies;
-        let full = enemies.len() >= Draft::TEAM_SIZE_5V5;
-        roster(&dataset, |hero| enemies.contains(&hero), |_| full)
+        // Counted off the derived draft rather than the board, so that the room
+        // the tiles offer is the room the picks they draw come from.
+        let room = draft.enemy_capacity(&dataset);
+        roster(
+            &dataset,
+            |hero| enemies.contains(&hero),
+            |role, _| !room.fits(Some(role)),
+            Some(&room),
+        )
     };
 
     // Which allies came from a teammate's seat rather than from this board.
@@ -464,14 +480,19 @@ fn App() -> Element {
 
     let ally_board = {
         let allies = &draft.allies;
-        let full = allies.len() >= Draft::TEAM_SIZE_5V5 - 1;
+        // Holds a slot for every seat that has not picked yet, your own
+        // included — in 5v5 role queue as tank, nobody else on your team is one.
+        let room = state.ally_capacity(&dataset, &my_id);
         let locked = draft.locked;
         // Your own locked hero is blocked too: a team cannot run duplicates,
         // and `add_ally` would refuse it anyway.
         roster(
             &dataset,
             |hero| allies.contains(&hero),
-            |hero| full || locked == Some(hero) || seated_allies.contains(&hero),
+            |role, hero| {
+                !room.fits(Some(role)) || locked == Some(hero) || seated_allies.contains(&hero)
+            },
+            Some(&room),
         )
     };
 
@@ -496,6 +517,8 @@ fn App() -> Element {
     let pool_board = vec![BoardRow {
         role,
         label: role.label().to_owned(),
+        // Your pool is not a team, so there is nothing for it to be out of.
+        capacity: None,
         tiles: dataset
             .heroes_in_role(role)
             .map(|hero| tile_of(&dataset, hero, pool.contains(hero), false))
@@ -554,6 +577,7 @@ fn App() -> Element {
 
             ui::Header {
                 role,
+                format: draft.format,
                 map: map.clone(),
                 sides_apply,
                 side: draft.side,
@@ -569,6 +593,19 @@ fn App() -> Element {
                             p.save(&ds);
                         }
                         me.write().role = next;
+                    }
+                },
+                // One handler for both halves of the switch, so there is exactly
+                // one place that moves the room, remembers the choice and drops
+                // what the new format has no room for.
+                on_format: {
+                    let ds = dataset.clone();
+                    move |next: Format| {
+                        logged.set(None);
+                        board.write().set_format(&ds, next);
+                        let mut p = profile.write();
+                        p.format = next;
+                        p.save(&ds);
                     }
                 },
                 on_side: move |next: Option<Side>| { board.write().side = next; },
@@ -746,9 +783,12 @@ fn App() -> Element {
                     title: "enemy".to_owned(),
                     side: "enemy".to_owned(),
                     rows: enemy_board,
-                    on_toggle: move |hero: HeroId| {
-                        logged.set(None);
-                        board.write().toggle_enemy(hero);
+                    on_toggle: {
+                        let ds = dataset.clone();
+                        move |hero: HeroId| {
+                            logged.set(None);
+                            board.write().toggle_enemy(&ds, hero);
+                        }
                     },
                     on_reset: move |_| { board.write().enemies.clear(); },
                 }
@@ -814,21 +854,30 @@ fn App() -> Element {
 /// same hero can be a live enemy pick, an untaken ally slot, and one of yours at
 /// the same time — which is the whole reason the boards are separate rather than
 /// one list with a mode.
+/// `blocked` takes the row's role as well as the hero, because with per-role
+/// caps the answer is a property of the row: a full dps row says nothing about
+/// whether a tank can still be entered. Taking it here also means the roles are
+/// free — the rows are built by walking them — rather than one lookup per tile.
+///
+/// `room` is what the row's count is drawn from, and `None` on a board that has
+/// no cap to count against.
 fn roster(
     dataset: &Dataset,
     picked: impl Fn(HeroId) -> bool,
-    blocked: impl Fn(HeroId) -> bool,
+    blocked: impl Fn(Role, HeroId) -> bool,
+    room: Option<&Capacity>,
 ) -> Vec<BoardRow> {
     Role::ALL
         .into_iter()
         .map(|role| BoardRow {
             role,
             label: role.label().to_owned(),
+            capacity: room.map(|room| room.free_in(role)),
             tiles: dataset
                 .heroes_in_role(role)
                 .map(|hero| {
                     let selected = picked(hero);
-                    tile_of(dataset, hero, selected, !selected && blocked(hero))
+                    tile_of(dataset, hero, selected, !selected && blocked(role, hero))
                 })
                 .collect(),
         })

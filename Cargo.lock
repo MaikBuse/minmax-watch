@@ -2228,6 +2228,7 @@ dependencies = [
  "axum",
  "futures-util",
  "overwatch-core",
+ "overwatch-data",
  "serde",
  "serde_json",
  "thiserror 2.0.20",

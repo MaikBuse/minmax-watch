@@ -13,6 +13,9 @@
 pub mod dataset;
 pub mod draft;
 pub mod error;
+#[cfg(test)]
+pub(crate) mod fixture;
+pub mod format;
 pub mod hero;
 pub mod map;
 pub mod matrix;
@@ -21,8 +24,9 @@ pub mod search;
 pub mod session;
 
 pub use dataset::{Dataset, DatasetParts};
-pub use draft::{enemies_in_role, Draft};
+pub use draft::{enemies_in_role, fit_to_format, Draft};
 pub use error::CoreError;
+pub use format::{Capacity, Format, Queue, TeamSize};
 pub use hero::{Hero, HeroId, HeroSet, Role};
 pub use map::{GameMap, GameMode, MapId, Side};
 pub use matrix::Matrix;

@@ -314,7 +314,21 @@ fn open(connection: Connection, code: String, name: String, mut sinks: Sinks, at
                     // Only adopt a board that has something in it, so joining a
                     // stale empty session cannot wipe a draft already in
                     // progress.
-                    if !state.board.is_empty() {
+                    if state.board.is_empty() {
+                        // Except the format, which is not part of the draft: it
+                        // is which queue the room is sitting in, and a room that
+                        // has said "6v6" and typed nothing has still said it.
+                        // Ignoring it would leave the joiner enforcing 5v5 caps
+                        // and then publishing them back over the room on their
+                        // first click.
+                        //
+                        // The alternative — teaching `Board::is_empty` to count
+                        // the format — would let a room with no picks overwrite
+                        // a draft in progress, which is the exact thing this
+                        // guard exists to prevent.
+                        sinks.synced_board.write().format = state.board.format;
+                        sinks.board.write().format = state.board.format;
+                    } else {
                         sinks.synced_board.set(state.board.clone());
                         sinks.board.set(state.board);
                     }
@@ -399,12 +413,35 @@ mod tests {
     use super::*;
     use overwatch_core::HeroId;
 
+    /// The queue has to travel, or two people in one session enforce different
+    /// caps on the same lobby. It rides on the board rather than the seat for
+    /// exactly the reason the map does: there is one of it per room.
+    #[test]
+    fn board_messages_carry_the_format() {
+        let board = Board {
+            format: overwatch_core::Format::new(
+                overwatch_core::TeamSize::SixVSix,
+                overwatch_core::Queue::Open,
+            ),
+            ..Board::new()
+        };
+
+        let json = serde_json::to_string(&RoomMessage::Board {
+            board,
+            from: "c1234".to_owned(),
+        })
+        .expect("serialises");
+
+        assert!(json.contains(r#""size":"6v6""#), "{json}");
+        assert!(json.contains(r#""queue":"open""#), "{json}");
+    }
+
     /// The wire format must match the server's, which is the one thing a
     /// duplicated type can get wrong.
     #[test]
     fn board_messages_use_the_agreed_shape() {
         let mut board = Board::new();
-        board.add_enemy(HeroId(4));
+        board.enemies.push(HeroId(4));
 
         let json = serde_json::to_string(&RoomMessage::Board {
             board,
