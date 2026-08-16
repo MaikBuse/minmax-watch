@@ -369,12 +369,6 @@ pub fn MapBoard(
                     // would change the shape of the list under the diff every
                     // time you picked a different map.
                     div { key: "{tile.map.0}", class: "map-slot",
-                        // A sibling of the tile rather than a child of it — a
-                        // button inside a button is not markup, and the click
-                        // would carry on into the tile and take the map back.
-                        if tile.selected && tile.has_sides {
-                            SideToggle { side, on_side, label: tile.name.clone() }
-                        }
                         button {
                             class: if tile.selected { "tile map-tile selected" } else { "tile map-tile" },
                             style: art(&tile.icon),
@@ -386,6 +380,17 @@ pub fn MapBoard(
                                 let map = tile.map;
                                 move |_| on_pick.call(map)
                             },
+                        }
+                        // A sibling of the tile rather than a child of it — a
+                        // button inside a button is not markup, and the click
+                        // would carry on into the tile and take the map back.
+                        //
+                        // After it rather than before, though it is drawn above:
+                        // it floats, so source order costs nothing visually and
+                        // buys the tab order the eye expects — the map, then the
+                        // question about the map.
+                        if tile.selected && tile.has_sides {
+                            SideToggle { side, on_side, label: tile.name.clone() }
                         }
                     }
                 }

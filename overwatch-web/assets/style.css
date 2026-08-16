@@ -972,6 +972,33 @@ body {
     white-space: nowrap;
 }
 
+/* The 5px it floats by is a gap the pointer would otherwise fall through on its
+   way up from the tile, taking the hover — and with it the toggle — out from
+   under itself. Transparent, so it bridges without drawing. */
+.map-sides::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 5px;
+}
+
+/* Once the question is answered it stops asking: an overlay that stays up is
+   covering a row of maps to tell you something the header is already saying.
+
+   Hidden rather than dropped, because a side you cannot change is worse than
+   one that is merely out of the way — hovering the tile or tabbing into it
+   brings the toggle back, which is also where you would go looking for it. */
+.map-sides:has(.side.active) {
+    display: none;
+}
+
+.map-slot:hover .map-sides:has(.side.active),
+.map-slot:focus-within .map-sides:has(.side.active) {
+    display: inline-flex;
+}
+
 /* On the one tile that has both, the toggle wins the spot — the name of the map
    you have already picked is on the header line anyway. */
 .map-slot:has(.map-sides) .tile:hover::after {
