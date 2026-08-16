@@ -33,9 +33,9 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 use overwatch_core::{
-    ban_recommendations, recommend, search_maps, shape_of, Archetype, BanBoard, BanSubject, Board,
-    Capacity, Dataset, Draft, Format, HeroId, MapId, Recommendation, Role, Seat, SessionState,
-    Side, UserContext,
+    ban_recommendations, recommend, search_maps, shape_of, threats, Archetype, BanBoard,
+    BanSubject, Board, Capacity, Dataset, Draft, Format, HeroId, MapId, Recommendation, Role, Seat,
+    SessionState, Side, Threat, UserContext,
 };
 
 use crate::profile::Profile;
@@ -65,6 +65,12 @@ const ROSTER_POOL_SHOWN: usize = 6;
 struct Frame {
     recommendations: Vec<Recommendation>,
     bans: BanBoard,
+    /// The enemy team ranked by how hard each one is beating your locked hero.
+    ///
+    /// Empty until you lock in, which is a state the panel renders rather than
+    /// an absence worth encoding: `draft.locked` is in scope at the render site,
+    /// so an `Option` here would be the same fact written twice.
+    threats: Vec<Threat>,
 }
 
 /// The roster with this client's own seat as *it* believes it to be.
@@ -460,10 +466,17 @@ fn App() -> Element {
 
         let recommendations = recommend(&ds, &draft, &ctx).unwrap_or_default();
         let bans = ban_recommendations(&ds, &draft, &ctx, &team);
+        // Named apart from the function it calls, which is imported under the
+        // obvious name and would otherwise be shadowed out of reach.
+        let threat_board = draft
+            .locked
+            .map(|hero| threats(&ds, &draft, &ctx, hero))
+            .unwrap_or_default();
 
         Frame {
             recommendations,
             bans,
+            threats: threat_board,
         }
     };
 
@@ -735,6 +748,18 @@ fn App() -> Element {
     // With one hero to defend, "hardest on" can only name it back at you.
     let locked_subject = matches!(frame.bans.subject, BanSubject::One { locked: true, .. });
     let patch_subject = matches!(frame.bans.subject, BanSubject::Patch);
+
+    // Three different silences, said three different ways. The last one is the
+    // one that has to be careful: an unrated pair is not a clean bill of
+    // health, and copy that read "nothing beats you" would turn the sources
+    // having no opinion into a measurement — the same mistake `threats` itself
+    // refuses to make by leaving those enemies off the list.
+    let threat_empty = match (draft.locked.is_some(), draft.enemies.is_empty()) {
+        (false, _) => "nothing locked — this reads your pick against their team",
+        (true, true) => "nothing on their side yet",
+        (true, false) => "no source has rated your pick against any of them",
+    }
+    .to_owned();
 
     // The link to hand a teammate, and its QR. Both derived from the code, and
     // both `None` when drafting alone. The QR is only built while the panel is
@@ -1019,6 +1044,14 @@ fn App() -> Element {
             }
 
             div { class: "columns",
+                // Ban and matchups share a column because they are the two
+                // halves of one question, split by whether the hero is on the
+                // enemy board yet: the ban list drains as picks land and this
+                // one fills with those same heroes, so the column is never
+                // dead. Wrapped rather than left to grid auto-placement, which
+                // would drop the second panel below the *tallest* row and leave
+                // a hole under the ban list.
+                div { class: "column-stack",
                 ui::BanPanel {
                     subject: ban_subject,
                     items: frame.bans.candidates
@@ -1053,6 +1086,23 @@ fn App() -> Element {
                             }
                         })
                         .collect::<Vec<_>>(),
+                }
+
+                ui::ThreatPanel {
+                    // Named for the hero, not for the relation: the ban panel
+                    // right above already spends "vs" on the opposite one, and
+                    // two adjacent headers reading "vs" about inverse things
+                    // would be worse than no label.
+                    subject: my_lock.map(|hero| format!("as {}", chip_of(hero).name)),
+                    items: frame.threats
+                        .iter()
+                        .filter_map(|threat| {
+                            my_lock.map(|locked| ui::ThreatRow::build(threat, locked, &dataset))
+                        })
+                        .collect::<Vec<_>>(),
+                    unrated: draft.enemies.len().saturating_sub(frame.threats.len()),
+                    empty: threat_empty,
+                }
                 }
 
                 ui::Recommendations {

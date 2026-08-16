@@ -6,7 +6,7 @@
 
 use dioxus::prelude::*;
 use overwatch_core::{
-    Dataset, Format, HeroId, MapId, Queue, ReasonKind, Recommendation, Role, Side, TeamSize,
+    Dataset, Format, HeroId, MapId, Queue, ReasonKind, Recommendation, Role, Side, TeamSize, Threat,
 };
 
 /// A reset that asks first, for the ones that throw away configuration rather
@@ -861,6 +861,143 @@ pub fn BanPanel(subject: String, items: Vec<BanRow>) -> Element {
     }
 }
 
+/// One enemy, read against the hero you are on.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ThreatRow {
+    pub enemy: HeroId,
+    pub name: String,
+    pub icon: String,
+    /// Already formatted and already negated, so below zero is losing exactly
+    /// as it is in the two columns beside this one.
+    pub score: String,
+    /// Whether that number came out above zero, for the tint. Carried rather
+    /// than re-derived from the string, so the colour cannot disagree with the
+    /// glyph on a value that rounded across the boundary.
+    pub favourable: bool,
+    /// True for a dead flat `+0`, which is neither.
+    pub even: bool,
+    /// The scraped sentence for the pair, empty for most of them.
+    pub text: String,
+}
+
+impl ThreatRow {
+    /// Resolves one threat into display form.
+    ///
+    /// `locked` is the hero the whole panel is read against, needed only to
+    /// recognise the mirror.
+    pub fn build(threat: &Threat, locked: HeroId, dataset: &Dataset) -> Self {
+        // `severity` is positive when the enemy is winning, so negating it puts
+        // this column on the same footing as the pick and ban columns. Rounded
+        // to an integer *before* the sign is read: `format!("{:+.0}", -0.004)`
+        // prints "-0", and a red minus-zero is a claim the data does not make.
+        let points = (threat.severity * -100.0).round() as i32;
+
+        let text = if !threat.text.is_empty() {
+            threat.text.clone()
+        } else if threat.enemy == locked {
+            // The mirror is rated 0.0 by definition rather than by anybody's
+            // measurement, and no source writes a sentence about it. Left bare
+            // it is a portrait and a "+0" — indistinguishable from the missing
+            // data it is the opposite of.
+            "the mirror — even by definition".to_owned()
+        } else {
+            // Everything else stays bare. Unlike a recommendation there is no
+            // `kind` to phrase from, and the only thing left to say would be
+            // the number again in words.
+            String::new()
+        };
+
+        Self {
+            enemy: threat.enemy,
+            name: dataset
+                .hero(threat.enemy)
+                .map(|h| h.name.clone())
+                .unwrap_or_else(|_| "?".to_owned()),
+            icon: dataset
+                .hero(threat.enemy)
+                .map(|h| crate::icons::hero(&h.key))
+                .unwrap_or_default(),
+            score: format!("{points:+}"),
+            favourable: points > 0,
+            even: points == 0,
+            text,
+        }
+    }
+}
+
+/// The enemy team, read against the hero you are on.
+///
+/// The counterpart to [`BanPanel`] directly above it, and deliberately not a
+/// second copy of it: a ban candidate is by construction a hero *nobody has
+/// picked* — [`overwatch_core::ban_recommendations`] filters the enemy board out
+/// — while every row here is a hero who is already on it. The two lists cannot
+/// overlap, and a hero moves from that panel to this one the moment the enemy
+/// locks it.
+///
+/// The heading says "matchups" rather than "threats" because the core function
+/// returns every rated enemy, including the ones you beat. A `+18` row is not a
+/// threat, and a panel that called it one would be lying in the one place the
+/// user is checking whether to trust it.
+///
+/// `subject` fixes the referent, which matters more here than on the ban panel.
+/// Every row shows an *enemy* portrait and an enemy name, so "Pharah −30" reads
+/// as a claim about Pharah unless the header says whose number it is.
+#[component]
+pub fn ThreatPanel(
+    subject: Option<String>,
+    items: Vec<ThreatRow>,
+    /// How many enemies are entered but unrated, so the gap between this list
+    /// and the enemy board is stated rather than left to be noticed.
+    unrated: usize,
+    empty: String,
+) -> Element {
+    rsx! {
+        section { class: "panel threats",
+            div { class: "panel-head",
+                h2 { "matchups" }
+                if let Some(subject) = &subject {
+                    span { class: "subject", "{subject}" }
+                }
+            }
+            if items.is_empty() {
+                p { class: "empty", "{empty}" }
+            }
+            for threat in items.iter() {
+                div {
+                    key: "{threat.enemy.0}",
+                    class: "threat",
+                    span { class: "rec-portrait", style: art(&threat.icon) }
+                    div { class: "rec-body",
+                        div { class: "rec-head",
+                            span { class: "rec-name", "{threat.name}" }
+                            span {
+                                class: if threat.even {
+                                    "score"
+                                } else if threat.favourable {
+                                    "score good"
+                                } else {
+                                    "score bad"
+                                },
+                                "{threat.score}"
+                            }
+                        }
+                        if !threat.text.is_empty() {
+                            p { class: "threat-text", "{threat.text}" }
+                        }
+                    }
+                }
+            }
+            // Naming the silence, rather than letting the row count quietly
+            // disagree with the number of portraits on the enemy board.
+            if unrated > 0 {
+                p { class: "threat-note",
+                    if unrated == 1 { "1 of their picks unrated" } else { "{unrated} of their picks unrated" }
+                }
+            }
+        }
+    }
+}
+
 /// A recommendation with every name and number already resolved.
 ///
 /// Components stay purely presentational and comparable, which is what lets
@@ -1250,5 +1387,140 @@ pub fn SessionBar(
                 }
             }
         }
+    }
+}
+
+/// The one part of this module that can be wrong in a way a test can catch.
+///
+/// Everything else here is markup, but [`ThreatRow::build`] inverts a sign, and
+/// a silently un-inverted threat column would read as the exact opposite of what
+/// it means while looking entirely plausible.
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use overwatch_core::{DatasetParts, Hero, Matrix};
+
+    const REINHARDT: HeroId = HeroId(0);
+    const PHARAH: HeroId = HeroId(1);
+
+    fn hero(key: &str, name: &str, role: Role) -> Hero {
+        Hero {
+            key: key.to_owned(),
+            name: name.to_owned(),
+            role,
+            subrole: None,
+            aliases: vec![key.to_owned()],
+        }
+    }
+
+    fn fixture() -> Dataset {
+        let heroes = vec![
+            hero("reinhardt", "Reinhardt", Role::Tank),
+            hero("pharah", "Pharah", Role::Damage),
+        ];
+        let n = heroes.len();
+
+        Dataset::new(DatasetParts {
+            heroes,
+            maps: Vec::new(),
+            matchups: Matrix::unrated(n),
+            synergy: Matrix::unrated(n),
+            map_affinity: Vec::new(),
+            base_strength: vec![0; n],
+            win_rate: vec![None; n],
+            side_lean: vec![0; n],
+            shape: vec![[0; 3]; n],
+            reasons: vec![String::new(); n * n],
+            generated: String::new(),
+            patch: String::new(),
+        })
+        .expect("a two-hero dataset is valid")
+    }
+
+    fn threat(enemy: HeroId, severity: f32, text: &str) -> Threat {
+        Threat {
+            enemy,
+            severity,
+            text: text.to_owned(),
+        }
+    }
+
+    #[test]
+    fn an_enemy_beating_you_reads_below_zero_like_every_other_column() {
+        let ds = fixture();
+        let row = ThreatRow::build(&threat(PHARAH, 0.9, ""), REINHARDT, &ds);
+
+        assert_eq!(row.score, "-90", "a hard counter has to read as a loss");
+        assert!(!row.favourable);
+        assert!(!row.even);
+    }
+
+    #[test]
+    fn an_enemy_you_beat_keeps_its_place_on_the_list_and_reads_above_zero() {
+        let ds = fixture();
+        let row = ThreatRow::build(&threat(PHARAH, -0.4, ""), REINHARDT, &ds);
+
+        // The panel is the whole enemy team, not only the half that is winning:
+        // being +40 into four of them is what makes a -90 into the fifth
+        // survivable, and a filtered list could not say that.
+        assert_eq!(row.score, "+40");
+        assert!(row.favourable);
+    }
+
+    /// `format!("{:+.0}", -0.4)` prints `-0`, which would render a red minus
+    /// sign over a matchup nothing measured as negative.
+    #[test]
+    fn a_severity_that_rounds_to_nothing_never_prints_a_signed_zero() {
+        let ds = fixture();
+
+        for severity in [0.004_f32, -0.004, 0.0] {
+            let row = ThreatRow::build(&threat(PHARAH, severity, ""), REINHARDT, &ds);
+            assert_eq!(row.score, "+0", "severity {severity} printed {}", row.score);
+            assert!(row.even, "and must take neither tint");
+            assert!(!row.favourable);
+        }
+    }
+
+    #[test]
+    fn the_mirror_says_so_rather_than_looking_like_missing_data() {
+        let ds = fixture();
+        let row = ThreatRow::build(&threat(REINHARDT, 0.0, ""), REINHARDT, &ds);
+
+        assert_eq!(row.score, "+0");
+        assert_eq!(row.text, "the mirror — even by definition");
+    }
+
+    /// Only ~40% of pairs carry a scraped sentence, and there is no `kind` here
+    /// to phrase a fallback from as `RecRow::build` does — the only thing left
+    /// to say would be the number again in words.
+    #[test]
+    fn an_unexplained_matchup_is_left_bare_rather_than_padded() {
+        let ds = fixture();
+
+        let bare = ThreatRow::build(&threat(PHARAH, 0.5, ""), REINHARDT, &ds);
+        assert_eq!(bare.text, "");
+
+        let scraped = ThreatRow::build(
+            &threat(
+                PHARAH,
+                0.5,
+                "Reinhardt is very weak against airborne targets.",
+            ),
+            REINHARDT,
+            &ds,
+        );
+        assert_eq!(
+            scraped.text,
+            "Reinhardt is very weak against airborne targets."
+        );
+    }
+
+    #[test]
+    fn a_hero_the_roster_cannot_name_still_renders_a_row() {
+        let ds = fixture();
+        let row = ThreatRow::build(&threat(HeroId(99), 0.3, ""), REINHARDT, &ds);
+
+        assert_eq!(row.name, "?", "a dataset mismatch must not blank the panel");
+        assert_eq!(row.score, "-30");
     }
 }

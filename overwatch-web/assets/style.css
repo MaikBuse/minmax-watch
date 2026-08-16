@@ -627,6 +627,17 @@ body {
     align-items: start;
 }
 
+/* Two panels sharing the left track. A wrapper rather than a third grid child:
+   auto-placement would put the second panel on row two, which starts below the
+   *tallest* row-one cell — leaving a hole under the ban list the height of the
+   pick column. `start` so the pair keeps its own height instead of stretching
+   to match the column beside it. */
+.column-stack {
+    display: grid;
+    gap: var(--sp-4);
+    align-content: start;
+}
+
 @media (max-width: 820px) {
     .columns,
     .boards {
@@ -686,6 +697,51 @@ body {
     font-size: var(--fs-sm);
     color: var(--text-muted);
     line-height: 1.35;
+}
+
+/* --- matchups panel --- */
+
+/* The ban row's geometry minus the rank column. Ban and pick are shortlists cut
+   from fifty-three heroes, so "3" there means "third worth considering"; this is
+   a read-out of the five or six heroes already on the enemy board, and numbering
+   a set that small implies a selection nobody made. Not clickable, for the same
+   reason `.ban` is not: the enemy board is where picks are edited. */
+.threat {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    border: 1px solid transparent;
+    border-radius: var(--r-lg);
+    padding: 7px 9px;
+    margin-bottom: 5px;
+}
+
+.threat-text {
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    line-height: 1.35;
+}
+
+/* How many enemies are entered but unrated. Muted and last, because it is about
+   the absence of rows rather than about any of them. */
+.threat-note {
+    margin: var(--sp-3) 0 0;
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+}
+
+/* Unlike the ban list, this one is not homogeneous — an enemy you beat appears
+   here too — so the tint is per row rather than per column. The leading sign is
+   what carries it and `{:+}` always emits one; the colour only reinforces,
+   exactly as with .reason.good / .reason.bad. A dead-even row takes neither
+   class and stays muted, because "+0" is not an argument in either direction. */
+.threat .score.good {
+    color: var(--positive);
+}
+
+.threat .score.bad {
+    color: var(--negative);
 }
 
 /* What the numbers are about, next to the heading, because the same "-34" means
