@@ -7,8 +7,9 @@
 //!
 //! Bound to Alt+W and Alt+L rather than bare W/L: recording a result also
 //! clears the draft, so the modifier is a guard against a stray keypress
-//! costing you the picks you just entered. Ctrl+W is the browser's close-tab
-//! and is not usable here.
+//! costing you the picks you just entered. That is the rule the whole chord
+//! table follows — ctrl builds, alt costs — and `crate::keys` is where it
+//! lives. Ctrl+W is the browser's close-tab and was never usable here anyway.
 
 use overwatch_core::{Dataset, Draft, HeroId, Role};
 use serde::{Deserialize, Serialize};

@@ -22,6 +22,7 @@
 
 mod board;
 mod icons;
+mod keys;
 mod matchlog;
 mod profile;
 mod session;
@@ -487,36 +488,55 @@ fn App() -> Element {
     // value avoids borrowing a signal inside a handler that also writes one.
     let draft_now = draft.clone();
     let on_key = move |evt: Event<KeyboardData>| {
-        // Typing "route 66" must not fire ^R, and Escape belongs to the filter
-        // box while it has the caret.
+        // Typing "route 66" must not walk the pick modes, and Escape belongs to
+        // the filter box while it has the caret.
         if *search_focused.read() {
             return;
         }
-        let modified = evt.modifiers().ctrl() || evt.modifiers().meta();
 
-        match evt.key() {
-            Key::Escape => {
-                evt.prevent_default();
-                // Clears the picks but deliberately keeps the map, which does
-                // not change between rounds of the same match. In a session
-                // this clears it for everyone — which is what "next round"
-                // means when five people are looking at the same board — but it
-                // only ever unlocks *your own* hero. Reaching across and
-                // clearing a teammate's pick is not a thing one key should do.
+        // Which chord this is belongs to `keys`, where it is a pure function
+        // over the physical key and has tests. What it costs belongs here.
+        let Some(command) = keys::command_for(evt.code(), evt.modifiers()) else {
+            return;
+        };
+        evt.prevent_default();
+
+        match command {
+            // Clears the picks but deliberately keeps the map, which does not
+            // change between rounds of the same match. In a session this clears
+            // it for everyone — which is what "next round" means when five
+            // people are looking at the same board — but it only ever unlocks
+            // *your own* hero. Reaching across and clearing a teammate's pick is
+            // not a thing one key should do.
+            keys::Command::Clear => {
                 board.write().clear_picks();
                 unlock.call(());
             }
-            // Alt+W / Alt+L record the result. Modified rather than bare
-            // letters because they also clear the draft: a guard against a
-            // stray keypress costing you the picks you just entered.
-            Key::Character(c) if evt.modifiers().alt() => {
-                let won = match c.as_str() {
-                    "w" | "W" => true,
-                    "l" | "L" => false,
-                    _ => return,
-                };
-                evt.prevent_default();
-
+            // The hero you just picked in game. It switches the pick column into
+            // swap mode, and it is your seat rather than the board: locking in
+            // is the one thing in a session that is nobody else's.
+            keys::Command::LockTop => {
+                let top = frame_top(&ds_keys, &draft_now, &profile.read());
+                if let Some(hero) = top {
+                    lock_hero.call(hero);
+                }
+            }
+            // Walk the pick modes in order, wrapping at the end. One key for
+            // three modes rather than three keys, because the hand already knows
+            // this one and a mode switch mid-draft is rare.
+            //
+            // Behind alt rather than ctrl because it gives up a pick the new
+            // mode cannot hold — the same reason recording a result is. The
+            // roster shows what everyone is playing, so the switch is also news
+            // to the rest of the session.
+            keys::Command::NextRole => {
+                let at = Role::PLAYABLE_MODES
+                    .iter()
+                    .position(|mode| *mode == profile.peek().role)
+                    .unwrap_or(0);
+                set_role.call(Role::PLAYABLE_MODES[(at + 1) % Role::PLAYABLE_MODES.len()]);
+            }
+            keys::Command::Record { won } => {
                 let role = profile.read().role;
                 // Credited to the display name now that there is one. A log of
                 // random client ids is unreadable the moment more than one
@@ -537,44 +557,6 @@ fn App() -> Element {
                     None => logged.set(None),
                 }
             }
-            Key::Character(c) if modified => {
-                match c.as_str() {
-                    // Lock the current top recommendation: this is the hero you
-                    // just picked in game, and it switches the list into
-                    // swap mode.
-                    "l" => {
-                        evt.prevent_default();
-                        let top = frame_top(&ds_keys, &draft_now, &profile.read());
-                        if let Some(hero) = top {
-                            // Your seat, not the board: locking in is the one
-                            // thing in a session that is nobody else's.
-                            lock_hero.call(hero);
-                        }
-                    }
-                    // Walk the pick modes in order, wrapping at the end. One key
-                    // for three modes rather than three keys, because the hand
-                    // already knows this one and a mode switch mid-draft is
-                    // rare enough that a second press costs nothing.
-                    //
-                    // It now gives up a pick the new mode cannot hold, so a
-                    // stray press mid-draft costs one. That is the same trade
-                    // the mode switch itself makes, and the alternative — a
-                    // seat declared dps while holding a tank — is the state
-                    // this key existed to avoid producing.
-                    "r" => {
-                        evt.prevent_default();
-                        let at = Role::PLAYABLE_MODES
-                            .iter()
-                            .position(|mode| *mode == profile.peek().role)
-                            .unwrap_or(0);
-                        // The roster shows what everyone is playing, so a role
-                        // switch is news to the rest of the session.
-                        set_role.call(Role::PLAYABLE_MODES[(at + 1) % Role::PLAYABLE_MODES.len()]);
-                    }
-                    _ => {}
-                }
-            }
-            _ => {}
         }
     };
 
@@ -804,6 +786,7 @@ fn App() -> Element {
                 modes,
                 generated: dataset.generated.clone(),
                 sync_status: status.read().label(),
+                logged: *logged.read(),
                 on_role: move |next: Role| set_role.call(next),
                 // One handler for both halves of the switch, so there is exactly
                 // one place that moves the room, remembers the choice and drops
@@ -827,15 +810,6 @@ fn App() -> Element {
                     board.write().clear_all();
                     unlock.call(());
                 },
-            }
-
-            div { class: "statusbar",
-                span { class: "hint", "^L lock · ^R role · ⌥W/⌥L result · Esc clear · on the ally board your first pick is your own · click again to take it back" }
-                match *logged.read() {
-                    Some(true) => rsx! { span { class: "logged win", "win recorded" } },
-                    Some(false) => rsx! { span { class: "logged loss", "loss recorded" } },
-                    None => rsx! {},
-                }
             }
 
             ui::SessionBar {

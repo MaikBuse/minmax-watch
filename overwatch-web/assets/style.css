@@ -333,26 +333,71 @@ body {
     font-size: var(--fs-xs);
 }
 
-/* --- status bar ---
-   One line of shortcut hints, and the confirmation that a result was recorded.
-   Fixed height so nothing below it moves when the confirmation appears. */
+/* --- the chords ---
+   A key that reveals the shortcut list, in the header beside the reset. This
+   replaces a permanent line of prose above the boards: the chords are for
+   people who draft every evening, and they do not read the hint either. On
+   :focus-within as well as :hover, because a list of keyboard shortcuts that
+   only a mouse can reach is no use to the people it is for. */
 
-.statusbar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    height: var(--sp-6);
-    padding: 0 var(--sp-1);
-    margin-bottom: var(--sp-3);
+.keys {
+    position: relative;
+    display: inline-flex;
 }
 
-.hint {
+.keys-button {
+    padding: 0.2rem 0.5rem;
+    font: inherit;
+    font-size: var(--fs-micro);
+    line-height: 1;
     color: var(--text-muted);
-    font-size: var(--fs-xs);
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    cursor: help;
+}
+
+.keys-button:hover {
+    color: var(--text);
+    border-color: var(--line-strong);
+}
+
+.keys-sheet {
+    display: none;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 20;
+    padding: var(--sp-2);
+    min-width: 11rem;
+    background: var(--overlay);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    box-shadow: 0 6px 20px rgb(0 0 0 / 45%);
+}
+
+.keys:hover .keys-sheet,
+.keys:focus-within .keys-sheet {
+    display: block;
+}
+
+.keys-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-2);
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    padding: 2px 0;
+}
+
+.keys-row kbd {
+    flex: 0 0 2.6rem;
+    font-family: inherit;
+    font-size: var(--fs-micro);
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--text);
 }
 
 /* --- boards ---
@@ -787,12 +832,14 @@ body {
     color: var(--positive);
 }
 
-/* Confirmation that a result was recorded. Replaces the key hint rather than
-   adding a line, so the command bar never changes height. */
+/* Confirmation that a result was recorded. In the header beside the sync light
+   now that the status bar is gone: both are transient news about what just
+   happened, rather than part of the draft. Sized to sit in that row without
+   changing its height. */
 .logged {
-    font-size: var(--fs-xs);
+    font-size: var(--fs-micro);
     font-weight: 600;
-    padding: 3px var(--sp-3);
+    padding: 2px var(--sp-2);
     border-radius: var(--r-sm);
     white-space: nowrap;
 }

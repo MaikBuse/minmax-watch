@@ -40,6 +40,42 @@ fn ResetButton(confirm: bool, on_reset: EventHandler<()>) -> Element {
     }
 }
 
+/// The chords, on hover.
+///
+/// They used to be a line of prose along the top of the screen, spent on every
+/// draft to teach a feature most people never press twice. The people who do
+/// press them do not read it either — they already know. So it moved behind a
+/// key that reveals it, which costs a hover to the person who wants it and
+/// nothing at all to everyone else.
+///
+/// Revealed on focus as well as hover, which is not optional: a list of
+/// keyboard shortcuts that can only be reached with a mouse is a joke at the
+/// expense of the people it is for.
+#[component]
+fn KeyHelp() -> Element {
+    rsx! {
+        div { class: "keys",
+            button {
+                class: "keys-button",
+                r#type: "button",
+                aria_label: "keyboard shortcuts",
+                // The sheet is the content; the button only reveals it, so it
+                // does nothing on click and must not steal a pick.
+                onclick: move |evt| evt.stop_propagation(),
+                "⌨"
+            }
+            div { class: "keys-sheet", role: "tooltip",
+                for (chord, what) in crate::keys::SHORTCUTS {
+                    div { key: "{chord}", class: "keys-row",
+                        kbd { "{chord}" }
+                        span { "{what}" }
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn role_class(role: Role) -> &'static str {
     match role {
         Role::Tank => "role-tank",
@@ -531,10 +567,10 @@ pub fn HeroBoard(
 /// of statement as the side: a small either/or about the match in front of you,
 /// not a mode the app is in.
 ///
-/// No keyboard shortcut, deliberately. The four that exist are all things done
-/// repeatedly inside a draft; this changes when you change queue, once an
-/// evening. A fifth chord would dilute the four that matter and lengthen a hint
-/// line already at capacity.
+/// No keyboard shortcut, deliberately. Every chord that exists is something
+/// done repeatedly inside a draft, where the seconds are real; this changes
+/// when you change queue, once an evening, and a chord for it would be one more
+/// thing in the table earning its place on the strength of nothing.
 #[component]
 fn FormatSwitch(format: Format, on_format: EventHandler<Format>) -> Element {
     rsx! {
@@ -680,6 +716,10 @@ pub fn Header(
     modes: Vec<ModeChip>,
     generated: String,
     sync_status: String,
+    /// `Some(won)` just after a result was recorded, so the keystroke has
+    /// visible confirmation. It sits beside the sync light because both are
+    /// transient status about what just happened rather than part of the draft.
+    logged: Option<bool>,
     on_role: EventHandler<Role>,
     on_format: EventHandler<Format>,
     on_reset_all: EventHandler<()>,
@@ -722,10 +762,18 @@ pub fn Header(
                 // Whether the other screen is actually attached. Scoring is
                 // local either way, so "offline" costs sync, not function.
                 span { class: "{sync_class}", "{sync_status}" }
+                // Confirmation that ⌥W/⌥L landed. Absent the rest of the time,
+                // and cleared by the next ordinary action rather than a timer.
+                match logged {
+                    Some(true) => rsx! { span { class: "logged win", "win recorded" } },
+                    Some(false) => rsx! { span { class: "logged loss", "loss recorded" } },
+                    None => rsx! {},
+                }
                 // Counter data ages with every patch; showing when it was last
                 // pulled is the difference between trusting it and trusting it
                 // blindly.
                 span { class: "generated", title: "counter data last ingested", "{generated}" }
+                KeyHelp {}
                 // Everything, map and side included — the "new match" reset, as
                 // opposed to Esc, which keeps the map for the next round.
                 ResetButton { confirm: true, on_reset: on_reset_all }
