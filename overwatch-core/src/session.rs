@@ -216,6 +216,59 @@ impl Seat {
             &self.name
         }
     }
+
+    /// Takes `hero`, moving the declared role to the one that hero plays.
+    ///
+    /// The role follows the pick rather than the other way round because the
+    /// pick is the fact: a hero locked in game is what you are playing whatever
+    /// you queued as. Keeping the two in step is what makes a seat cost exactly
+    /// one slot of `role` whether or not it has locked — see
+    /// [`SessionState::assemble_allies`], which charges a lock its hero's role
+    /// and an empty seat its declared one, and can only agree with itself if
+    /// they are the same role.
+    ///
+    /// A hero the dataset cannot name a role for leaves the role alone. There
+    /// is nothing to follow, and guessing would move the slot this seat holds
+    /// on the strength of a dataset mismatch.
+    /// Returns the role the seat holds afterwards, which is what a caller
+    /// keeping its own copy of "what am I playing" needs in order to follow.
+    pub fn lock(&mut self, dataset: &Dataset, hero: HeroId) -> Role {
+        self.locked = Some(hero);
+        if let Some(role) = role_of(dataset, hero) {
+            self.role = role;
+        }
+        self.role
+    }
+
+    /// Declares `role`, dropping a pick the new role cannot hold. Returns
+    /// whether a lock was actually given up.
+    ///
+    /// The counterpart to [`Self::lock`], and the same invariant seen from the
+    /// other side. Dropping the pick rather than keeping it is the one place
+    /// this file takes something back, and it is deliberate for the reason
+    /// [`Board::set_format`] gives: the loss is attributable and happens under
+    /// the cursor. The alternative — a seat declared dps while locked on a tank
+    /// — reads as a tank to the derivation and as a dps to the roster, and
+    /// makes the pick panel argue about swapping away from your own hero.
+    pub fn set_role(&mut self, dataset: &Dataset, role: Role) -> bool {
+        self.role = role;
+        let stale = self
+            .locked
+            .is_some_and(|hero| role_of(dataset, hero) != Some(role));
+        if stale {
+            self.locked = None;
+        }
+        stale
+    }
+
+    /// Gives the pick back, leaving the declared role alone.
+    ///
+    /// Un-picking says nothing about what you are queued as, so the slot this
+    /// seat holds does not move — it goes back to being a reservation in the
+    /// same role.
+    pub fn unlock(&mut self) {
+        self.locked = None;
+    }
 }
 
 /// Everything a session holds: one shared board and one seat per member.
@@ -247,6 +300,19 @@ impl SessionState {
             Some(existing) => *existing = seat,
             None => self.seats.push(seat),
         }
+    }
+
+    /// Drops a seat and the slot it was holding. Returns whether there was one.
+    ///
+    /// For somebody saying they are done, which is a different event from their
+    /// socket dropping: a seat outlives its connection precisely so a reload
+    /// does not empty a slot mid-draft, but somebody who has actually left is
+    /// not coming back to fill it, and a reservation nobody will ever spend is
+    /// one the rest of the team should get back.
+    pub fn remove_seat(&mut self, id: &str) -> bool {
+        let before = self.seats.len();
+        self.seats.retain(|seat| seat.id != id);
+        self.seats.len() != before
     }
 
     /// The scoring view for one member.
@@ -301,9 +367,10 @@ impl SessionState {
     /// The one place the ally arithmetic lives, and the order of it is the rule:
     ///
     /// 1. **Locked seats, mine included.** A hero picked in game costs its own
-    ///    role's slot whatever anybody declared. These are never gated — a
-    ///    teammate's pick is a fact, and a cap that could refuse it would delete
-    ///    a hero from a team that really has it.
+    ///    role's slot whatever anybody declared, falling back to the declared
+    ///    role only when the roster cannot name the hero's. These are never
+    ///    gated — a teammate's pick is a fact, and a cap that could refuse it
+    ///    would delete a hero from a team that really has it.
     /// 2. **Typed extras, in entry order**, each refused if its role is full.
     ///    This is the only gate, so it can only ever turn away the newest.
     /// 3. **Reservations**: every seat that has *not* locked, mine included,
@@ -339,7 +406,14 @@ impl SessionState {
                 draft.add_ally(hero)
             };
             if landed {
-                room.take(role_of(dataset, hero));
+                // Falling back to the declared role is what keeps a seat
+                // costing one slot of `seat.role` either way. A hero the roster
+                // cannot name would otherwise spend a body and no role column,
+                // so locking one would quietly hand the seat's own role slot
+                // back to the team — the reservation below no longer runs.
+                // A hero it *can* name still overrides the declaration: the
+                // pick is the fact.
+                room.take(role_of(dataset, hero).or(Some(seat.role)));
             }
         }
 
@@ -627,6 +701,11 @@ mod tests {
         );
     }
 
+    /// A seat whose declaration disagrees with its pick, which [`Seat::lock`]
+    /// no longer produces on this build. It still arrives: the server holds no
+    /// dataset and so cannot repair one, `publish_legacy_draft` keeps the old
+    /// declaration while writing a new lock, and a client on an older build
+    /// never had the rule. The hero is the fact, so the hero is what it spends.
     #[test]
     fn a_teammate_who_has_locked_spends_their_hero_and_not_their_declared_role() {
         let ds = fixture::dataset();
@@ -848,6 +927,179 @@ mod tests {
         let ids: Vec<&str> = state.seats.iter().map(|s| s.id.as_str()).collect();
         assert_eq!(ids, vec!["a", "b", "c"], "the roster must not reorder");
         assert_eq!(state.seat("b").and_then(|s| s.locked), Some(TRACER));
+    }
+
+    // --- a seat's pick and the role it holds --------------------------------
+
+    /// The invariant, from the picking side: what you locked is what you are
+    /// playing, whatever you queued as.
+    #[test]
+    fn locking_a_hero_of_another_role_moves_the_seat_to_that_role() {
+        let ds = fixture::dataset();
+        let mut seat = seated("me", Role::Damage, None);
+
+        seat.lock(&ds, REINHARDT);
+        assert_eq!(seat.locked, Some(REINHARDT));
+        assert_eq!(seat.role, Role::Tank, "the role follows the pick");
+    }
+
+    #[test]
+    fn locking_a_hero_of_your_own_role_leaves_the_role_alone() {
+        let ds = fixture::dataset();
+        let mut seat = seated("me", Role::Support, None);
+
+        seat.lock(&ds, ANA);
+        assert_eq!(seat.role, Role::Support);
+    }
+
+    /// The invariant from the other side. A pick the new role cannot hold is
+    /// the one thing this file takes back, and it happens under the cursor.
+    #[test]
+    fn switching_role_drops_a_pick_the_new_role_cannot_hold() {
+        let ds = fixture::dataset();
+        let mut seat = seated("me", Role::Tank, Some(SIGMA));
+
+        assert!(seat.set_role(&ds, Role::Damage), "the tank had to go");
+        assert_eq!(seat.locked, None);
+        assert_eq!(seat.role, Role::Damage);
+    }
+
+    #[test]
+    fn switching_to_the_role_you_are_already_playing_keeps_the_pick() {
+        let ds = fixture::dataset();
+        let mut seat = seated("me", Role::Damage, Some(TRACER));
+
+        assert!(!seat.set_role(&ds, Role::Damage), "nothing was given up");
+        assert_eq!(seat.locked, Some(TRACER));
+    }
+
+    /// A dataset mismatch must not move the slot this seat is holding: there is
+    /// no role to follow, so the declared one stands.
+    #[test]
+    fn locking_a_hero_the_roster_cannot_name_keeps_the_declared_role() {
+        let ds = fixture::dataset();
+        let mut seat = seated("me", Role::Support, None);
+
+        seat.lock(&ds, NOBODY);
+        assert_eq!(seat.locked, Some(NOBODY));
+        assert_eq!(seat.role, Role::Support, "nothing to follow");
+
+        // And it is not silently kept across a role switch either — the same
+        // rule applies, since its role is not the one being declared.
+        assert!(seat.set_role(&ds, Role::Tank));
+        assert_eq!(seat.locked, None);
+    }
+
+    #[test]
+    fn giving_a_pick_back_leaves_the_role_where_it_was() {
+        let ds = fixture::dataset();
+        let mut seat = seated("me", Role::Damage, None);
+        seat.lock(&ds, REINHARDT);
+
+        seat.unlock();
+        assert_eq!(seat.locked, None);
+        assert_eq!(
+            seat.role,
+            Role::Tank,
+            "un-picking says nothing about what you are queued as"
+        );
+    }
+
+    /// What the invariant buys, stated as the arithmetic the boards draw from:
+    /// a seat costs one slot of its declared role either way, so locking in
+    /// never moves the team's shape — only which of its slots is spoken for.
+    #[test]
+    fn a_seat_costs_one_slot_of_its_role_whether_or_not_it_has_locked() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![
+            seated("me", Role::Damage, None),
+            seated("mika", Role::Support, None),
+        ]);
+
+        let before = room(&state, &ds, "me");
+        assert_eq!(before, [1, 1, 1]);
+
+        // Both lock in, each keeping the invariant.
+        state.seats[0].lock(&ds, TRACER);
+        state.seats[1].lock(&ds, ANA);
+
+        assert_eq!(
+            room(&state, &ds, "me"),
+            before,
+            "the shape of the team does not move when people lock in"
+        );
+    }
+
+    /// The one hole the invariant would otherwise leave. [`Seat::lock`] keeps
+    /// the declared role for a hero it cannot name, so the derivation has to
+    /// keep charging that role — otherwise locking an unknown hero would hand
+    /// the seat's own slot back to the team, since the reservation pass skips
+    /// a seat that has locked.
+    #[test]
+    fn an_unknown_locked_hero_still_holds_the_seats_declared_role() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![
+            seated("me", Role::Damage, None),
+            seated("mika", Role::Support, None),
+        ]);
+
+        let before = room(&state, &ds, "me");
+        state.seats[1].lock(&ds, NOBODY);
+
+        assert_eq!(
+            room(&state, &ds, "me"),
+            before,
+            "an unnameable pick must not free the slot its seat was holding"
+        );
+    }
+
+    /// The role switch the feature was reported over: the slot you were holding
+    /// goes back to the team and the new one is taken, on every screen.
+    #[test]
+    fn switching_role_frees_the_slot_you_held_and_reserves_another() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Tank, Some(SIGMA))]);
+
+        assert_eq!(room(&state, &ds, "me"), [0, 2, 2]);
+
+        state.seats[0].set_role(&ds, Role::Damage);
+        assert_eq!(
+            room(&state, &ds, "me"),
+            [1, 1, 2],
+            "the tank slot came back and a dps slot went"
+        );
+    }
+
+    // --- leaving ------------------------------------------------------------
+
+    #[test]
+    fn removing_a_seat_gives_its_slot_back_to_the_team() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![
+            seated("me", Role::Damage, None),
+            seated("mika", Role::Tank, None),
+        ]);
+
+        assert_eq!(room(&state, &ds, "me"), [0, 1, 2]);
+
+        assert!(state.remove_seat("mika"));
+        assert_eq!(
+            room(&state, &ds, "me"),
+            [1, 1, 2],
+            "a reservation nobody will spend is one the team gets back"
+        );
+    }
+
+    #[test]
+    fn removing_a_seat_that_is_not_there_reports_so_and_changes_nothing() {
+        let mut state = session(vec![seated("me", Role::Tank, None)]);
+
+        assert!(!state.remove_seat("nobody"));
+        assert_eq!(state.seats.len(), 1);
+        // Leaving twice is the ordinary way this happens: the socket drops
+        // right behind the message that already removed the seat.
+        assert!(state.remove_seat("me"));
+        assert!(!state.remove_seat("me"));
     }
 
     #[test]

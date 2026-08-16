@@ -219,19 +219,62 @@ pub struct MapTile {
     pub selected: bool,
 }
 
+/// What one tile is, on the board it is drawn on.
+///
+/// One state rather than a pair of booleans, and that is the point. `selected`
+/// and `disabled` spelled four combinations of which only three meant
+/// anything, so the code building them had to remember to suppress the fourth.
+/// It did not: a teammate's pick came out selected *and* clickable, and a click
+/// on it quietly wrote the shared board. Here a tile is exactly one of these
+/// and the impossible combination cannot be written down.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TileState {
+    /// Not on this board. Clicking puts it there.
+    Free,
+    /// On this board because somebody put it there. Clicking takes it back.
+    Picked,
+    /// Your own pick. Clicking takes it back like any other pick of yours; it
+    /// is drawn apart because it is the one hero on the team that is you.
+    Mine,
+    /// A teammate's own pick, arriving from their seat. Theirs to change, not
+    /// yours — a click here would have nothing to write.
+    Theirs,
+    /// The team has no room left in this role, so a click cannot land.
+    Blocked,
+}
+
+impl TileState {
+    /// The class modifier for this state. `Blocked` keeps the `disabled` class
+    /// it has always had, so its styling survives the rename untouched.
+    pub fn class(self) -> &'static str {
+        match self {
+            TileState::Free => "",
+            TileState::Picked => " selected",
+            TileState::Mine => " mine",
+            TileState::Theirs => " theirs",
+            TileState::Blocked => " disabled",
+        }
+    }
+
+    /// Whether a click on this tile has anywhere to go.
+    pub fn is_clickable(self) -> bool {
+        !matches!(self, TileState::Theirs | TileState::Blocked)
+    }
+}
+
 /// One hero on one of the roster boards.
 ///
-/// `selected` and `disabled` are computed per board, not per hero: the same
-/// hero is picked on the enemy board, unpicked on the ally board, and in your
-/// pool all at once.
+/// The state is computed per board, not per hero: the same hero is picked on
+/// the enemy board, unpicked on the ally board, and in your pool all at once.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HeroTile {
     pub hero: HeroId,
     pub name: String,
     pub icon: String,
-    pub selected: bool,
-    /// The team is full and this hero is not on it, so a click cannot land.
-    pub disabled: bool,
+    pub state: TileState,
+    /// Whose it is, on a [`TileState::Theirs`] tile. It rides in the hover
+    /// label, because "not yours to click" is only half an answer without it.
+    pub owner: Option<String>,
 }
 
 /// One role's worth of a roster board.
@@ -245,6 +288,13 @@ pub struct BoardRow {
     /// Without it a greyed-out row is unexplained: the only other feedback that
     /// a cap exists is a click that does nothing.
     pub capacity: Option<usize>,
+    /// This row's remaining slot is the one you are holding open yourself.
+    ///
+    /// Shown instead of the count, because the count would be a lie. Your own
+    /// unspent reservation makes `capacity` read zero while every tile in the
+    /// row is live — the slot is not gone, it is yours, and saying so is both
+    /// truer and more use than a number.
+    pub mine: bool,
     pub tiles: Vec<HeroTile>,
 }
 
@@ -340,11 +390,23 @@ pub fn HeroBoard(
     /// current draft, in which case it asks first.
     #[props(default = false)]
     reset_confirm: bool,
+    /// The next click on this board takes a hero for *you* rather than for a
+    /// teammate. Colours the hover border in the same amber the resulting tile
+    /// will take, so which of the two a click means is answered before it is
+    /// spent rather than after.
+    #[props(default = false)]
+    claiming: bool,
     on_toggle: EventHandler<HeroId>,
     on_reset: EventHandler<()>,
 ) -> Element {
+    let board_class = if claiming {
+        format!("board board-{side} claiming")
+    } else {
+        format!("board board-{side}")
+    };
+
     rsx! {
-        section { class: "board board-{side}",
+        section { class: "{board_class}",
             div { class: "board-head",
                 h3 { class: "board-title {side}", "{title}" }
                 ResetButton { confirm: reset_confirm, on_reset }
@@ -354,8 +416,12 @@ pub fn HeroBoard(
                     span { class: format!("board-role {}", role_class(row.role)),
                         "{row.label}"
                         // A zero here is the answer to "why can I not click
-                        // this", which a disabled tile alone does not give.
-                        if let Some(free) = row.capacity {
+                        // this", which a disabled tile alone does not give —
+                        // except on the row whose last slot is your own, where
+                        // the zero would contradict a row of live tiles.
+                        if row.mine {
+                            span { class: "board-free you", title: "this slot is yours", "you" }
+                        } else if let Some(free) = row.capacity {
                             span { class: "board-free", "{free}" }
                         }
                     }
@@ -363,21 +429,28 @@ pub fn HeroBoard(
                         for tile in row.tiles.iter() {
                             button {
                                 key: "{tile.hero.0}",
-                                class: format!(
-                                    "tile{}{}",
-                                    if tile.selected { " selected" } else { "" },
-                                    if tile.disabled { " disabled" } else { "" },
-                                ),
+                                class: format!("tile{}", tile.state.class()),
                                 style: art(&tile.icon),
                                 aria_label: "{tile.name}",
-                                "data-name": "{tile.name}",
-                                // Disabled rather than hidden: a full team must
-                                // still show the whole roster, or the positions
-                                // everything else relies on would move.
-                                disabled: tile.disabled,
+                                // Whose it is, where that is the reason it
+                                // cannot be clicked.
+                                "data-name": match &tile.owner {
+                                    Some(owner) => format!("{} · {}", tile.name, owner),
+                                    None => tile.name.clone(),
+                                },
+                                // Only a genuinely full row gets the attribute.
+                                // A teammate's pick is inert but stays focusable
+                                // and hoverable, or a keyboard user could never
+                                // reach the label saying whose it is.
+                                disabled: matches!(tile.state, TileState::Blocked),
+                                aria_disabled: !tile.state.is_clickable(),
+                                // Guarded here rather than in the handler, so a
+                                // click that cannot land never leaves the
+                                // component at all.
                                 onclick: {
                                     let hero = tile.hero;
-                                    move |_| on_toggle.call(hero)
+                                    let state = tile.state;
+                                    move |_| if state.is_clickable() { on_toggle.call(hero) }
                                 },
                             }
                         }
@@ -835,6 +908,13 @@ pub struct RosterRow {
     pub connected: bool,
     /// Whether this row is the person looking at it.
     pub is_me: bool,
+    /// Somebody else in the session has taken the same hero.
+    ///
+    /// The team cannot field two of them, so the derivation counts the hero
+    /// once — which means without this the roster shows two people on it and
+    /// the boards show one, with nothing to say why. The game will refuse it in
+    /// a moment; the point is that the two of you find out here first.
+    pub contested: bool,
 }
 
 /// Who is in the session and what they are on.
@@ -860,9 +940,17 @@ pub fn Roster(rows: Vec<RosterRow>) -> Element {
                         span { class: "roster-role", "{row.role_label}" }
                         match (row.icon, row.hero) {
                             (Some(icon), Some(hero)) => rsx! {
-                                span { class: "roster-hero",
+                                span {
+                                    class: if row.contested { "roster-hero contested" } else { "roster-hero" },
                                     span { class: "roster-portrait", style: art(&icon) }
                                     "{hero}"
+                                    if row.contested {
+                                        span {
+                                            class: "roster-clash",
+                                            title: "somebody else has taken this hero too",
+                                            "×2"
+                                        }
+                                    }
                                 }
                             },
                             // An empty slot is information: they are still

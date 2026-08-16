@@ -478,6 +478,47 @@ body {
     border-color: var(--accent);
 }
 
+/* Your own pick, on a board that is your whole team. Amber, because that is
+   what every other surface here already means by "mine" — the pool board, the
+   star, the locked row in the pick column. The corner dot carries it too, so
+   the one tile that is you is not distinguished by colour alone. */
+.board-ally .tile.mine {
+    opacity: 1;
+    filter: none;
+    border-color: var(--warn);
+}
+
+.board-ally .tile.mine::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--warn);
+    box-shadow: 0 0 0 1px var(--bg);
+}
+
+/* A teammate's own pick, arriving from their seat. Drawn as on the team but
+   visibly not yours to change — a click that lands and does nothing is how a
+   board starts feeling broken. Deliberately not `disabled`: the hover label is
+   what names whose it is, and a disabled button leaves the tab order, so a
+   keyboard user could never read it. */
+.board-ally .tile.theirs {
+    opacity: 1;
+    filter: saturate(0.3);
+    border-color: var(--ally);
+    cursor: default;
+}
+
+/* Before you have taken a hero, the next click on this board is you. Colouring
+   the hover border in the amber the tile is about to become says which of the
+   two meanings a click carries, before it is spent rather than after. */
+.board-ally.claiming .tile:hover {
+    border-color: var(--warn);
+}
+
 .tile:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
@@ -909,6 +950,15 @@ body {
     font-variant-numeric: tabular-nums;
 }
 
+/* The row whose last slot is the one you are holding open yourself. A count
+   here would read zero against a row of live tiles, because your own unspent
+   reservation is what took it — the slot is not gone, it is yours. */
+.board-free.you {
+    color: var(--warn);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
 /* --- my pool ---
    A marker and nothing else: every hero in the role is ranked either way, so it
    gets a colour that reads as "mine" rather than as "good". The glyph carries it
@@ -1138,11 +1188,18 @@ body {
     font-size: var(--fs-micro);
 }
 
-/* A teammate's own pick, shown on the ally board. Theirs to change, not yours —
-   drawn as picked but visibly not clickable, because a click that lands and does
-   nothing is how a board starts feeling broken. */
-.tile.picked:disabled {
-    cursor: default;
+/* Two people on one hero. The team fields one of it, so the boards can only
+   draw it once — this row is the only place the collision is visible, and it
+   gets the colour this app uses for "this is a problem". */
+.roster-hero.contested {
+    color: var(--enemy);
+}
+
+.roster-clash {
+    margin-left: 0.3rem;
+    font-size: var(--fs-micro);
+    font-weight: 700;
+    color: var(--enemy);
 }
 
 /* --- the footer ---

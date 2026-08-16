@@ -345,6 +345,12 @@ async fn handle_socket(
                             Ok(RoomMessage::Seat { seat, .. }) => {
                                 state.rooms.publish_seat(&code, seat, &client_id);
                             }
+                            // Done with the session, as opposed to the socket
+                            // dropping — the seat goes, and the slot it held
+                            // goes back to the team.
+                            Ok(RoomMessage::Leave { .. }) => {
+                                state.rooms.remove_seat(&code, &client_id);
+                            }
                             // A client from before sessions existed.
                             Ok(RoomMessage::Update { draft, .. }) => {
                                 state.rooms.publish_legacy_draft(&code, draft, &client_id);
@@ -692,6 +698,90 @@ mod e2e {
         let value: serde_json::Value = serde_json::from_str(&body).expect("json");
         assert_eq!(value["status"], "ok");
         assert_eq!(value["rooms"], 1);
+    }
+
+    /// Departing on purpose is a different event from a socket dropping, and
+    /// only this end-to-end path proves the distinction survives the wire: the
+    /// `from` the server acts on is the socket's, not the payload's.
+    #[tokio::test]
+    async fn an_explicit_leave_takes_the_seat_off_everyone_elses_roster() {
+        let base = serve().await;
+        let code = create_session(&base).await;
+
+        let mut era = join(&base, &code, "era", "era").await;
+        let _ = next_of_interest(&mut era).await;
+
+        let mut mika = join(&base, &code, "mika", "mika").await;
+        let _ = next_of_interest(&mut mika).await;
+        mika_locks_in(&mut mika).await;
+
+        // era waits until the roster actually holds both, so the assertion
+        // below is about the departure rather than about arrival ordering.
+        let both = roster_until(&mut era, |seats| seats.len() == 2).await;
+        assert!(both.iter().any(|seat| seat.id == "mika"));
+
+        send(
+            &mut mika,
+            &RoomMessage::Leave {
+                // Deliberately a lie: the server must use the socket's id.
+                from: "era".to_owned(),
+            },
+        )
+        .await;
+
+        let seats = roster_until(&mut era, |seats| seats.len() == 1).await;
+        assert_eq!(seats[0].id, "era", "the wrong seat was taken");
+    }
+
+    async fn mika_locks_in(socket: &mut Socket) {
+        send(
+            socket,
+            &RoomMessage::Seat {
+                seat: Seat {
+                    locked: Some(HeroId(8)),
+                    ..Seat::new("mika")
+                },
+                from: "mika".to_owned(),
+            },
+        )
+        .await;
+    }
+
+    /// The compatibility contract for the new message, from the other side: a
+    /// client on a newer build talking to this server sends things it has never
+    /// heard of, and a parse failure must not take the session down with it.
+    #[tokio::test]
+    async fn a_message_the_server_cannot_parse_does_not_end_the_session() {
+        let base = serve().await;
+        let code = create_session(&base).await;
+
+        let mut era = join(&base, &code, "era", "era").await;
+        let _ = next_of_interest(&mut era).await;
+        let mut mika = join(&base, &code, "mika", "mika").await;
+        let _ = next_of_interest(&mut mika).await;
+
+        mika.send(WsMessage::Text(
+            r#"{"type":"something-this-build-never-heard-of","from":"mika"}"#.to_owned(),
+        ))
+        .await
+        .expect("sends");
+
+        // The session carries on: the very next message still lands.
+        let mut board = Board::new();
+        board.enemies.push(HeroId(3));
+        send(
+            &mut mika,
+            &RoomMessage::Board {
+                board,
+                from: "mika".to_owned(),
+            },
+        )
+        .await;
+
+        let RoomMessage::Board { board, .. } = next_of_interest(&mut era).await else {
+            panic!("the board should still have arrived");
+        };
+        assert_eq!(board.enemies, vec![HeroId(3)]);
     }
 
     async fn reqwest_get(url: &str) -> String {
