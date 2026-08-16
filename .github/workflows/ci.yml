@@ -63,13 +63,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # One tag, and deliberately no `latest`. image-updater tooling watches
-      # this repository with the `newest-build` strategy, which ranks every tag
-      # it finds by build time — a moving `latest` would win every comparison
-      # and pin the cluster to a tag whose contents change underneath it.
+      # One tag, and deliberately no `latest`. Image-updater tooling that ranks
+      # tags by build time would rank a moving `latest` above every real build
+      # and pin the deployment to a tag whose contents change underneath it.
       #
-      # The `-amd64` suffix matches the convention the other images in the
-      # cluster use. Only amd64 is built: every node is a the host VM.
+      # The `-amd64` suffix matches the deployment's naming convention. Only
+      # amd64 is built, because that is all it runs on.
       - uses: docker/build-push-action@v6
         with:
           context: .
