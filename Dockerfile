@@ -54,6 +54,15 @@ COPY . .
 # its results into /out: a cache mount is scratch space, not part of the
 # resulting image layer, so anything left under target/ would simply not exist
 # in the next stage.
+
+# The commit being built, stamped into the bundle's footer and into /health.
+# It has to come in as an ARG: .dockerignore excludes .git from the context, so
+# nothing inside this stage can work the sha out for itself. CI passes it; a
+# local `docker build` without it produces an image that honestly says "dev".
+# Declared here rather than at the top of the stage so that a new sha only
+# invalidates this layer and not the toolchain ones above it.
+ARG MINMAX_BUILD=dev
+
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/src/target,sharing=locked \
     bash docker/build.sh

@@ -335,10 +335,25 @@ fn is_wsl() -> bool {
         .unwrap_or(false)
 }
 
+/// The commit this binary was compiled from, or `"dev"` when nothing stamped it.
+///
+/// The same `MINMAX_BUILD` the wasm bundle reads — `docker/build.sh` exports it
+/// once and both compiles inherit it, so the footer on the page and the answer
+/// below cannot name different commits. Reported in full rather than shortened,
+/// because the full sha is also the `<sha>-amd64` image tag: this is what turns
+/// "did the rollout land" into one `curl` instead of a browser and a guess.
+///
+/// A `match` rather than `unwrap_or`, which is not const-stable.
+const BUILD: &str = match option_env!("MINMAX_BUILD") {
+    Some(sha) => sha,
+    None => "dev",
+};
+
 async fn health(State(state): State<AppState>) -> impl IntoResponse {
     Json(serde_json::json!({
         "status": "ok",
         "rooms": state.rooms.room_count(),
+        "build": BUILD,
     }))
 }
 
@@ -890,6 +905,11 @@ mod e2e {
         let value: serde_json::Value = serde_json::from_str(&body).expect("json");
         assert_eq!(value["status"], "ok");
         assert_eq!(value["rooms"], 1);
+        // Present and non-empty, not equal to any particular value: under `cargo
+        // test` nothing sets MINMAX_BUILD so this is "dev", but asserting that
+        // would fail for anyone who happens to have it exported. What the deploy
+        // needs from this field is that it is always there and never blank.
+        assert!(!value["build"].as_str().expect("build").is_empty());
     }
 
     /// Departing on purpose is a different event from a socket dropping, and

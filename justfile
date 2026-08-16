@@ -47,7 +47,12 @@ build-web:
     # ships unoptimised. Setting it false means there is no DWARF to trip over.
     # (wasm-opt is already passed --strip-debug, but it parses the debug info
     # before stripping it, so the strip does not save it.) Worth 1.6M -> 1.2M.
-    cd overwatch-web && dx build --platform web --release --debug-symbols false
+    #
+    # MINMAX_BUILD is what the footer shows and what `/health` reports; unset, it
+    # reads "dev". It has to be on this line rather than exported above, because
+    # `set shell` makes every recipe line its own shell. `|| echo dev` keeps the
+    # recipe working outside a checkout — `-u` would otherwise abort on nothing.
+    cd overwatch-web && MINMAX_BUILD="$(git rev-parse HEAD 2>/dev/null || echo dev)" dx build --platform web --release --debug-symbols false
     # The service worker and manifest go to the bundle root rather than through
     # `asset!()`: a service worker only controls the scope it is served from, so
     # a hashed path under /assets would control nothing.
@@ -92,7 +97,10 @@ _art out:
 
 # Serve the app and the sync socket on the LAN
 serve: build-web
-    cargo run --release -p overwatch-server
+    # The same stamp the bundle got above. The server is a separate compile, so
+    # leaving it off here would have `/health` say "dev" while the footer on the
+    # page it is serving says the sha — the one thing this feature must not do.
+    MINMAX_BUILD="$(git rev-parse HEAD 2>/dev/null || echo dev)" cargo run --release -p overwatch-server
 
 # Client only, with hot reload and no sync
 dev:

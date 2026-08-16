@@ -76,5 +76,10 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ghcr.io/maikbuse/minmax-watch:${{ github.sha }}-amd64
+          # The same sha as the tag, this time as a value the build can read.
+          # It is the only way in: .dockerignore keeps .git out of the context,
+          # so without this the image would report itself as "dev".
+          build-args: |
+            MINMAX_BUILD=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

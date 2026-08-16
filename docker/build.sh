@@ -11,6 +11,15 @@ set -euo pipefail
 
 web_out=target/dx/overwatch-web/release/web/public
 
+# The commit this image is built from — the footer links to it and /health
+# reports it. It arrives as a Dockerfile ARG because .dockerignore keeps .git out
+# of the build context, so there is no `git rev-parse` to fall back on here.
+#
+# Exported once and read by both compiles below, which is what makes it
+# impossible for the page and the server to disagree about what is running.
+# The `:-dev` default is required: `-u` would abort on an unset variable.
+export MINMAX_BUILD="${MINMAX_BUILD:-dev}"
+
 # `--debug-symbols false` is load-bearing rather than a size tweak. dx defaults
 # it to true even for a release build, and the DWARF rustc emits is newer than
 # the Binaryen dx ships can parse: wasm-opt aborts with "compile unit size was

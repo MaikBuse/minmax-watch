@@ -152,12 +152,31 @@ fn brand_mark() -> Element {
     }
 }
 
+/// The commit this bundle was compiled from, or `"dev"` when nothing stamped it.
+///
+/// Set on the `dx build` line in the justfile and exported by `docker/build.sh`
+/// from the `MINMAX_BUILD` build arg; `overwatch-server` reads the same variable
+/// so the footer and `/health` can never name different commits. `option_env!`
+/// rather than `env!` is what keeps `just dev` and a bare `cargo build`
+/// compiling, and it is deliberately not a `build.rs` — rustc records the read
+/// in its dep-info, so cargo already rebuilds this crate when the value moves.
+///
+/// A `match` rather than `unwrap_or`, which is not const-stable.
+const BUILD: &str = match option_env!("MINMAX_BUILD") {
+    Some(sha) => sha,
+    None => "dev",
+};
+
 /// The one place the app says who it is and whose artwork it is borrowing.
 ///
 /// The portraits and map shots in this bundle are Blizzard's. Serving them
 /// across a LAN and serving them to the open internet are different postures,
 /// and the second one should say so out loud rather than leave it to be
 /// inferred from a licence file nobody opens.
+///
+/// It also says which build it is, because a draft screen that scores locally
+/// gives no other clue whether the tab in front of you is the deploy that just
+/// went out or the one cached before it.
 #[component]
 pub fn Footer() -> Element {
     rsx! {
@@ -171,6 +190,22 @@ pub fn Footer() -> Element {
             }
             span { class: "sep", "·" }
             span { "MIT" }
+            span { class: "sep", "·" }
+            // Seven characters is what a sha is quoted as; the href carries the
+            // whole thing, which is also the `<sha>-amd64` image tag, so the
+            // link is how you get from "what am I looking at" to the diff.
+            // `.get(..7)` rather than a slice: a short or non-hex value is a
+            // build-script mistake, not a reason to panic on someone's screen.
+            if BUILD == "dev" {
+                span { title: "a local build — nothing stamped a commit into it", "build dev" }
+            } else {
+                a {
+                    href: "https://github.com/MaikBuse/minmax-watch/commit/{BUILD}",
+                    rel: "noopener",
+                    title: "the commit this build came from",
+                    "build {BUILD.get(..7).unwrap_or(BUILD)}"
+                }
+            }
             span { class: "sep", "·" }
             span {
                 "not affiliated with or endorsed by Blizzard Entertainment. \
