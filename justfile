@@ -31,6 +31,10 @@ wasm-check:
 # --- build & run ------------------------------------------------------------
 
 # Build the release client bundle
+#
+# docker/build.sh is the same sequence for the container image. The two have to
+# stay in step: an asset added here and forgotten there works under `just serve`
+# and 404s in production.
 build-web:
     # dx writes content-hashed filenames and never removes the old ones, so the
     # output directory otherwise accumulates a copy of every past build.

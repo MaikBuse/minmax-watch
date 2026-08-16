@@ -1,0 +1,25 @@
+# The build context is the workspace root, because overwatch-data reaches
+# data/*.toml through include_str! and dx writes to the root-level target/.
+# So this file is what keeps the context from being most of a gigabyte.
+
+# Build output. The container builds its own, into a cache mount.
+/target
+
+.git
+.github
+.gitignore
+
+# The ingest cache: tens of megabytes of scraped HTML, and the crate that reads
+# it is dev-only and never built here.
+/data/sources
+
+# Personal, and the deployed server runs with the match log switched off.
+/data/matches.jsonl
+
+# NOT ignored, despite living alongside the two entries above: /data/*.toml is
+# the dataset, compiled into the binaries by include_str!. Excluding it fails
+# the build.
+
+docs
+README.md
+LICENSE

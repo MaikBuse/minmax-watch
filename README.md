@@ -48,11 +48,38 @@ never in the path between a keystroke and an answer.
 person should open. `just --list` shows every recipe, including the `ingest-*`
 family that regenerates `data/`.
 
-> **On exposing it.** There is no authentication: `POST /api/matches` appends to
-> `data/matches.jsonl` for anyone who can reach it, `POST /api/session` mints
-> rooms, and `/ws/{room}` is joinable by code with no rate limiting. It is built
-> for a home network. Putting it behind a public address needs that dealt with
-> first.
+### Configuration
+
+The server reads three optional environment variables:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `OVERWATCH_ADDR` | `0.0.0.0:8080` | A full socket address. A bare port or bare IP does not parse and silently falls back to the default. |
+| `OVERWATCH_ASSETS` | `target/dx/overwatch-web/release/web/public` | The bundle to serve. Relative to the working directory. |
+| `OVERWATCH_MATCH_LOG` | `data/matches.jsonl` | Where match results are appended. **Set it to the empty string to switch the match log off**, which makes `/api/matches` a 404 in both directions. |
+
+> **On exposing it.** There is no authentication: `POST /api/session` mints rooms
+> and `/ws/{room}` is joinable by code with no rate limiting. A session code is a
+> convenience for finding the right draft, not a secret.
+>
+> The match log is the part that is actually personal — `GET /api/matches`
+> returns the whole history and `POST` appends to it — so the public deployment
+> runs with `OVERWATCH_MATCH_LOG=""` and the endpoint closed. Anything else you
+> put behind a public address needs the rest dealt with first.
+
+## Deployment
+
+`minmax.watch` runs from a container built by
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) on every push to `main`
+and published to `ghcr.io/maikbuse/minmax-watch:<sha>-amd64`. The Kubernetes
+manifests live in the `home-talos-cluster` repository under `helm/minmax/`;
+ArgoCD Image Updater promotes each new build.
+
+The [`Dockerfile`](Dockerfile) reproduces the `build-web` recipe from the
+`justfile`. **The two have to stay in step** — anything added to the recipe's
+list of root-path assets has to be added to the Dockerfile too, or it works
+locally and 404s in production. The image additionally brotli-compresses the
+bundle, which `just serve` does not do.
 
 ## Checks
 
