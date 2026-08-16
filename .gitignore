@@ -15,3 +15,8 @@
 # keep results puts them outside the working tree rather than un-ignoring this.
 # Comment it out to track your own.
 /data/matches.jsonl
+
+# Local editor notes. The architecture they describe belongs in README.md and
+# docs/ where a reader will actually find it, not in a file addressed to one
+# tool — so this is kept out of the tree rather than maintained twice.
+/CLAUDE.md
