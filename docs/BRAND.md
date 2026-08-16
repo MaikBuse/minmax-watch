@@ -17,8 +17,8 @@ the app is for — "Overwatch 2 draft assistant" — is nominative use and is fi
 | Browser tab | `MinMax — Overwatch 2 draft assistant` (set in `Dioxus.toml`, **not** `index.html`) |
 | PWA name / short name | `MinMax` |
 | Tagline | `Overwatch 2 draft assistant` |
-| Supporting line | `keyboard-first · scored locally · nothing to install` |
-| Description | `Overwatch 2 draft assistant. Counter picks, hero matchups and team synergy, scored in your browser as hero select runs — keyboard-first, nothing to install.` |
+| Supporting line | `scored locally · shared by code · nothing to install` |
+| Description | `Overwatch 2 draft assistant. Counter picks, hero matchups and team synergy, scored in your browser and shared with your team by session code.` |
 
 > `index.html` carries an empty `<title></title>` on purpose: `dx` appends the
 > Dioxus.toml title *into* that element, so text in both places duplicates.

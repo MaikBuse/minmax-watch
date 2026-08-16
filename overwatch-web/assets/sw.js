@@ -17,7 +17,7 @@
 // and no h1. Network-first means an online client would replace it on the next
 // load anyway — this is for the offline one, which would otherwise keep opening
 // the old shell indefinitely with nothing to trigger the update.
-const CACHE = 'minmax-v3';
+const CACHE = 'minmax-v4';
 
 self.addEventListener('install', event => {
     // Take over immediately rather than waiting for every tab to close.

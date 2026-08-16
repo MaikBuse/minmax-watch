@@ -2,7 +2,7 @@
     "id": "/",
     "name": "MinMax",
     "short_name": "MinMax",
-    "description": "Overwatch 2 draft assistant. Counter picks, hero matchups and team synergy, scored in your browser as hero select runs — keyboard-first, nothing to install.",
+    "description": "Overwatch 2 draft assistant. Counter picks, hero matchups and team synergy, scored in your browser and shared with your team by session code.",
     "lang": "en",
     "dir": "ltr",
     "start_url": "/",
