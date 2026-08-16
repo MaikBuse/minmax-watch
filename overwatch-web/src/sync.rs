@@ -23,7 +23,12 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{MessageEvent, WebSocket};
 
-const CLIENT_ID_KEY: &str = "overwatch-picker.client-id";
+const CLIENT_ID_KEY: &str = "minmax.client-id";
+
+/// The key this was stored under before the app was named. Migrated forward on
+/// read so a reload across the rename keeps its seat instead of joining the
+/// session again as a second, identical-looking person.
+const LEGACY_CLIENT_ID_KEY: &str = "overwatch-picker.client-id";
 
 /// First reconnect delay, in milliseconds.
 const BACKOFF_MIN_MS: i32 = 500;
@@ -44,11 +49,34 @@ const BACKOFF_MAX_MS: i32 = 8_000;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum RoomMessage {
-    Board { board: Board, from: String },
-    Seat { seat: Seat, from: String },
-    Snapshot { state: SessionState },
-    Roster { seats: Vec<Seat> },
-    Rejected { reason: String },
+    Board {
+        board: Board,
+        from: String,
+    },
+    Seat {
+        seat: Seat,
+        from: String,
+    },
+    Snapshot {
+        state: SessionState,
+    },
+    Roster {
+        seats: Vec<Seat>,
+    },
+    Rejected {
+        reason: String,
+    },
+    /// Saying we are done, as opposed to the socket dropping. Sent, never
+    /// received — what the others see is the roster the removal produces.
+    ///
+    /// The two are deliberately different events. A seat outlives its socket so
+    /// that a reload does not empty a slot mid-draft; somebody who has actually
+    /// left is not coming back to fill theirs. Closing the tab is the dropped
+    /// case, not this one: there is no unload hook, and adding one would make a
+    /// browser crash indistinguishable from walking away.
+    Leave {
+        from: String,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -111,6 +139,18 @@ pub fn client_id() -> String {
     {
         if !existing.is_empty() {
             return existing;
+        }
+    }
+
+    // Pre-rename identity. Claimed under the new key rather than left in place,
+    // so this runs once rather than on every load.
+    if let Some(storage) = storage.as_ref() {
+        if let Ok(Some(legacy)) = storage.get_item(LEGACY_CLIENT_ID_KEY) {
+            let _ = storage.remove_item(LEGACY_CLIENT_ID_KEY);
+            if !legacy.is_empty() {
+                let _ = storage.set_item(CLIENT_ID_KEY, &legacy);
+                return legacy;
+            }
         }
     }
 
@@ -178,34 +218,57 @@ impl Connection {
         }
     }
 
-    fn send(&self, message: &RoomMessage) {
+    /// Sends `message`, reporting whether it actually went.
+    ///
+    /// The answer matters to the caller. A socket that is merely *connecting*
+    /// or reconnecting drops what it is handed, and the shadow signals the
+    /// outbound effects diff against must not record such a message as sent —
+    /// they would then never offer it again, and the edit would be lost to the
+    /// team for good while looking published on this screen.
+    fn send(&self, message: &RoomMessage) -> bool {
         let socket = self.socket.borrow();
         let Some(socket) = socket.as_ref() else {
-            return;
+            return false;
         };
         if socket.ready_state() != WebSocket::OPEN {
-            return;
+            return false;
         }
-        if let Ok(text) = serde_json::to_string(message) {
-            let _ = socket.send_with_str(&text);
-        }
+        let Ok(text) = serde_json::to_string(message) else {
+            return false;
+        };
+        socket.send_with_str(&text).is_ok()
     }
 
-    /// Publishes the shared board. Silently does nothing when offline — a failed
-    /// send must never interrupt what the player is doing.
-    pub fn publish_board(&self, board: &Board) {
+    /// Publishes the shared board. Does nothing when offline — a failed send
+    /// must never interrupt what the player is doing — and says so, so the
+    /// caller can try again when the light comes back on.
+    pub fn publish_board(&self, board: &Board) -> bool {
         self.send(&RoomMessage::Board {
             board: board.clone(),
             from: self.id.clone(),
-        });
+        })
     }
 
     /// Publishes this client's own seat.
-    pub fn publish_seat(&self, seat: &Seat) {
+    pub fn publish_seat(&self, seat: &Seat) -> bool {
         self.send(&RoomMessage::Seat {
             seat: seat.clone(),
             from: self.id.clone(),
+        })
+    }
+
+    /// Says we are done with the session, then closes.
+    ///
+    /// Both halves, because either alone is wrong: closing without the message
+    /// reads to the server as a dropped socket and leaves the seat holding a
+    /// slot, and sending without closing would leave a socket attached to a
+    /// session we have left. `close()` after `send` is safe — the frame is
+    /// already queued on the socket, and a graceful close flushes it.
+    pub fn leave(&self) {
+        self.send(&RoomMessage::Leave {
+            from: self.id.clone(),
         });
+        self.close();
     }
 
     /// Closes the socket without reopening it. The reconnect loop checks for
@@ -297,7 +360,21 @@ fn open(connection: Connection, code: String, name: String, mut sinks: Sinks, at
                     // Only adopt a board that has something in it, so joining a
                     // stale empty session cannot wipe a draft already in
                     // progress.
-                    if !state.board.is_empty() {
+                    if state.board.is_empty() {
+                        // Except the format, which is not part of the draft: it
+                        // is which queue the room is sitting in, and a room that
+                        // has said "6v6" and typed nothing has still said it.
+                        // Ignoring it would leave the joiner enforcing 5v5 caps
+                        // and then publishing them back over the room on their
+                        // first click.
+                        //
+                        // The alternative — teaching `Board::is_empty` to count
+                        // the format — would let a room with no picks overwrite
+                        // a draft in progress, which is the exact thing this
+                        // guard exists to prevent.
+                        sinks.synced_board.write().format = state.board.format;
+                        sinks.board.write().format = state.board.format;
+                    } else {
                         sinks.synced_board.set(state.board.clone());
                         sinks.board.set(state.board);
                     }
@@ -311,7 +388,7 @@ fn open(connection: Connection, code: String, name: String, mut sinks: Sinks, at
                     sinks.status.set(Status::Rejected);
                 }
                 // Client-to-server only.
-                RoomMessage::Seat { .. } => {}
+                RoomMessage::Seat { .. } | RoomMessage::Leave { .. } => {}
             }
         })
     };
@@ -382,12 +459,35 @@ mod tests {
     use super::*;
     use overwatch_core::HeroId;
 
+    /// The queue has to travel, or two people in one session enforce different
+    /// caps on the same lobby. It rides on the board rather than the seat for
+    /// exactly the reason the map does: there is one of it per room.
+    #[test]
+    fn board_messages_carry_the_format() {
+        let board = Board {
+            format: overwatch_core::Format::new(
+                overwatch_core::TeamSize::SixVSix,
+                overwatch_core::Queue::Open,
+            ),
+            ..Board::new()
+        };
+
+        let json = serde_json::to_string(&RoomMessage::Board {
+            board,
+            from: "c1234".to_owned(),
+        })
+        .expect("serialises");
+
+        assert!(json.contains(r#""size":"6v6""#), "{json}");
+        assert!(json.contains(r#""queue":"open""#), "{json}");
+    }
+
     /// The wire format must match the server's, which is the one thing a
     /// duplicated type can get wrong.
     #[test]
     fn board_messages_use_the_agreed_shape() {
         let mut board = Board::new();
-        board.add_enemy(HeroId(4));
+        board.enemies.push(HeroId(4));
 
         let json = serde_json::to_string(&RoomMessage::Board {
             board,
@@ -413,6 +513,20 @@ mod tests {
 
         assert!(json.contains(r#""type":"seat""#), "{json}");
         assert!(json.contains(r#""locked":9"#), "{json}");
+    }
+
+    /// Pinned from both ends — `overwatch_server::room` has the mirror of this
+    /// test. The envelope is duplicated on purpose, so the pair is the only
+    /// thing stopping the two halves drifting apart.
+    #[test]
+    fn leave_messages_use_the_agreed_shape() {
+        let json = serde_json::to_string(&RoomMessage::Leave {
+            from: "c1234".to_owned(),
+        })
+        .expect("serialises");
+
+        assert!(json.contains(r#""type":"leave""#), "{json}");
+        assert!(json.contains(r#""from":"c1234""#), "{json}");
     }
 
     #[test]

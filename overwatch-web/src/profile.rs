@@ -5,10 +5,15 @@
 //! sticky. The map is sticky too, but only within a session — it is cleared
 //! deliberately rather than carried into the next match on a different map.
 
-use overwatch_core::{Dataset, HeroSet, Role, Weights};
+use overwatch_core::{Dataset, Format, HeroSet, Role, Weights};
 use serde::{Deserialize, Serialize};
 
-const STORAGE_KEY: &str = "overwatch-picker.profile";
+const STORAGE_KEY: &str = "minmax.profile";
+
+/// The key this was stored under before the app was named. Read once, migrated
+/// forward, then removed — a rename that silently emptied everyone's hero pool
+/// would cost exactly the setup time the profile exists to save.
+const LEGACY_STORAGE_KEY: &str = "overwatch-picker.profile";
 
 /// Stored by hero *key* rather than index, so a roster update — which shifts
 /// every index — cannot silently repoint your pool at the wrong heroes.
@@ -28,6 +33,14 @@ pub struct StoredProfile {
     pub damage_pool: Vec<String>,
     #[serde(default)]
     pub support_pool: Vec<String>,
+    /// The queue you were last in. Sticky like the role and unlike the map: you
+    /// play an evening of 6v6, while the map changes every game.
+    ///
+    /// Stored as the typed value rather than a pair of strings, the way
+    /// `weights` is — the variant names *are* the stable keys, and core pins
+    /// them.
+    #[serde(default)]
+    pub format: Option<Format>,
     /// Comfort adjustments, keyed by hero.
     #[serde(default)]
     pub overrides: Vec<(String, i8)>,
@@ -54,6 +67,10 @@ pub struct StoredProfile {
 #[derive(Debug, Clone)]
 pub struct Profile {
     pub role: Role,
+    /// The format a fresh, solo board opens in. In a session the room's board
+    /// wins, exactly as the map does — this only ever remembers what *you* last
+    /// chose, and an incoming board never writes it.
+    pub format: Format,
     /// The heroes you actually play, one set per role, indexed by
     /// [`Role::index`]. An array rather than a field each, so adding a fourth
     /// role could never again leave a `match` with a catch-all arm quietly
@@ -79,6 +96,7 @@ impl Profile {
     pub fn empty(hero_count: usize) -> Self {
         Self {
             role: Role::Tank,
+            format: Format::default(),
             pools: [HeroSet::empty(); Role::ALL.len()],
             overrides: vec![0; hero_count],
             weights: Weights::default(),
@@ -100,6 +118,11 @@ impl Profile {
 
         if let Some(role) = stored.role.as_deref().and_then(|r| Role::parse(r).ok()) {
             profile.role = role;
+        }
+        // A profile written before formats existed starts you where it left
+        // everyone: 5v5 role queue, which is the only shape the app had.
+        if let Some(format) = stored.format {
+            profile.format = format;
         }
         // Unknown keys are dropped rather than treated as an error: a hero
         // removed from the roster should cost you that entry, not your profile.
@@ -148,6 +171,7 @@ impl Profile {
 
         StoredProfile {
             role: Some(self.role.as_str().to_owned()),
+            format: Some(self.format),
             tank_pool: keys(&self.pool(Role::Tank)),
             damage_pool: keys(&self.pool(Role::Damage)),
             support_pool: keys(&self.pool(Role::Support)),
@@ -177,7 +201,7 @@ impl Profile {
     /// A bad profile must never stop the app from opening mid-draft.
     pub fn load(dataset: &Dataset) -> Self {
         let stored = storage()
-            .and_then(|s| s.get_item(STORAGE_KEY).ok().flatten())
+            .and_then(|s| read_raw(&s))
             .and_then(|raw| serde_json::from_str::<StoredProfile>(&raw).ok())
             .unwrap_or_default();
         Self::from_stored(stored, dataset)
@@ -208,9 +232,28 @@ fn storage() -> Option<web_sys::Storage> {
     web_sys::window()?.local_storage().ok().flatten()
 }
 
+/// The stored profile, migrating it off the pre-rename key if that is where it
+/// still lives.
+///
+/// The write is what makes this a migration rather than a permanent fallback,
+/// and the remove is what stops a stale copy from winning later: without it, a
+/// profile saved here and then read on a build that still preferred the old key
+/// would silently roll back. Both are best-effort — a storage that refuses the
+/// write still returns the profile, it just migrates again next time.
+fn read_raw(storage: &web_sys::Storage) -> Option<String> {
+    if let Ok(Some(raw)) = storage.get_item(STORAGE_KEY) {
+        return Some(raw);
+    }
+    let raw = storage.get_item(LEGACY_STORAGE_KEY).ok().flatten()?;
+    let _ = storage.set_item(STORAGE_KEY, &raw);
+    let _ = storage.remove_item(LEGACY_STORAGE_KEY);
+    Some(raw)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use overwatch_core::{Queue, TeamSize};
 
     /// A stored profile is by definition older than the code reading it, and
     /// [`Profile::load`] falls back to defaults on anything it cannot parse —
@@ -304,6 +347,45 @@ mod tests {
         assert_eq!(stored.session.as_deref(), Some("brave-otter-41"));
         assert_eq!(stored.name.as_deref(), Some("era"));
         assert_eq!(stored.room, None);
+    }
+
+    /// Formats arrived long after people had profiles. One written without the
+    /// field has to open where it left them — 5v5 role queue was the only shape
+    /// the app had — rather than in a queue they never chose.
+    #[test]
+    fn a_profile_written_before_formats_existed_starts_you_in_5v5() {
+        let old = r#"{"role": "support", "support_pool": ["ana"]}"#;
+
+        let stored: StoredProfile = serde_json::from_str(old).expect("the format is optional");
+        assert_eq!(stored.format, None);
+
+        let profile = Profile::from_stored(stored, &fixture());
+        assert_eq!(profile.format, Format::default());
+        assert_eq!(profile.format.team_size(), 5);
+        assert_eq!(
+            profile.pool(Role::Support).len(),
+            1,
+            "and the rest of it is untouched"
+        );
+    }
+
+    #[test]
+    fn the_format_you_chose_is_the_one_you_come_back_to() {
+        let dataset = fixture();
+        let mut profile = Profile::empty(dataset.hero_count());
+        profile.format = Format::new(TeamSize::SixVSix, Queue::Open);
+
+        let stored = profile.to_stored(&dataset);
+        let raw = serde_json::to_string(&stored).expect("serialises");
+        assert!(raw.contains(r#""size":"6v6""#), "{raw}");
+        assert!(raw.contains(r#""queue":"open""#), "{raw}");
+
+        let back: StoredProfile = serde_json::from_str(&raw).expect("deserialises");
+        assert_eq!(
+            Profile::from_stored(back, &dataset).format,
+            profile.format,
+            "a reload puts you back in the queue you were in"
+        );
     }
 
     /// A profile whose session is blank means "alone", not "a session called

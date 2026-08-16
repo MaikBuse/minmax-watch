@@ -5,7 +5,9 @@
 //! re-renderable from one recomputed frame.
 
 use dioxus::prelude::*;
-use overwatch_core::{Dataset, HeroId, MapId, ReasonKind, Recommendation, Role, Side};
+use overwatch_core::{
+    Dataset, Format, HeroId, MapId, Queue, ReasonKind, Recommendation, Role, Side, TeamSize,
+};
 
 /// A reset that asks first, for the ones that throw away configuration rather
 /// than match state.
@@ -59,6 +61,87 @@ pub struct ModeChip {
     pub pool_size: usize,
     /// How many heroes the role has, so the count has something to be out of.
     pub roster_size: usize,
+}
+
+/// The app mark: the three role arcs around the reticle, same drawing as
+/// `assets/icon.svg`.
+///
+/// The glyph alone, never the `minmax.watch` wordmark. The header already
+/// carries the mode switch, the map, the side toggle, the sync light, the
+/// ingest date and a reset, and a screen whose entire argument is density
+/// cannot spend a hundred pixels of it naming the app you already opened. The
+/// wordmark does its work on the tab, the install prompt and the link preview.
+///
+/// Drawn inline rather than as an `<img>` so it needs no network round trip and
+/// cannot flash in after the first paint.
+fn brand_mark() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 96 96",
+            width: "22",
+            height: "22",
+            "aria-hidden": "true",
+            g {
+                fill: "none",
+                stroke_width: "10",
+                stroke_linecap: "round",
+                transform: "rotate(-90 48 48)",
+                circle {
+                    cx: "48", cy: "48", r: "32",
+                    stroke: "var(--role-tank)",
+                    stroke_dasharray: "55.85 145.2",
+                }
+                circle {
+                    cx: "48", cy: "48", r: "32",
+                    stroke: "var(--role-damage)",
+                    stroke_dasharray: "55.85 145.2",
+                    stroke_dashoffset: "-67.02",
+                }
+                circle {
+                    cx: "48", cy: "48", r: "32",
+                    stroke: "var(--role-support)",
+                    stroke_dasharray: "55.85 145.2",
+                    stroke_dashoffset: "-134.04",
+                }
+            }
+            g {
+                stroke: "currentColor",
+                stroke_width: "8",
+                stroke_linecap: "round",
+                fill: "none",
+                circle { cx: "48", cy: "48", r: "10" }
+                path { d: "M48 30v-6M48 66v6M30 48h-6M66 48h6" }
+            }
+        }
+    }
+}
+
+/// The one place the app says who it is and whose artwork it is borrowing.
+///
+/// The portraits and map shots in this bundle are Blizzard's. Serving them
+/// across a LAN and serving them to the open internet are different postures,
+/// and the second one should say so out loud rather than leave it to be
+/// inferred from a licence file nobody opens.
+#[component]
+pub fn Footer() -> Element {
+    rsx! {
+        footer { class: "footer",
+            a { href: "https://minmax.watch/", "minmax.watch" }
+            span { class: "sep", "·" }
+            a {
+                href: "https://github.com/MaikBuse/minmax-watch",
+                rel: "noopener",
+                "source"
+            }
+            span { class: "sep", "·" }
+            span { "MIT" }
+            span { class: "sep", "·" }
+            span {
+                "not affiliated with or endorsed by Blizzard Entertainment. \
+                 Overwatch, hero and map artwork are Blizzard's."
+            }
+        }
+    }
 }
 
 /// The role glyph on a mode segment, drawn inline rather than set in type.
@@ -136,19 +219,62 @@ pub struct MapTile {
     pub selected: bool,
 }
 
+/// What one tile is, on the board it is drawn on.
+///
+/// One state rather than a pair of booleans, and that is the point. `selected`
+/// and `disabled` spelled four combinations of which only three meant
+/// anything, so the code building them had to remember to suppress the fourth.
+/// It did not: a teammate's pick came out selected *and* clickable, and a click
+/// on it quietly wrote the shared board. Here a tile is exactly one of these
+/// and the impossible combination cannot be written down.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TileState {
+    /// Not on this board. Clicking puts it there.
+    Free,
+    /// On this board because somebody put it there. Clicking takes it back.
+    Picked,
+    /// Your own pick. Clicking takes it back like any other pick of yours; it
+    /// is drawn apart because it is the one hero on the team that is you.
+    Mine,
+    /// A teammate's own pick, arriving from their seat. Theirs to change, not
+    /// yours — a click here would have nothing to write.
+    Theirs,
+    /// The team has no room left in this role, so a click cannot land.
+    Blocked,
+}
+
+impl TileState {
+    /// The class modifier for this state. `Blocked` keeps the `disabled` class
+    /// it has always had, so its styling survives the rename untouched.
+    pub fn class(self) -> &'static str {
+        match self {
+            TileState::Free => "",
+            TileState::Picked => " selected",
+            TileState::Mine => " mine",
+            TileState::Theirs => " theirs",
+            TileState::Blocked => " disabled",
+        }
+    }
+
+    /// Whether a click on this tile has anywhere to go.
+    pub fn is_clickable(self) -> bool {
+        !matches!(self, TileState::Theirs | TileState::Blocked)
+    }
+}
+
 /// One hero on one of the roster boards.
 ///
-/// `selected` and `disabled` are computed per board, not per hero: the same
-/// hero is picked on the enemy board, unpicked on the ally board, and in your
-/// pool all at once.
+/// The state is computed per board, not per hero: the same hero is picked on
+/// the enemy board, unpicked on the ally board, and in your pool all at once.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HeroTile {
     pub hero: HeroId,
     pub name: String,
     pub icon: String,
-    pub selected: bool,
-    /// The team is full and this hero is not on it, so a click cannot land.
-    pub disabled: bool,
+    pub state: TileState,
+    /// Whose it is, on a [`TileState::Theirs`] tile. It rides in the hover
+    /// label, because "not yours to click" is only half an answer without it.
+    pub owner: Option<String>,
 }
 
 /// One role's worth of a roster board.
@@ -156,6 +282,19 @@ pub struct HeroTile {
 pub struct BoardRow {
     pub role: Role,
     pub label: String,
+    /// How many of this role the team can still take, or `None` on a board that
+    /// is not a team and has nothing to be out of.
+    ///
+    /// Without it a greyed-out row is unexplained: the only other feedback that
+    /// a cap exists is a click that does nothing.
+    pub capacity: Option<usize>,
+    /// This row's remaining slot is the one you are holding open yourself.
+    ///
+    /// Shown instead of the count, because the count would be a lie. Your own
+    /// unspent reservation makes `capacity` read zero while every tile in the
+    /// row is live — the slot is not gone, it is yours, and saying so is both
+    /// truer and more use than a number.
+    pub mine: bool,
     pub tiles: Vec<HeroTile>,
 }
 
@@ -251,40 +390,121 @@ pub fn HeroBoard(
     /// current draft, in which case it asks first.
     #[props(default = false)]
     reset_confirm: bool,
+    /// The next click on this board takes a hero for *you* rather than for a
+    /// teammate. Colours the hover border in the same amber the resulting tile
+    /// will take, so which of the two a click means is answered before it is
+    /// spent rather than after.
+    #[props(default = false)]
+    claiming: bool,
     on_toggle: EventHandler<HeroId>,
     on_reset: EventHandler<()>,
 ) -> Element {
+    let board_class = if claiming {
+        format!("board board-{side} claiming")
+    } else {
+        format!("board board-{side}")
+    };
+
     rsx! {
-        section { class: "board board-{side}",
+        section { class: "{board_class}",
             div { class: "board-head",
                 h3 { class: "board-title {side}", "{title}" }
                 ResetButton { confirm: reset_confirm, on_reset }
             }
             for row in rows.iter() {
                 div { key: "{row.label}", class: "board-row",
-                    span { class: format!("board-role {}", role_class(row.role)), "{row.label}" }
+                    span { class: format!("board-role {}", role_class(row.role)),
+                        "{row.label}"
+                        // A zero here is the answer to "why can I not click
+                        // this", which a disabled tile alone does not give —
+                        // except on the row whose last slot is your own, where
+                        // the zero would contradict a row of live tiles.
+                        if row.mine {
+                            span { class: "board-free you", title: "this slot is yours", "you" }
+                        } else if let Some(free) = row.capacity {
+                            span { class: "board-free", "{free}" }
+                        }
+                    }
                     div { class: "tiles",
                         for tile in row.tiles.iter() {
                             button {
                                 key: "{tile.hero.0}",
-                                class: format!(
-                                    "tile{}{}",
-                                    if tile.selected { " selected" } else { "" },
-                                    if tile.disabled { " disabled" } else { "" },
-                                ),
+                                class: format!("tile{}", tile.state.class()),
                                 style: art(&tile.icon),
                                 aria_label: "{tile.name}",
-                                "data-name": "{tile.name}",
-                                // Disabled rather than hidden: a full team must
-                                // still show the whole roster, or the positions
-                                // everything else relies on would move.
-                                disabled: tile.disabled,
+                                // Whose it is, where that is the reason it
+                                // cannot be clicked.
+                                "data-name": match &tile.owner {
+                                    Some(owner) => format!("{} · {}", tile.name, owner),
+                                    None => tile.name.clone(),
+                                },
+                                // Only a genuinely full row gets the attribute.
+                                // A teammate's pick is inert but stays focusable
+                                // and hoverable, or a keyboard user could never
+                                // reach the label saying whose it is.
+                                disabled: matches!(tile.state, TileState::Blocked),
+                                aria_disabled: !tile.state.is_clickable(),
+                                // Guarded here rather than in the handler, so a
+                                // click that cannot land never leaves the
+                                // component at all.
                                 onclick: {
                                     let hero = tile.hero;
-                                    move |_| on_toggle.call(hero)
+                                    let state = tile.state;
+                                    move |_| if state.is_clickable() { on_toggle.call(hero) }
                                 },
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// Which queue this match is in: how many a team fields, and whether the roles
+/// are held to a split.
+///
+/// Two controls rather than one four-way switch, because the two questions are
+/// independent — the game asks them separately, and a combined control would
+/// make "same size, other queue" a hunt rather than a click. Shaped like
+/// [`SideToggle`] rather than like [`ModeSwitch`], because it is the same kind
+/// of statement as the side: a small either/or about the match in front of you,
+/// not a mode the app is in.
+///
+/// No keyboard shortcut, deliberately. The four that exist are all things done
+/// repeatedly inside a draft; this changes when you change queue, once an
+/// evening. A fifth chord would dilute the four that matter and lengthen a hint
+/// line already at capacity.
+#[component]
+fn FormatSwitch(format: Format, on_format: EventHandler<Format>) -> Element {
+    rsx! {
+        div { class: "format-bar",
+            div { class: "formats", role: "group", aria_label: "team size",
+                for option in TeamSize::BOTH {
+                    button {
+                        key: "{option.as_str()}",
+                        class: if format.size == option { "format active" } else { "format" },
+                        aria_pressed: "{format.size == option}",
+                        // Unlike the side toggle there is no click-to-clear: a
+                        // match always has a size, so there is nothing for an
+                        // empty state to mean.
+                        onclick: move |_| on_format.call(Format { size: option, ..format }),
+                        "{option.label()}"
+                    }
+                }
+            }
+            div { class: "queues", role: "group", aria_label: "queue",
+                for option in Queue::BOTH {
+                    button {
+                        key: "{option.as_str()}",
+                        class: if format.queue == option { "queue active" } else { "queue" },
+                        aria_pressed: "{format.queue == option}",
+                        // The segment says "role"; what that costs you is two
+                        // words too long for the header and exactly right here.
+                        title: "{option.description()}",
+                        aria_label: "{option.description()}",
+                        onclick: move |_| on_format.call(Format { queue: option, ..format }),
+                        "{option.label()}"
                     }
                 }
             }
@@ -374,6 +594,8 @@ fn ModeSwitch(role: Role, modes: Vec<ModeChip>, on_role: EventHandler<Role>) -> 
 #[component]
 pub fn Header(
     role: Role,
+    /// The queue the room is in: team size and whether roles are split.
+    format: Format,
     map: Option<MapChip>,
     /// `None` on a symmetric mode, or when no map is picked yet.
     sides_apply: bool,
@@ -383,6 +605,7 @@ pub fn Header(
     generated: String,
     sync_status: String,
     on_role: EventHandler<Role>,
+    on_format: EventHandler<Format>,
     on_side: EventHandler<Option<Side>>,
     on_reset_all: EventHandler<()>,
 ) -> Element {
@@ -390,8 +613,20 @@ pub fn Header(
 
     rsx! {
         header { class: "header",
+            a {
+                class: "brand",
+                href: "/",
+                "aria-label": "MinMax — minmax.watch",
+                title: "minmax.watch",
+                {brand_mark()}
+            }
             ModeSwitch { role, modes, on_role }
             div { class: "context",
+                // First, because it is the widest-scope fact about the match —
+                // queue, then map, then side — and because unlike the side
+                // toggle it never disappears, so the cluster keeps a stable
+                // left edge as picks land.
+                FormatSwitch { format, on_format }
                 match map {
                     Some(map) => rsx! {
                         span { class: "map-thumb", style: art(&map.icon) }
@@ -673,6 +908,13 @@ pub struct RosterRow {
     pub connected: bool,
     /// Whether this row is the person looking at it.
     pub is_me: bool,
+    /// Somebody else in the session has taken the same hero.
+    ///
+    /// The team cannot field two of them, so the derivation counts the hero
+    /// once — which means without this the roster shows two people on it and
+    /// the boards show one, with nothing to say why. The game will refuse it in
+    /// a moment; the point is that the two of you find out here first.
+    pub contested: bool,
 }
 
 /// Who is in the session and what they are on.
@@ -698,9 +940,17 @@ pub fn Roster(rows: Vec<RosterRow>) -> Element {
                         span { class: "roster-role", "{row.role_label}" }
                         match (row.icon, row.hero) {
                             (Some(icon), Some(hero)) => rsx! {
-                                span { class: "roster-hero",
+                                span {
+                                    class: if row.contested { "roster-hero contested" } else { "roster-hero" },
                                     span { class: "roster-portrait", style: art(&icon) }
                                     "{hero}"
+                                    if row.contested {
+                                        span {
+                                            class: "roster-clash",
+                                            title: "somebody else has taken this hero too",
+                                            "×2"
+                                        }
+                                    }
                                 }
                             },
                             // An empty slot is information: they are still

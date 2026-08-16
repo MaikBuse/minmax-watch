@@ -31,6 +31,10 @@ wasm-check:
 # --- build & run ------------------------------------------------------------
 
 # Build the release client bundle
+#
+# docker/build.sh is the same sequence for the container image. The two have to
+# stay in step: an asset added here and forgotten there works under `just serve`
+# and 404s in production.
 build-web:
     # dx writes content-hashed filenames and never removes the old ones, so the
     # output directory otherwise accumulates a copy of every past build.
@@ -48,8 +52,26 @@ build-web:
     # a hashed path under /assets would control nothing.
     cp overwatch-web/assets/sw.js {{web_out}}/sw.js
     cp overwatch-web/assets/manifest.json {{web_out}}/manifest.json
-    # Same reason: index.html and the manifest both point at /icon.svg.
+    # Same reason: every one of these is referenced by an absolute root path —
+    # from index.html, from manifest.json, or by a crawler that only ever looks
+    # at /favicon.ico and /robots.txt. `asset!()` cannot deliver any of them,
+    # because it content-hashes the name and nothing here can know the hash.
+    #
+    # Anything added to index.html or manifest.json as an absolute path has to
+    # be added here too, or it silently 404s in the bundle while working fine
+    # under `just dev`.
     cp overwatch-web/assets/icon.svg {{web_out}}/icon.svg
+    cp overwatch-web/assets/logo.svg {{web_out}}/logo.svg
+    cp overwatch-web/assets/favicon.ico {{web_out}}/favicon.ico
+    cp overwatch-web/assets/apple-touch-icon.png {{web_out}}/apple-touch-icon.png
+    cp overwatch-web/assets/icon-192.png {{web_out}}/icon-192.png
+    cp overwatch-web/assets/icon-512.png {{web_out}}/icon-512.png
+    cp overwatch-web/assets/og.png {{web_out}}/og.png
+    cp overwatch-web/assets/robots.txt {{web_out}}/robots.txt
+    # The stylesheet's @font-face points at /fonts/, for the same reason.
+    mkdir -p {{web_out}}/fonts
+    cp overwatch-web/assets/fonts/inter-latin.woff2 {{web_out}}/fonts/inter-latin.woff2
+    cp overwatch-web/assets/fonts/LICENSE-Inter.txt {{web_out}}/fonts/LICENSE-Inter.txt
     @echo "bundle: $(du -sh {{web_out}} | cut -f1)"
 
 # Serve the app and the sync socket on the LAN
@@ -93,6 +115,16 @@ ingest-refresh:
     # Slow and hits the sites. Use when a patch has landed and the data is
     # genuinely stale, or to re-check heroes a source did not have last time.
     cargo run -p overwatch-ingest -- all --refresh
+
+# --- brand ------------------------------------------------------------------
+
+# Rasterise the brand SVGs into favicons, PWA icons and the OG card
+brand-icons:
+    # Sources are assets/icon.svg and assets/og.svg; everything this writes is
+    # derived and safe to delete. Local only - no network - and it rewrites a
+    # file only when the bytes actually change, so a no-op run leaves the git
+    # diff empty. Run it after editing either SVG.
+    cargo run -p overwatch-ingest -- brand
 
 # Show what the last ingest changed
 ingest-diff:

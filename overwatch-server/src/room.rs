@@ -72,6 +72,17 @@ pub enum RoomMessage {
     /// Server to a client that asked for a session nobody had started.
     Rejected { reason: String },
 
+    /// A client saying it is done with the session, as opposed to its socket
+    /// dropping. Client to server; never sent back out — what the others see is
+    /// the [`RoomMessage::Roster`] the removal produces.
+    ///
+    /// The two are deliberately different events. A seat outlives its
+    /// connection so that a reload does not empty a slot mid-draft, but
+    /// somebody who has actually left is not coming back to fill theirs, and a
+    /// reservation nobody will ever spend is one the rest of the team should
+    /// get back. `from` is the socket's id, like everywhere else here.
+    Leave { from: String },
+
     /// A whole-draft update from a client that predates sessions.
     ///
     /// Accepted and folded into a board plus a seat; never sent. The service
@@ -266,6 +277,31 @@ impl Rooms {
         let _ = tx.send(RoomMessage::Roster { seats });
     }
 
+    /// Drops a seat outright and fans the roster out.
+    ///
+    /// For [`RoomMessage::Leave`] only. [`Rooms::leave`] — the socket-dropped
+    /// path — deliberately does not do this: the seat is kept there so that a
+    /// reload comes back to its pick.
+    ///
+    /// Removing a seat that is not there is not an error. It is the ordinary
+    /// case: the socket closes right behind the message that already removed
+    /// it, and `Drop` runs anyway.
+    pub fn remove_seat(&self, code: &str, id: &str) {
+        let mut rooms = self.lock();
+        let Some(room) = rooms.get_mut(code) else {
+            return;
+        };
+        if !room.state.remove_seat(id) {
+            return;
+        }
+
+        let tx = room.tx.clone();
+        let seats = room.state.seats.clone();
+        drop(rooms);
+
+        let _ = tx.send(RoomMessage::Roster { seats });
+    }
+
     /// Folds a pre-session client's whole-draft update into the split state.
     ///
     /// Its `allies` cannot be told apart from anyone else's picks, so they land
@@ -273,6 +309,9 @@ impl Rooms {
     /// a client that had no idea seats existed.
     pub fn publish_legacy_draft(&self, code: &str, draft: Draft, from: &str) {
         let board = Board {
+            // A client old enough to send a whole draft sends no format either,
+            // so this is 5v5 — which is the only shape that client ever had.
+            format: draft.format,
             map: draft.map,
             side: draft.side,
             enemies: draft.enemies,
@@ -397,7 +436,7 @@ mod tests {
         let (code, _first) = open(&rooms, "era");
 
         let mut board = Board::new();
-        board.add_enemy(HeroId(3));
+        board.enemies.push(HeroId(3));
         board.map = Some(MapId(2));
         rooms.publish_board(&code, board.clone(), "era");
         rooms.publish_seat(
@@ -459,7 +498,7 @@ mod tests {
         let _second = rooms.join(&code, "mika", "mika").expect("joins");
 
         let mut board = Board::new();
-        board.add_enemy(HeroId(7));
+        board.enemies.push(HeroId(7));
         rooms.publish_board(&code, board.clone(), "mika");
 
         // Both joins announced themselves, so skip the roster traffic rather
@@ -543,7 +582,7 @@ mod tests {
         let (theirs, _them) = open(&rooms, "someone");
 
         let mut board = Board::new();
-        board.add_enemy(HeroId(1));
+        board.enemies.push(HeroId(1));
         rooms.publish_board(&ours, board, "era");
 
         let other = rooms.state_of(&theirs).expect("the other session");
@@ -647,13 +686,78 @@ mod tests {
         let rooms = Rooms::new();
         rooms.publish_board("nobody", Board::new(), "era");
         rooms.publish_seat("nobody", Seat::new("era"), "era");
+        rooms.remove_seat("nobody", "era");
         assert_eq!(rooms.room_count(), 0);
+    }
+
+    /// The counterpart to `leaving_marks_a_seat_disconnected_rather_than_
+    /// deleting_it`, and the two are meant to be read as a pair: a socket that
+    /// drops keeps its seat, and somebody who says they are done does not.
+    #[test]
+    fn an_explicit_leave_removes_the_seat_rather_than_marking_it_offline() {
+        let rooms = Rooms::new();
+        let (code, _first) = open(&rooms, "era");
+        let second = rooms.join(&code, "mika", "mika").expect("joins");
+        rooms.publish_seat(
+            &code,
+            Seat {
+                role: Role::Tank,
+                locked: Some(HeroId(8)),
+                ..Seat::new("mika")
+            },
+            "mika",
+        );
+
+        rooms.remove_seat(&code, "mika");
+
+        let state = rooms.state_of(&code).expect("the session");
+        assert!(
+            state.seat("mika").is_none(),
+            "somebody who left is not holding a slot open"
+        );
+        assert!(state.seat("era").is_some(), "and nobody else was touched");
+
+        // The socket closing behind the message is the ordinary case, not an
+        // error: `Drop` runs regardless and must find nothing to do.
+        drop(second);
+        let state = rooms.state_of(&code).expect("the session");
+        assert!(state.seat("mika").is_none(), "and it stays gone");
+    }
+
+    #[test]
+    fn leaving_a_session_twice_is_not_an_error() {
+        let rooms = Rooms::new();
+        let (code, _first) = open(&rooms, "era");
+
+        rooms.remove_seat(&code, "era");
+        rooms.remove_seat(&code, "era");
+        rooms.remove_seat(&code, "nobody-was-here");
+
+        let state = rooms.state_of(&code).expect("the session survives");
+        assert!(state.seats.is_empty());
+    }
+
+    /// The wire shape the client's own test pins from the other side. The
+    /// envelope is duplicated on purpose, so this pair is the only thing
+    /// stopping the two halves drifting.
+    #[test]
+    fn leave_messages_use_the_agreed_shape() {
+        let message = RoomMessage::Leave {
+            from: "c1234".to_owned(),
+        };
+        let json = serde_json::to_string(&message).expect("serialises");
+
+        assert!(json.contains(r#""type":"leave""#), "{json}");
+        assert!(json.contains(r#""from":"c1234""#), "{json}");
+
+        let back: RoomMessage = serde_json::from_str(&json).expect("deserialises");
+        assert_eq!(back, message);
     }
 
     #[test]
     fn messages_round_trip_as_json() {
         let mut board = Board::new();
-        board.add_enemy(HeroId(2));
+        board.enemies.push(HeroId(2));
 
         let message = RoomMessage::Board {
             board,

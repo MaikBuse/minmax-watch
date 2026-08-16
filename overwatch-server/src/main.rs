@@ -10,10 +10,14 @@
 //! and an answer, and a client whose connection drops keeps working alone.
 //! That is the whole reason the sync feature does not cost any latency.
 //!
-//! There is no authentication: it is meant for a home network. Do not expose it
-//! to the internet as-is. A session code is a convenience for finding the right
-//! draft, not a secret — anyone who can reach the port and knows a code is in
-//! that session.
+//! There is no authentication: it is meant for a home network. A session code
+//! is a convenience for finding the right draft, not a secret — anyone who can
+//! reach the port and knows a code is in that session.
+//!
+//! The match log is the one part that is genuinely personal rather than merely
+//! unguarded, so it can be switched off: an empty `OVERWATCH_MATCH_LOG` makes
+//! `/api/matches` a 404 in both directions. The public deployment runs that
+//! way, which is what makes exposing the rest of this defensible.
 
 mod code;
 mod matchlog;
@@ -38,7 +42,8 @@ use crate::room::{RoomMessage, Rooms};
 #[derive(Clone)]
 struct AppState {
     rooms: Rooms,
-    matches: MatchLog,
+    /// `None` disables the match log entirely — see `Config::from_env`.
+    matches: Option<MatchLog>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -60,7 +65,7 @@ async fn main() -> Result<()> {
 
     let state = AppState {
         rooms: Rooms::new(),
-        matches: MatchLog::new(config.match_log.clone()),
+        matches: config.match_log.clone().map(MatchLog::new),
     };
 
     let app = router(state, &config.assets);
@@ -83,14 +88,34 @@ async fn main() -> Result<()> {
 /// ephemeral port rather than testing a reimplementation of it.
 fn router(state: AppState, assets: &std::path::Path) -> Router {
     let index = assets.join("index.html");
+    // `precompressed_*` serves `foo.wasm.br` in place of `foo.wasm` when the
+    // client accepts it, and falls straight back to the plain file when no
+    // sibling exists. So the container build can brotli the bundle once at
+    // -q 11 and every request is a plain file read, where compressing on the
+    // fly would spend CPU per request to get a worse ratio — and `just serve`,
+    // which precompresses nothing, is unaffected either way.
+    //
+    // The wasm is the reason this is here: ~1.2M raw, roughly a third of that
+    // compressed, on the critical path of every first visit.
     let static_files = ServeDir::new(assets)
+        .precompressed_br()
+        .precompressed_gzip()
         // Unknown paths fall back to the SPA shell rather than a bare 404.
-        .not_found_service(ServeFile::new(&index));
+        .not_found_service(
+            ServeFile::new(&index)
+                .precompressed_br()
+                .precompressed_gzip(),
+        );
 
     Router::new()
         .route("/health", get(health))
         .route("/ws/{room}", get(ws_handler))
         .route("/api/session", post(post_session))
+        // Registered even when the match log is off, in which case the handlers
+        // answer 404. Dropping the route instead would hand `/api/matches` to
+        // the SPA fallback below, which answers 200 with the index page — a
+        // disabled endpoint that returns the app is worse than either a working
+        // one or an honest 404.
         .route("/api/matches", post(post_match).get(get_matches))
         .fallback_service(static_files)
         .with_state(state)
@@ -99,7 +124,8 @@ fn router(state: AppState, assets: &std::path::Path) -> Router {
 struct Config {
     addr: SocketAddr,
     assets: PathBuf,
-    match_log: PathBuf,
+    /// `None` when the match log is switched off.
+    match_log: Option<PathBuf>,
 }
 
 impl Config {
@@ -115,9 +141,16 @@ impl Config {
             .map(PathBuf::from)
             .unwrap_or_else(|_| PathBuf::from("target/dx/overwatch-web/release/web/public"));
 
-        let match_log = std::env::var("OVERWATCH_MATCH_LOG")
-            .map(PathBuf::from)
-            .unwrap_or_else(|_| PathBuf::from("data/matches.jsonl"));
+        // Unset keeps the local default, so `just serve` is unaffected. Set but
+        // empty means off — the deployment switch. Spelling it that way rather
+        // than adding a second variable keeps the two states that matter (where
+        // is it / is it on) in one place, and an empty string is the one value
+        // that could never be a real path.
+        let match_log = match std::env::var("OVERWATCH_MATCH_LOG") {
+            Ok(raw) if raw.is_empty() => None,
+            Ok(raw) => Some(PathBuf::from(raw)),
+            Err(_) => Some(PathBuf::from("data/matches.jsonl")),
+        };
 
         Self {
             addr,
@@ -134,7 +167,7 @@ impl Config {
 /// verbatim invites exactly one bug report, so it never appears here.
 fn print_banner(config: &Config) {
     let port = config.addr.port();
-    println!("overwatch-picker is up");
+    println!("minmax is up");
     println!("  this machine   http://localhost:{port}");
 
     match primary_local_ip() {
@@ -166,7 +199,7 @@ fn print_banner(config: &Config) {
             "      netsh interface portproxy add v4tov4 listenport={port} listenaddress=0.0.0.0 connectport={port} connectaddress={wsl_ip}"
         );
         println!(
-            "      New-NetFirewallRule -DisplayName 'Overwatch Picker' -Direction Inbound -LocalPort {port} -Protocol TCP -Action Allow"
+            "      New-NetFirewallRule -DisplayName 'MinMax' -Direction Inbound -LocalPort {port} -Protocol TCP -Action Allow"
         );
         println!();
         println!("  Note the forwarded address changes when WSL restarts; mirrored mode does not.");
@@ -174,7 +207,10 @@ fn print_banner(config: &Config) {
 
     println!();
     println!("  serving   {}", config.assets.display());
-    println!("  match log {}", config.match_log.display());
+    match &config.match_log {
+        Some(path) => println!("  match log {}", path.display()),
+        None => println!("  match log off (OVERWATCH_MATCH_LOG is empty)"),
+    }
     if !config.assets.is_dir() {
         println!(
             "  note: {} does not exist yet - run `just build-web` first",
@@ -225,7 +261,10 @@ async fn post_match(
     State(state): State<AppState>,
     Json(record): Json<MatchRecord>,
 ) -> impl IntoResponse {
-    match state.matches.append(&record).await {
+    let Some(matches) = &state.matches else {
+        return StatusCode::NOT_FOUND;
+    };
+    match matches.append(&record).await {
         Ok(()) => StatusCode::NO_CONTENT,
         Err(err) => {
             eprintln!("failed to record a match: {err:#}");
@@ -235,7 +274,10 @@ async fn post_match(
 }
 
 async fn get_matches(State(state): State<AppState>) -> impl IntoResponse {
-    match state.matches.read_all().await {
+    let Some(matches) = &state.matches else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    match matches.read_all().await {
         Ok(records) => Json(records).into_response(),
         Err(err) => {
             eprintln!("failed to read the match log: {err:#}");
@@ -345,6 +387,12 @@ async fn handle_socket(
                             Ok(RoomMessage::Seat { seat, .. }) => {
                                 state.rooms.publish_seat(&code, seat, &client_id);
                             }
+                            // Done with the session, as opposed to the socket
+                            // dropping — the seat goes, and the slot it held
+                            // goes back to the team.
+                            Ok(RoomMessage::Leave { .. }) => {
+                                state.rooms.remove_seat(&code, &client_id);
+                            }
                             // A client from before sessions existed.
                             Ok(RoomMessage::Update { draft, .. }) => {
                                 state.rooms.publish_legacy_draft(&code, draft, &client_id);
@@ -404,9 +452,13 @@ mod e2e {
                 .map(|since| since.as_nanos())
                 .unwrap_or(0),
         ));
+        serve_with(Some(MatchLog::new(matches))).await
+    }
+
+    async fn serve_with(matches: Option<MatchLog>) -> String {
         let state = AppState {
             rooms: Rooms::new(),
-            matches: MatchLog::new(matches),
+            matches,
         };
         let app = router(state, std::path::Path::new("/nonexistent"));
 
@@ -530,8 +582,8 @@ mod e2e {
 
         // Whoever reads the enemy comp first types it once...
         let mut board = Board::new();
-        board.add_enemy(HeroId(3));
-        board.add_enemy(HeroId(4));
+        board.enemies.push(HeroId(3));
+        board.enemies.push(HeroId(4));
         send(
             &mut era,
             &RoomMessage::Board {
@@ -628,8 +680,9 @@ mod e2e {
             board: Board::new(),
             seats,
         };
+        let dataset = overwatch_data::load().expect("the committed dataset loads");
         assert_eq!(
-            state.draft_for("era").allies,
+            state.draft_for(&dataset, "era").allies,
             vec![HeroId(11)],
             "a teammate locking in becomes your ally without you typing it"
         );
@@ -644,7 +697,7 @@ mod e2e {
         let _ = next_of_interest(&mut era).await;
 
         let mut board = Board::new();
-        board.add_enemy(HeroId(2));
+        board.enemies.push(HeroId(2));
         send(
             &mut era,
             &RoomMessage::Board {
@@ -693,7 +746,111 @@ mod e2e {
         assert_eq!(value["rooms"], 1);
     }
 
+    /// Departing on purpose is a different event from a socket dropping, and
+    /// only this end-to-end path proves the distinction survives the wire: the
+    /// `from` the server acts on is the socket's, not the payload's.
+    #[tokio::test]
+    async fn an_explicit_leave_takes_the_seat_off_everyone_elses_roster() {
+        let base = serve().await;
+        let code = create_session(&base).await;
+
+        let mut era = join(&base, &code, "era", "era").await;
+        let _ = next_of_interest(&mut era).await;
+
+        let mut mika = join(&base, &code, "mika", "mika").await;
+        let _ = next_of_interest(&mut mika).await;
+        mika_locks_in(&mut mika).await;
+
+        // era waits until the roster actually holds both, so the assertion
+        // below is about the departure rather than about arrival ordering.
+        let both = roster_until(&mut era, |seats| seats.len() == 2).await;
+        assert!(both.iter().any(|seat| seat.id == "mika"));
+
+        send(
+            &mut mika,
+            &RoomMessage::Leave {
+                // Deliberately a lie: the server must use the socket's id.
+                from: "era".to_owned(),
+            },
+        )
+        .await;
+
+        let seats = roster_until(&mut era, |seats| seats.len() == 1).await;
+        assert_eq!(seats[0].id, "era", "the wrong seat was taken");
+    }
+
+    async fn mika_locks_in(socket: &mut Socket) {
+        send(
+            socket,
+            &RoomMessage::Seat {
+                seat: Seat {
+                    locked: Some(HeroId(8)),
+                    ..Seat::new("mika")
+                },
+                from: "mika".to_owned(),
+            },
+        )
+        .await;
+    }
+
+    /// The compatibility contract for the new message, from the other side: a
+    /// client on a newer build talking to this server sends things it has never
+    /// heard of, and a parse failure must not take the session down with it.
+    #[tokio::test]
+    async fn a_message_the_server_cannot_parse_does_not_end_the_session() {
+        let base = serve().await;
+        let code = create_session(&base).await;
+
+        let mut era = join(&base, &code, "era", "era").await;
+        let _ = next_of_interest(&mut era).await;
+        let mut mika = join(&base, &code, "mika", "mika").await;
+        let _ = next_of_interest(&mut mika).await;
+
+        mika.send(WsMessage::Text(
+            r#"{"type":"something-this-build-never-heard-of","from":"mika"}"#.to_owned(),
+        ))
+        .await
+        .expect("sends");
+
+        // The session carries on: the very next message still lands.
+        let mut board = Board::new();
+        board.enemies.push(HeroId(3));
+        send(
+            &mut mika,
+            &RoomMessage::Board {
+                board,
+                from: "mika".to_owned(),
+            },
+        )
+        .await;
+
+        let RoomMessage::Board { board, .. } = next_of_interest(&mut era).await else {
+            panic!("the board should still have arrived");
+        };
+        assert_eq!(board.enemies, vec![HeroId(3)]);
+    }
+
     async fn reqwest_get(url: &str) -> String {
+        raw_get(url)
+            .await
+            .split_once("\r\n\r\n")
+            .map(|(_, body)| body.to_owned())
+            .expect("a body")
+    }
+
+    /// The status code of a bare GET, for the cases where the code is the
+    /// whole point and the body is not.
+    async fn status_of(url: &str) -> u16 {
+        let raw = raw_get(url).await;
+        let status = raw
+            .lines()
+            .next()
+            .and_then(|line| line.split_whitespace().nth(1))
+            .expect("a status line");
+        status.parse().expect("a numeric status")
+    }
+
+    async fn raw_get(url: &str) -> String {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
         let rest = url.trim_start_matches("http://");
@@ -711,8 +868,36 @@ mod e2e {
 
         let mut raw = String::new();
         stream.read_to_string(&mut raw).await.expect("reads");
-        raw.split_once("\r\n\r\n")
-            .map(|(_, body)| body.to_owned())
-            .expect("a body")
+        raw
+    }
+
+    /// Switching the match log off has to actually close the endpoint.
+    ///
+    /// The failure this guards against is not a misbehaving handler but a
+    /// disappearing route: drop `/api/matches` from the table instead of
+    /// answering 404 on it and the SPA fallback picks it up, so the endpoint
+    /// "works" — it returns 200 and the index page — and nothing looks wrong
+    /// until someone checks what the public deployment is actually serving.
+    #[tokio::test]
+    async fn a_disabled_match_log_closes_the_endpoint() {
+        let base = serve_with(None).await;
+        assert_eq!(status_of(&format!("http://{base}/api/matches")).await, 404);
+
+        // Only the match log goes: sync is the reason the server is reachable
+        // at all, and it has to survive the switch.
+        let code = create_session(&base).await;
+        let mut era = join(&base, &code, "era", "era").await;
+        assert!(matches!(
+            next_of_interest(&mut era).await,
+            RoomMessage::Snapshot { .. }
+        ));
+    }
+
+    /// The other half of the pair: without this, the test above would still
+    /// pass if `/api/matches` were broken for everyone.
+    #[tokio::test]
+    async fn an_enabled_match_log_serves_the_endpoint() {
+        let base = serve().await;
+        assert_eq!(status_of(&format!("http://{base}/api/matches")).await, 200);
     }
 }

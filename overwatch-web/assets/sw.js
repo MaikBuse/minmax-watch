@@ -9,7 +9,7 @@
 // Cache-first would be faster by a few milliseconds but would serve a stale
 // build after every `just build-web`, which is a much worse trade.
 
-const CACHE = 'overwatch-picker-v2';
+const CACHE = 'minmax-v1';
 
 self.addEventListener('install', event => {
     // Take over immediately rather than waiting for every tab to close.

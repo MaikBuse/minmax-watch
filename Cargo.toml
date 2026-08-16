@@ -29,6 +29,9 @@ scraper = "0.23"
 serde_json = "1.0"
 # Only the codecs we actually round-trip: portraits are PNG, map shots are JPEG.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+# Rasterises the brand SVGs. Pure Rust, so `just brand-icons` needs no
+# ImageMagick or librsvg on the machine running it.
+resvg = { version = "0.45", default-features = false }
 time = { version = "0.3", features = ["formatting", "macros"] }
 
 [profile.dev]

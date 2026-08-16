@@ -1,22 +1,104 @@
-/* Dark, dense, and readable in the two seconds you get to glance at it.
+/* MinMax — minmax.watch
+   Dark, dense, and readable in the two seconds you get to glance at it.
    Type is large because this is read under time pressure, and colour carries
-   meaning only alongside a label or a sign so it survives colour-blindness. */
+   meaning only alongside a label or a sign so it survives colour-blindness.
+
+   The design language is "tactical HUD": deep charcoal, hairline rules, hard
+   corners, tabular numerals, and saturation spent only where it encodes
+   something. See docs/BRAND.md for the reasoning behind each token. */
+
+/* --- the face ---
+   Self-hosted rather than linked: this is an offline-first PWA whose whole
+   argument is that the network is never between a keystroke and an answer, and
+   a webfont fetched from a third party at load would put it there. Latin subset
+   of the variable face, 48K, weights 400-700 from one file. Symbols outside the
+   subset (the pool star, the option glyph) fall through to the system stack,
+   which is where they would have come from anyway. */
+@font-face {
+    font-family: "Inter";
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: swap;
+    src: url("/fonts/inter-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6,
+        U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+        U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 :root {
-    --bg: #0f1115;
-    --panel: #171a21;
-    --panel-edge: #232833;
-    --text: #e8ecf3;
-    --muted: #8a93a5;
-    --good: #4ade80;
-    --bad: #f87171;
-    --enemy: #f87171;
+    /* --- surfaces --- */
+    --bg: #0b0d11;
+    --surface: #12151c;
+    --surface-raised: #181c25;
+    --line: #242a36;
+    --line-strong: #333b4a;
+    /* Above every panel: the hover label on a tile has to beat the artwork
+       behind it, so it is darker than the page rather than lighter. */
+    --overlay: #05070b;
+    /* Text placed *on* a saturated fill. Near-black with a blue cast rather
+       than pure black, so a filled pill reads as part of the palette. */
+    --on-color: #0b1220;
+
+    /* --- text --- */
+    --text: #e6eaf2;
+    --text-muted: #8b94a7;
+    /* The third step is as dark as it can be and still clear WCAG AA (4.5:1)
+       on both --bg and --surface. Everything wearing it — the rank column, the
+       roster state, the footer, the input placeholders — is 11-12px, which is
+       exactly the size that cannot afford a "quiet" grey chosen by eye. */
+    --text-faint: #767f96;
+
+    /* --- brand --- */
+    --accent: #38bdf8;
+    --accent-soft: #7dd3fc;
+
+    /* --- roles ---
+       Conventional enough to be worth matching rather than reinventing: these
+       are the hues the game itself trains you on. */
+    --role-tank: #60a5fa;
+    --role-damage: #f87171;
+    --role-support: #4ade80;
+
+    /* --- semantics ---
+       Deliberately separate names from the role hues above, even where a value
+       currently coincides. A negative reason and a damage hero are unrelated
+       facts, and one token serving both meant neither could ever move. */
+    --positive: #4ade80;
+    --negative: #f87171;
+    /* "Mine": pool markers, the star, a locked-in pick. */
+    --warn: #fbbf24;
+
+    /* --- teams ---
+       Enemy is rose rather than the damage red it used to share, so an enemy
+       board is not tinted identically to a damage-role tile sitting next to it. */
     --ally: #60a5fa;
-    --locked: #fbbf24;
-    --accent: #7dd3fc;
-    --tank: #60a5fa;
-    --damage: #f87171;
-    --support: #4ade80;
+    --enemy: #fb7185;
+
+    /* --- type ---
+       Six steps, down from the fifteen ad-hoc sizes this screen used to mix. */
+    --font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+        sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    --fs-micro: 0.6875rem;
+    --fs-xs: 0.75rem;
+    --fs-sm: 0.8125rem;
+    --fs-base: 0.875rem;
+    --fs-md: 1rem;
+    --fs-lg: 1.0625rem;
+
+    /* --- space and shape --- */
+    --sp-1: 2px;
+    --sp-2: 4px;
+    --sp-3: 8px;
+    --sp-4: 12px;
+    --sp-5: 16px;
+    --sp-6: 24px;
+
+    --r-sm: 2px;
+    --r-md: 4px;
+    --r-lg: 6px;
+    --r-pill: 999px;
 }
 
 * {
@@ -36,7 +118,7 @@
 .map-thumb {
     display: inline-block;
     flex-shrink: 0;
-    background-color: #232833;
+    background-color: var(--line);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -45,19 +127,19 @@
 .portrait {
     width: 22px;
     height: 22px;
-    border-radius: 4px;
+    border-radius: var(--r-md);
 }
 
 .rec-portrait {
     width: 34px;
     height: 34px;
-    border-radius: 5px;
+    border-radius: var(--r-md);
 }
 
 .map-thumb {
     width: 44px;
     height: 25px;
-    border-radius: 3px;
+    border-radius: var(--r-sm);
 }
 
 html,
@@ -66,8 +148,9 @@ body {
     padding: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-family: var(--font-ui);
     font-size: 16px;
+    -webkit-font-smoothing: antialiased;
 }
 
 /* The root holds the keyboard focus, because with no text input there is
@@ -77,19 +160,52 @@ body {
 .app {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 16px;
+    padding: var(--sp-5);
     min-height: 100vh;
     outline: none;
 }
 
+/* --- the mark ---
+   The wordmark does its work on the tab, the install prompt and the link
+   preview. Here it is the glyph alone: the header is already carrying the mode
+   switch, the map, the side toggle, the sync light, the ingest date and a
+   reset, and a screen whose whole argument is density cannot spend a hundred
+   pixels of it telling you which app you already opened. */
+
+.brand {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin-right: var(--sp-1);
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.brand svg {
+    display: block;
+}
+
+.brand:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
 /* --- header --- */
 
+/* The mark and the mode switch are one group on the left; everything about the
+   current match is pushed to the right by the .context margin rather than by
+   space-between, which would have spread all three apart once the mark landed
+   between them. */
 .header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-4);
+}
+
+.header .context {
+    margin-left: auto;
 }
 
 /* The mode switch is one control, not three buttons: a single track with the
@@ -99,11 +215,11 @@ body {
 
 .modes {
     display: flex;
-    gap: 2px;
-    padding: 2px;
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    border-radius: 8px;
+    gap: var(--sp-1);
+    padding: var(--sp-1);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
 }
 
 .mode {
@@ -111,11 +227,12 @@ body {
     align-items: center;
     gap: 7px;
     background: none;
-    color: var(--muted);
+    color: var(--text-muted);
     border: 0;
-    border-radius: 6px;
+    border-radius: var(--r-md);
     padding: 6px 13px;
-    font-size: 14px;
+    font-family: inherit;
+    font-size: var(--fs-base);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -125,20 +242,20 @@ body {
 /* One custom property per role, so the three tokens at the top of this file do
    all the work and the active rule below stays a single block. */
 .mode.role-tank {
-    --role: var(--tank);
+    --role: var(--role-tank);
 }
 
 .mode.role-damage {
-    --role: var(--damage);
+    --role: var(--role-damage);
 }
 
 .mode.role-support {
-    --role: var(--support);
+    --role: var(--role-support);
 }
 
 .mode:hover:not(.active) {
     color: var(--text);
-    background: var(--panel-edge);
+    background: var(--line);
 }
 
 .mode.active {
@@ -161,10 +278,10 @@ body {
    the pool highlights rather than restricts, so an empty one still offers the
    whole role. */
 .mode-count {
-    font-size: 11px;
+    font-size: var(--fs-micro);
     font-weight: 600;
     letter-spacing: 0;
-    color: var(--muted);
+    color: var(--text-muted);
     font-variant-numeric: tabular-nums;
 }
 
@@ -185,7 +302,7 @@ body {
     display: flex;
     align-items: center;
     gap: 14px;
-    font-size: 14px;
+    font-size: var(--fs-base);
 }
 
 /* The thumbnail belongs to the map name, so it sits closer than the gap. */
@@ -195,16 +312,17 @@ body {
 
 .map {
     font-weight: 600;
-    font-size: 17px;
+    font-size: var(--fs-lg);
 }
 
 .map.unset,
 .generated {
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 .generated {
     font-variant-numeric: tabular-nums;
+    font-size: var(--fs-xs);
 }
 
 /* --- status bar ---
@@ -216,14 +334,14 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    height: 24px;
-    padding: 0 2px;
-    margin-bottom: 8px;
+    height: var(--sp-6);
+    padding: 0 var(--sp-1);
+    margin-bottom: var(--sp-3);
 }
 
 .hint {
-    color: var(--muted);
-    font-size: 12px;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -243,20 +361,20 @@ body {
 }
 
 .board {
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    border-radius: 8px;
-    padding: 8px 10px 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: var(--sp-3) 10px 10px;
     margin-bottom: 10px;
 }
 
 .board-title {
-    font-size: 11px;
+    font-size: var(--fs-micro);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     margin: 0 0 6px;
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 .board-title.map {
@@ -268,22 +386,30 @@ body {
 .board-title.ally {
     color: var(--ally);
 }
+/* Amber, matching the marker every other surface uses for "mine" — the star,
+   the pooled rows, the selected tile on this same board. It used to be green,
+   which made the one board whose contents are all yours the only place that
+   said so in a different colour. */
 .board-title.pool {
-    color: var(--support);
+    color: var(--warn);
 }
 
 .board-row {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
-    margin-bottom: 4px;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-2);
 }
 
 /* Wide enough for "support", so every row's tiles start on one column. */
+/* Fixed width so the tile grids of all three rows start on the same column —
+   the portraits are found by position, and a ragged left edge would move them.
+   Wide enough for the longest label *and* its count: "SUPPORT 2" is what sets
+   this number, not "SUPPORT". */
 .board-role {
-    width: 52px;
+    width: 66px;
     flex-shrink: 0;
-    font-size: 11px;
+    font-size: var(--fs-micro);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -291,19 +417,19 @@ body {
 }
 
 .board-role.role-tank {
-    color: var(--tank);
+    color: var(--role-tank);
 }
 .board-role.role-damage {
-    color: var(--damage);
+    color: var(--role-damage);
 }
 .board-role.role-support {
-    color: var(--support);
+    color: var(--role-support);
 }
 
 .tiles {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--sp-2);
     min-width: 0;
 }
 
@@ -315,8 +441,8 @@ body {
     height: 36px;
     padding: 0;
     border: 2px solid transparent;
-    border-radius: 5px;
-    background-color: #232833;
+    border-radius: var(--r-md);
+    background-color: var(--line);
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -346,10 +472,56 @@ body {
    and the list are visibly the same set rather than two things that happen to
    agree. */
 .board-pool .tile.selected {
-    border-color: var(--locked);
+    border-color: var(--warn);
 }
 .board-map .tile.selected {
     border-color: var(--accent);
+}
+
+/* Your own pick, on a board that is your whole team. Amber, because that is
+   what every other surface here already means by "mine" — the pool board, the
+   star, the locked row in the pick column. The corner dot carries it too, so
+   the one tile that is you is not distinguished by colour alone. */
+.board-ally .tile.mine {
+    opacity: 1;
+    filter: none;
+    border-color: var(--warn);
+}
+
+.board-ally .tile.mine::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--warn);
+    box-shadow: 0 0 0 1px var(--bg);
+}
+
+/* A teammate's own pick, arriving from their seat. Drawn as on the team but
+   visibly not yours to change — a click that lands and does nothing is how a
+   board starts feeling broken. Deliberately not `disabled`: the hover label is
+   what names whose it is, and a disabled button leaves the tab order, so a
+   keyboard user could never read it. */
+.board-ally .tile.theirs {
+    opacity: 1;
+    filter: saturate(0.3);
+    border-color: var(--ally);
+    cursor: default;
+}
+
+/* Before you have taken a hero, the next click on this board is you. Colouring
+   the hover border in the amber the tile is about to become says which of the
+   two meanings a click carries, before it is spent rather than after. */
+.board-ally.claiming .tile:hover {
+    border-color: var(--warn);
+}
+
+.tile:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
 }
 
 /* The team is full and this hero is not on it. Drawn rather than hidden: the
@@ -365,7 +537,7 @@ body {
 .map-tile {
     width: 52px;
     height: 30px;
-    border-radius: 4px;
+    border-radius: var(--r-md);
 }
 
 /* The name, on hover, with no delay — a native title tooltip waits about a
@@ -378,12 +550,12 @@ body {
     transform: translateX(-50%);
     display: none;
     z-index: 5;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: #05070b;
-    border: 1px solid var(--panel-edge);
+    padding: var(--sp-1) 6px;
+    border-radius: var(--r-md);
+    background: var(--overlay);
+    border: 1px solid var(--line);
     color: var(--text);
-    font-size: 12px;
+    font-size: var(--fs-xs);
     line-height: 1.2;
     white-space: nowrap;
     pointer-events: none;
@@ -398,7 +570,7 @@ body {
 .columns {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
-    gap: 12px;
+    gap: var(--sp-4);
     align-items: start;
 }
 
@@ -410,18 +582,18 @@ body {
 }
 
 .panel {
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    border-radius: 8px;
-    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: var(--sp-4);
 }
 
 .panel h2 {
-    margin: 0 0 8px;
-    font-size: 12px;
+    margin: 0 0 var(--sp-3);
+    font-size: var(--fs-xs);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 /* --- ban panel --- */
@@ -433,9 +605,9 @@ body {
 .ban {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    gap: var(--sp-3);
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: var(--r-lg);
     padding: 7px 9px;
     margin-bottom: 5px;
 }
@@ -445,7 +617,7 @@ body {
    the same: it is the same fact, and inventing a second one for it would only
    make you learn two. */
 .ban.pooled {
-    border-left: 3px solid var(--locked);
+    border-left: 3px solid var(--warn);
 }
 
 /* Every number on this list is a matchup you lose — that is what puts a hero on
@@ -453,21 +625,21 @@ body {
    distinguishing this column from the pick column beside it, where the same
    figures are what you gain. */
 .ban .score {
-    color: var(--bad);
+    color: var(--negative);
 }
 
 /* Which of your heroes takes the worst of it. Never rendered when you are
    locked in — with one hero to defend it could only name it back at you. */
 .ban-worst {
-    margin: 2px 0 0;
-    font-size: 13px;
-    color: var(--muted);
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
 }
 
 .ban-text {
-    margin: 2px 0 0;
-    font-size: 13px;
-    color: var(--muted);
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
     line-height: 1.35;
 }
 
@@ -475,15 +647,15 @@ body {
    your locked hero's own matchup or an average over your whole pool depending
    on it. */
 .panel-head .subject {
-    font-size: 11px;
+    font-size: var(--fs-micro);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 .empty {
-    color: var(--muted);
-    font-size: 13px;
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
     padding-top: 5px;
 }
 
@@ -494,9 +666,9 @@ body {
 .rec {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
+    gap: var(--sp-3);
     border: 1px solid transparent;
-    border-radius: 6px;
+    border-radius: var(--r-lg);
     padding: 7px 9px;
     margin-bottom: 5px;
     cursor: pointer;
@@ -508,26 +680,31 @@ body {
 }
 
 .rec:hover {
-    background: #1d212a;
+    background: var(--surface-raised);
+}
+
+.rec:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
 }
 
 .rec.locked {
-    border-color: var(--locked);
+    border-color: var(--warn);
 }
 
 .rec.swap {
-    border-color: var(--good);
+    border-color: var(--positive);
 }
 
 .rec-head {
     display: flex;
     align-items: baseline;
-    gap: 8px;
+    gap: var(--sp-3);
 }
 
 .rank {
-    color: var(--muted);
-    font-size: 12px;
+    color: var(--text-faint);
+    font-size: var(--fs-xs);
     font-variant-numeric: tabular-nums;
     width: 14px;
     flex-shrink: 0;
@@ -537,30 +714,36 @@ body {
 }
 
 .rec-name {
-    font-size: 17px;
+    font-size: var(--fs-lg);
     font-weight: 600;
     flex: 1;
 }
 
 .tag {
-    font-size: 10px;
+    font-size: var(--fs-micro);
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    padding: 2px 6px;
-    border-radius: 3px;
-    background: #232833;
-    color: var(--locked);
+    padding: var(--sp-1) 6px;
+    border-radius: var(--r-sm);
+    background: var(--line);
+    color: var(--warn);
 }
 
 .tag.swap-tag {
-    color: #0b1220;
-    background: var(--good);
+    color: var(--on-color);
+    background: var(--positive);
 }
 
+/* The one number the whole panel exists to deliver. Monospaced as well as
+   tabular: the digits are compared down a column, and a proportional face
+   makes an 88 and a 74 different widths before it makes them different
+   numbers. */
 .score {
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-    font-size: 15px;
-    color: var(--muted);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    color: var(--text-muted);
     min-width: 46px;
     text-align: right;
 }
@@ -574,54 +757,54 @@ body {
 }
 
 .reason {
-    font-size: 13px;
+    font-size: var(--fs-sm);
     line-height: 1.4;
-    color: var(--muted);
+    color: var(--text-muted);
 }
 
 /* The leading sign carries the meaning; colour only reinforces it. */
 .reason.good::before {
     content: "+ ";
-    color: var(--good);
+    color: var(--positive);
 }
 
 .reason.bad::before {
     content: "− ";
-    color: var(--bad);
+    color: var(--negative);
 }
 
 /* Sync state. Scoring is local regardless, so "offline" is information,
    not an error — it is styled as muted rather than alarming. */
 .sync {
-    font-size: 12px;
-    padding: 2px 7px;
-    border-radius: 3px;
-    background: #232833;
-    color: var(--muted);
+    font-size: var(--fs-xs);
+    padding: var(--sp-1) 7px;
+    border-radius: var(--r-sm);
+    background: var(--line);
+    color: var(--text-muted);
 }
 
 .sync[class*="synced"] {
-    color: var(--good);
+    color: var(--positive);
 }
 
 /* Confirmation that a result was recorded. Replaces the key hint rather than
    adding a line, so the command bar never changes height. */
 .logged {
-    font-size: 12px;
+    font-size: var(--fs-xs);
     font-weight: 600;
-    padding: 3px 8px;
-    border-radius: 3px;
+    padding: 3px var(--sp-3);
+    border-radius: var(--r-sm);
     white-space: nowrap;
 }
 
 .logged.win {
-    color: #0b1220;
-    background: var(--good);
+    color: var(--on-color);
+    background: var(--positive);
 }
 
 .logged.loss {
-    color: #0b1220;
-    background: var(--bad);
+    color: var(--on-color);
+    background: var(--negative);
 }
 
 /* --- board heads, resets and the map filter ---
@@ -652,11 +835,11 @@ body {
     max-width: 18rem;
     padding: 0.3rem 0.55rem;
     font: inherit;
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
     color: var(--text);
     background: var(--bg);
-    border: 1px solid var(--panel-edge);
-    border-radius: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
 }
 
 .map-search:focus {
@@ -665,7 +848,7 @@ body {
 }
 
 .map-search::placeholder {
-    color: var(--muted);
+    color: var(--text-faint);
 }
 
 /* Deliberately quiet. A reset is never the thing you are reaching for mid-draft,
@@ -675,55 +858,105 @@ body {
     flex: 0 0 auto;
     padding: 0.2rem 0.5rem;
     font: inherit;
-    font-size: 0.7rem;
+    font-size: var(--fs-micro);
     letter-spacing: 0.04em;
-    color: var(--muted);
+    color: var(--text-muted);
     background: transparent;
-    border: 1px solid var(--panel-edge);
-    border-radius: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
     cursor: pointer;
 }
 
 .reset:hover {
     color: var(--text);
-    border-color: var(--muted);
+    border-color: var(--line-strong);
 }
 
 .reset.armed {
-    color: var(--bg);
-    background: var(--bad);
-    border-color: var(--bad);
+    color: var(--on-color);
+    background: var(--negative);
+    border-color: var(--negative);
     font-weight: 700;
 }
 
 /* --- attack / defend ---
    Only rendered on the payload modes, so its absence is information too. */
 
-.sides {
+/* Attack/defend, team size and queue are one control language: a small either/or
+   about the match in front of you. They share these rules rather than each
+   growing a look of its own, so that changing how an either/or reads changes all
+   of them. Deliberately not the .modes segmented control above — that one
+   belongs to the role you are picking as, and borrowing it here would claim the
+   two are the same kind of choice. */
+
+.sides,
+.formats,
+.queues {
     display: inline-flex;
     gap: 0.25rem;
 }
 
-.side {
+/* The size and the queue are two questions about one thing, so they sit closer
+   to each other than to the map beside them. */
+.format-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-2);
+}
+
+.side,
+.format,
+.queue {
     padding: 0.2rem 0.6rem;
     font: inherit;
-    font-size: 0.75rem;
-    color: var(--muted);
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    border-radius: 4px;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
     cursor: pointer;
 }
 
-.side:hover {
+.side:hover,
+.format:hover,
+.queue:hover {
     color: var(--text);
 }
 
-.side.active {
-    color: var(--bg);
+.side.active,
+.format.active,
+.queue.active {
+    color: var(--on-color);
     background: var(--accent);
     border-color: var(--accent);
     font-weight: 700;
+}
+
+.side:focus-visible,
+.format:focus-visible,
+.queue:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* How many of the row's role the team can still take. Sits on the role label
+   because that is what it is counting, and reads as a countdown: a zero is the
+   answer to "why can I not click any of these". */
+.board-free {
+    margin-left: 0.35rem;
+    font-size: var(--fs-micro);
+    font-weight: 600;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+}
+
+/* The row whose last slot is the one you are holding open yourself. A count
+   here would read zero against a row of live tiles, because your own unspent
+   reservation is what took it — the slot is not gone, it is yours. */
+.board-free.you {
+    color: var(--warn);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 /* --- my pool ---
@@ -733,13 +966,13 @@ body {
 
 .star {
     padding: 0 0.25rem;
-    font-size: 1rem;
+    font-size: var(--fs-md);
     line-height: 1;
-    color: var(--locked);
+    color: var(--warn);
 }
 
 .rec.pooled {
-    border-left: 3px solid var(--locked);
+    border-left: 3px solid var(--warn);
 }
 
 /* --- the session ---
@@ -755,11 +988,11 @@ body {
 .session-row {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--sp-3);
     flex-wrap: wrap;
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
     padding: 7px 10px;
 }
 
@@ -768,11 +1001,11 @@ body {
     min-width: 0;
     padding: 0.3rem 0.55rem;
     font: inherit;
-    font-size: 0.85rem;
+    font-size: var(--fs-sm);
     color: var(--text);
     background: var(--bg);
-    border: 1px solid var(--panel-edge);
-    border-radius: 4px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
 }
 
 .session-name {
@@ -792,7 +1025,7 @@ body {
 
 .session-name::placeholder,
 .session-entry::placeholder {
-    color: var(--muted);
+    color: var(--text-faint);
 }
 
 /* The code is the thing being read aloud to four other people, so it is the one
@@ -800,32 +1033,32 @@ body {
    get transcribed, and a proportional 1 next to a proportional l is how a code
    gets typed back wrong. */
 .session-code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.95rem;
+    font-family: var(--font-mono);
+    font-size: var(--fs-md);
     font-weight: 700;
     letter-spacing: 0.04em;
     color: var(--accent);
-    padding: 2px 8px;
+    padding: var(--sp-1) var(--sp-3);
     background: color-mix(in srgb, var(--accent) 12%, transparent);
-    border-radius: 4px;
+    border-radius: var(--r-md);
     user-select: all;
 }
 
 .session-action {
     font: inherit;
-    font-size: 0.8rem;
-    color: var(--muted);
-    background: var(--panel-edge);
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    background: var(--line);
     border: 1px solid transparent;
-    border-radius: 4px;
+    border-radius: var(--r-md);
     padding: 0.3rem 0.6rem;
     cursor: pointer;
 }
 
 .session-action:hover {
     color: var(--text);
-    border-color: var(--panel-edge);
-    background: color-mix(in srgb, var(--accent) 10%, var(--panel-edge));
+    border-color: var(--line-strong);
+    background: color-mix(in srgb, var(--accent) 10%, var(--line));
 }
 
 .session-action.start {
@@ -838,33 +1071,33 @@ body {
 }
 
 .session-action.leave:hover {
-    color: var(--bad);
-    background: color-mix(in srgb, var(--bad) 12%, var(--panel-edge));
+    color: var(--negative);
+    background: color-mix(in srgb, var(--negative) 12%, var(--line));
 }
 
 .session-or {
-    color: var(--muted);
-    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
 }
 
 .session-status {
     margin-left: auto;
-    font-size: 12px;
-    padding: 2px 7px;
-    border-radius: 3px;
-    background: #232833;
-    color: var(--muted);
+    font-size: var(--fs-xs);
+    padding: var(--sp-1) 7px;
+    border-radius: var(--r-sm);
+    background: var(--line);
+    color: var(--text-muted);
     white-space: nowrap;
 }
 
 /* White plate behind the QR regardless of theme: a scanner wants the quiet zone
    light, and the panel behind it is not. */
 .session-qr {
-    margin-top: 8px;
+    margin-top: var(--sp-3);
     width: max-content;
-    padding: 8px;
+    padding: var(--sp-3);
     background: #fff;
-    border-radius: 6px;
+    border-radius: var(--r-lg);
 }
 
 .session-qr img {
@@ -880,10 +1113,10 @@ body {
    separate screens any more. */
 
 .roster {
-    background: var(--panel);
-    border: 1px solid var(--panel-edge);
-    border-radius: 8px;
-    padding: 8px 10px 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    padding: var(--sp-3) 10px 10px;
     margin-bottom: 10px;
 }
 
@@ -899,12 +1132,12 @@ body {
 .roster-row {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 4px 9px 4px 6px;
+    gap: var(--sp-3);
+    padding: var(--sp-2) 9px var(--sp-2) 6px;
     background: var(--bg);
-    border: 1px solid var(--panel-edge);
-    border-radius: 999px;
-    font-size: 0.82rem;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    font-size: var(--fs-sm);
 }
 
 /* Still on the team, just not talking. Dimmed rather than removed: they are on
@@ -923,8 +1156,8 @@ body {
 }
 
 .roster-role {
-    color: var(--muted);
-    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-size: var(--fs-xs);
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
@@ -933,11 +1166,11 @@ body {
     display: flex;
     align-items: center;
     gap: 5px;
-    color: var(--locked);
+    color: var(--warn);
 }
 
 .roster-hero.unset {
-    color: var(--muted);
+    color: var(--text-faint);
     font-style: italic;
 }
 
@@ -947,17 +1180,62 @@ body {
     border-radius: 50%;
     background-size: cover;
     background-position: center top;
-    border: 1px solid var(--panel-edge);
+    border: 1px solid var(--line);
 }
 
 .roster-state {
-    color: var(--muted);
-    font-size: 0.72rem;
+    color: var(--text-faint);
+    font-size: var(--fs-micro);
 }
 
-/* A teammate's own pick, shown on the ally board. Theirs to change, not yours —
-   drawn as picked but visibly not clickable, because a click that lands and does
-   nothing is how a board starts feeling broken. */
-.tile.picked:disabled {
-    cursor: default;
+/* Two people on one hero. The team fields one of it, so the boards can only
+   draw it once — this row is the only place the collision is visible, and it
+   gets the colour this app uses for "this is a problem". */
+.roster-hero.contested {
+    color: var(--enemy);
+}
+
+.roster-clash {
+    margin-left: 0.3rem;
+    font-size: var(--fs-micro);
+    font-weight: 700;
+    color: var(--enemy);
+}
+
+/* --- the footer ---
+   The one place the app says who it is and whose artwork it is borrowing. The
+   portraits and map shots in this bundle are Blizzard's, and serving them to
+   the open internet is a different posture than serving them across a LAN. */
+
+.footer {
+    margin-top: var(--sp-6);
+    padding-top: var(--sp-4);
+    border-top: 1px solid var(--line);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2) 10px;
+    color: var(--text-faint);
+    font-size: var(--fs-micro);
+    letter-spacing: 0.02em;
+}
+
+.footer a {
+    color: var(--text-muted);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line-strong);
+}
+
+.footer a:hover {
+    color: var(--text);
+}
+
+.footer a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
+.footer .sep {
+    color: var(--line-strong);
 }

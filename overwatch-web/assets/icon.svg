@@ -1,18 +1,20 @@
-<!-- App mark: the three roles as a ring around a reticle.
+<!-- MinMax app mark: the three roles as a ring around a reticle.
      Original artwork in the app's own palette rather than a hero portrait —
      the portraits are Blizzard's, and the app's identity should be ours.
-     Drawn for `purpose: any maskable`: the background is full-bleed so a
-     circular mask never cuts through to transparency, and every mark sits
-     inside the central 80% safe zone. -->
+     Drawn for `purpose: maskable`: the background is full-bleed so a circular
+     mask never cuts through to transparency, and every mark sits inside the
+     central 80% safe zone.
+     Colours are the tokens from assets/style.css, inlined because an SVG
+     rasterised by `just brand-icons` cannot read a stylesheet. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
     <defs>
         <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#1b1f28" />
-            <stop offset="1" stop-color="#0f1115" />
+            <stop offset="0" stop-color="#181c25" />
+            <stop offset="1" stop-color="#0b0d11" />
         </linearGradient>
     </defs>
 
-    <rect width="512" height="512" fill="#0f1115" />
+    <rect width="512" height="512" fill="#0b0d11" />
     <rect width="512" height="512" rx="96" fill="url(#panel)" />
 
     <!-- Tank / damage / support, one arc each. A 942.48-unit circumference
@@ -28,7 +30,7 @@
     </g>
 
     <!-- Reticle: the pick itself. -->
-    <g stroke="#7dd3fc" stroke-width="18" stroke-linecap="round" fill="none">
+    <g stroke="#38bdf8" stroke-width="18" stroke-linecap="round" fill="none">
         <circle cx="256" cy="256" r="52" />
         <path d="M256 168v-30M256 344v30M168 256h-30M344 256h30" />
     </g>

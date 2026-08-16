@@ -59,15 +59,6 @@ impl Role {
         }
     }
 
-    /// How many of this role a 5v5 team fields.
-    pub const fn slots_5v5(self) -> usize {
-        match self {
-            Role::Tank => 1,
-            Role::Damage => 2,
-            Role::Support => 2,
-        }
-    }
-
     /// The stable key: what [`Role::parse`] round-trips, and what the stored
     /// profile and the match log are written with. Not what the screen shows —
     /// see [`Role::label`].
