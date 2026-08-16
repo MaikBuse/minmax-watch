@@ -99,6 +99,26 @@
     --r-md: 4px;
     --r-lg: 6px;
     --r-pill: 999px;
+
+    /* --- sizes ---
+       The numbers the responsive section at the foot of this file moves. They
+       live here rather than inline so that a board, the map board and the
+       hand-computed clearance above `.board-map .tiles` cannot drift apart:
+       there is one place to change a tile, and everything sized off one
+       follows. Overridden only in `--- sizes ---`; nothing else may touch them. */
+    --shell-max: 1400px;
+    /* The answer strip's own height, needed in two places that must agree: the
+       bar, and the page padding that keeps the footer out from under it. */
+    --strip-h: 52px;
+    --tile: 36px;
+    --tile-gap: var(--sp-2);
+    --map-tile-w: 52px;
+    --map-tile-h: 30px;
+    /* Wide enough for the longest role label *and* its count ("SUPPORT 2"), in
+       `em` so it still is once the reader enlarges the text. 6em against the
+       11px the label is set in — the 66px this used to be. Goes to `auto` on a
+       phone, where the label sits above its grid instead of beside it. */
+    --role-gutter: 6em;
 }
 
 * {
@@ -149,8 +169,17 @@ body {
     background: var(--bg);
     color: var(--text);
     font-family: var(--font-ui);
-    font-size: 16px;
+    /* 100%, not a hard 16px. Every step in the type scale above is in `rem`, so
+       pinning the root reduced a browser's own text-size preference to nothing —
+       a user who sets "large" got the same 11px footer as everyone else. This is
+       the one line that hands the whole scale back to them. */
+    font-size: 100%;
     -webkit-font-smoothing: antialiased;
+    /* iOS inflates text in rotated views on its own initiative, which on a
+       board sized in fixed pixels moves the tiles under a thumb that had
+       already found them. */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 /* --- the boot splash ---
@@ -228,10 +257,15 @@ body {
    would be pure noise, so it is suppressed here and only here — every actual
    control below still gets one. */
 .app {
-    max-width: 1400px;
+    max-width: var(--shell-max);
     margin: 0 auto;
     padding: var(--sp-5);
     min-height: 100vh;
+    /* `svh`, not `dvh`. A dynamic viewport unit tracks the mobile URL bar as it
+       collapses, so a page bound to one reflows *while it is being scrolled*.
+       The smallest viewport is what a minimum wants: it is the one value that
+       can never itself be the reason a scrollbar appears. */
+    min-height: 100svh;
     outline: none;
 }
 
@@ -267,8 +301,16 @@ body {
    current match is pushed to the right by the .context margin rather than by
    space-between, which would have spread all three apart once the mark landed
    between them. */
+/* Wraps at every width, not just on a phone. This row carries the mark, a
+   three-segment mode switch and the whole of `.context` — the queue, the map,
+   the side, the sync light, the ingest date, the chords and a reset — and the
+   sum of those is wider than a laptop window well before it is wider than a
+   phone: measured, it ran off the viewport from about 950px down. A wrap that
+   only engages when the line is actually full costs nothing at the widths where
+   it never does. */
 .header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--sp-4);
     margin-bottom: var(--sp-4);
@@ -368,16 +410,27 @@ body {
 
 /* Centred rather than baseline-aligned: the map thumbnail has no baseline to
    align to, and centring keeps the text row reading level beside it. */
+/* Wraps for the same reason `.header` does, and it is the half that actually
+   overflowed: six items and two button groups on one line is more than a
+   1024px window has once the mode switch has taken its share. */
 .context {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 14px;
     font-size: var(--fs-base);
 }
 
-/* The thumbnail belongs to the map name, so it sits closer than the gap. */
-.context .map-thumb {
-    margin-right: -8px;
+/* The shot, the name and the side are one statement about one map, so they are
+   one box. It used to be three siblings pulled together with negative margins
+   against `.context`'s 14px gap, which worked exactly as long as the header
+   never wrapped: once it did, the side landed at the head of the next line and
+   its -8px dragged it back through the page padding and off the screen. A
+   nested flex with its own gap says the same thing and cannot come apart. */
+.map-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .map {
@@ -388,7 +441,6 @@ body {
 /* A readout of what the map board's toggle is set to, not a second control.
    Sits against the map name because it is half of the same fact. */
 .map-side {
-    margin-left: -8px;
     font-size: var(--fs-xs);
     color: var(--text-muted);
 }
@@ -528,9 +580,17 @@ body {
 /* Fixed width so the tile grids of all three rows start on the same column —
    the portraits are found by position, and a ragged left edge would move them.
    Wide enough for the longest label *and* its count: "SUPPORT 2" is what sets
-   this number, not "SUPPORT". */
+   this number, not "SUPPORT".
+
+   `min-width` as well as width, because the label is the one thing here sized
+   in `em` off a root the reader is now allowed to enlarge: at 200% text zoom
+   "SUPPORT 2" is twice this box, and 66 hard pixels would clip it while still
+   charging the tiles for all 66. Hence `6em` rather than `66px` — the same
+   width at the default size, and still the right one when the text grows,
+   because it is measured in the thing that grew. On a phone the column goes
+   away entirely; see `--- sizes ---`. */
 .board-role {
-    width: 66px;
+    width: var(--role-gutter);
     flex-shrink: 0;
     font-size: var(--fs-micro);
     font-weight: 700;
@@ -552,7 +612,7 @@ body {
 .tiles {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--sp-2);
+    gap: var(--tile-gap);
     min-width: 0;
 }
 
@@ -560,8 +620,8 @@ body {
    alone: unpicked ones sit back, and the ones that are picked come forward. */
 .tile {
     position: relative;
-    width: 36px;
-    height: 36px;
+    width: var(--tile);
+    height: var(--tile);
     padding: 0;
     border: 2px solid transparent;
     border-radius: var(--r-md);
@@ -658,13 +718,18 @@ body {
 
 /* Map shots are 16:9, so they get their own box. */
 .map-tile {
-    width: 52px;
-    height: 30px;
+    width: var(--map-tile-w);
+    height: var(--map-tile-h);
     border-radius: var(--r-md);
 }
 
 /* The name, on hover, with no delay — a native title tooltip waits about a
-   second, which is most of the time a hero select gives you. */
+   second, which is most of the time a hero select gives you.
+
+   Wraps rather than running off in one line: a couple of the map names are long
+   enough that a `nowrap` label centred on a tile near the edge of a phone hangs
+   off the viewport. Capping the measure is what stops that; the cap is in `vw`
+   as well as `rem` so it is a cap on *this screen* rather than on this font. */
 .tile::after {
     content: attr(data-name);
     position: absolute;
@@ -680,11 +745,29 @@ body {
     color: var(--text);
     font-size: var(--fs-xs);
     line-height: 1.2;
-    white-space: nowrap;
+    width: max-content;
+    max-width: min(10rem, 45vw);
+    text-align: center;
     pointer-events: none;
 }
 
-.tile:hover::after {
+/* Three ways in, one for each kind of pointer.
+
+   `:hover` is the mouse. `:focus-visible` is the keyboard, and it was missing:
+   tabbing the board named nothing, so the one input method this app is built
+   around got less than the mouse did.
+
+   `:active` is the touch answer, and it is the only one that can be. There is
+   no hover phase on a touchscreen, and `:focus` is not available either — a
+   click anywhere inside `.app` is caught by the root's own handler
+   (`main.rs`, the `onclick` that re-takes focus so the chords keep working),
+   so a tapped tile holds focus for less than a frame. `:active` lasts exactly
+   as long as the finger does, which makes press-and-hold the gesture that
+   reads a portrait: hold to see the name, slide off to put it back, lift to
+   pick. */
+.tile:hover::after,
+.tile:active::after,
+.tile:focus-visible::after {
     display: block;
 }
 
@@ -708,12 +791,8 @@ body {
     align-content: start;
 }
 
-@media (max-width: 820px) {
-    .columns,
-    .boards {
-        grid-template-columns: 1fr;
-    }
-}
+/* Where this used to collapse both grids at one width: the two have different
+   comfort widths and now break at different ones, in `--- sizes ---`. */
 
 .panel {
     background: var(--surface);
@@ -867,8 +946,15 @@ body {
     border-color: var(--positive);
 }
 
+/* Wraps, because this row is the narrowest thing in the app that has to hold
+   four items at once — a name, up to two tags and the score — and the panel it
+   sits in is half of a two-column grid that now survives down to 700px. Without
+   the wrap the score is simply pushed out of the panel: `.rec-name` takes
+   `flex: 1` and, with no `min-width: 0`, a flex item refuses to shrink below
+   its own content. "Wrecking Ball" at 17px/600 is what finds that edge. */
 .rec-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: baseline;
     gap: var(--sp-3);
 }
@@ -887,7 +973,12 @@ body {
 .rec-name {
     font-size: var(--fs-lg);
     font-weight: 600;
-    flex: 1;
+    /* `min-width: 0` is the half that does the work — `flex: 1` alone still
+       floors at the content width, which is how the score used to leave the
+       panel. The 6rem basis keeps the name on the first line until it genuinely
+       cannot fit, so the common case is still one row. */
+    flex: 1 1 6rem;
+    min-width: 0;
 }
 
 .tag {
@@ -917,10 +1008,32 @@ body {
     color: var(--text-muted);
     min-width: 46px;
     text-align: right;
+    /* Holds the right edge whether or not the head wrapped. Without it a
+       wrapped score sits against the name it dropped below, which reads as a
+       second number about that word rather than as the row's own. */
+    margin-left: auto;
 }
 
 /* No left padding any more: the rank and portrait columns already indent the
-   whole body, so the reasons line up under the name rather than past it. */
+   whole body, so the reasons line up under the name rather than past it.
+
+   Capped in `ch`, which is the one thing on this screen that wants a maximum
+   rather than a share of the width: at a 1400px shell a reason runs past ninety
+   characters, and prose that long is read by scanning back to find the start of
+   the next line. The tiles can have the rest — they are found by position, and
+   position is what a wider board buys.
+
+   Declared on the elements that carry the text rather than on the list around
+   it: `ch` is the width of a "0" in the font-size of the box it is written on,
+   and the list inherits 16px while the lines inside it are 13px. On the `ul`
+   this same 62 came out as about 76 characters — a cap that did not mean what
+   it said. */
+.reason,
+.ban-text,
+.ban-worst {
+    max-width: 62ch;
+}
+
 .reasons {
     list-style: none;
     margin: 3px 0 0;
@@ -985,9 +1098,14 @@ body {
    reset and, on the map board, the filter box. Both sit to the right so the
    titles stay in the same column your eye already scans down. */
 
+/* Wraps for the same reason `.rec-head` does: the ally board's title is a
+   sentence when the seat is unclaimed ("ally · click to take yours"), and it
+   shares the row with a shape chip and a reset. At 360px, or at any text zoom,
+   that is more than one line's worth and the reset is what leaves. */
 .board-head,
 .panel-head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.6rem;
     margin-bottom: 0.5rem;
@@ -1203,8 +1321,11 @@ body {
 }
 
 /* On the one tile that has both, the toggle wins the spot — the name of the map
-   you have already picked is on the header line anyway. */
-.map-slot:has(.map-sides) .tile:hover::after {
+   you have already picked is on the header line anyway. All three reveals, or
+   the label comes back under the toggle on the pointers the other two serve. */
+.map-slot:has(.map-sides) .tile:hover::after,
+.map-slot:has(.map-sides) .tile:active::after,
+.map-slot:has(.map-sides) .tile:focus-visible::after {
     display: none;
 }
 
@@ -1555,4 +1676,381 @@ body {
 
 .footer .sep {
     color: var(--line-strong);
+}
+
+/* --- the answer strip ---
+   The pick column, three rows of it, pinned where a thumb already is. It exists
+   because on a phone every panel stacks, and the one thing the app is for ends
+   up below six of them — the answer furthest from the hand.
+
+   `display: none` here and switched on in `--- sizes ---`, which is the only
+   place that decides who sees it. It is never switched off by anything that can
+   change during a draft: not a pick, not a role, not turning the phone over. On
+   the screens that have it, it is always there, empty state included — which is
+   the same rule the boards keep when a hero cannot be picked.
+
+   Fixed, so it does not scroll away; `z-index: 30` clears everything the boards
+   float (the chords sheet at 20 is the highest of them). */
+.answer-strip {
+    display: none;
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 30;
+    background: var(--overlay);
+    border-top: 1px solid var(--line);
+    /* The inset resolves to 0px where there is no notch, so this is one
+       declaration rather than a query. */
+    padding: var(--sp-2) var(--sp-3)
+        calc(var(--sp-2) + env(safe-area-inset-bottom, 0px));
+}
+
+.strip-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    min-height: var(--strip-h);
+}
+
+/* One candidate. Sized to fill its third of the bar so the three read as one
+   control, the way the mode switch does. */
+.strip-pick {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    font: inherit;
+    color: var(--text);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    cursor: pointer;
+    text-align: left;
+}
+
+.strip-pick:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* Same amber every other surface here means "mine" by, and the same left bar
+   the pick column marks a pooled row with. */
+.strip-pick.pooled {
+    border-left: 3px solid var(--warn);
+}
+
+.strip-pick.locked {
+    border-color: var(--warn);
+}
+
+.strip-pick.swap {
+    border-color: var(--positive);
+}
+
+.strip-portrait {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: var(--r-md);
+    background-color: var(--line);
+    background-size: cover;
+    background-position: center;
+}
+
+/* Truncated rather than wrapped: the bar is a fixed height, and a two-line name
+   would push the score off it. The full name is a tap away on the board. */
+.strip-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--fs-sm);
+    font-weight: 600;
+}
+
+.strip-score {
+    flex-shrink: 0;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+/* Says so rather than collapsing. A bar that came and went as the draft filled
+   up would be the one thing on this screen that moves under your hand. */
+.strip-empty {
+    margin: 0;
+    padding: 0 var(--sp-1);
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+}
+
+/* --- sizes ---
+   Every media query about a screen lives here, and nothing may be appended
+   below it. A plain rule written after this block silently outranks every
+   override inside it — same specificity, later source — and there is no
+   `!important` anywhere to make that visible when it happens.
+
+   The one query not in here is the `prefers-reduced-motion` beside the boot
+   splash, which is about an animation rather than a size and belongs with the
+   thing it turns off.
+
+   Ordered widest-first, then pointer, then orientation. Where a width query and
+   a pointer query both match one element, the later one wins: that is source
+   order, not specificity, because media queries add none. Read the two touch
+   blocks as coming *after* the phone block deliberately.
+
+   The numbers are not round. They are the widths at which a thing stops
+   fitting, and each one says which thing.
+
+   --- 1600: the shell ---
+   Above this the 1400px cap is spending a quarter of a 1920px screen on empty
+   gutter. Raising it hands the width to the boards, where it buys tiles per row
+   and therefore a shorter page. It does move every portrait once, which is a
+   cost worth naming — but a window resize is not mid-draft, and the layout it
+   settles into is as stable as the old one. */
+@media (min-width: 1600px) {
+    :root {
+        --shell-max: 1680px;
+    }
+}
+
+/* --- 880: the boards ---
+   Where a two-column board stops fitting eight tiles across: each column offers
+   (vw - 42)/2 - 96, and 8 tiles need 8x36 + 7x4 = 316. Below it the two boards
+   side by side come to nine tile rows where one full-width board stacked twice
+   comes to eight — so stacking is the *denser* layout here, not the looser one,
+   and collapsing any later would make this band taller rather than shorter. */
+@media (max-width: 880px) {
+    .boards {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- 700: the pick column ---
+   These two panels are text, not artwork, so they hold a column far below the
+   width a board needs. What used to break them early was `.rec-head` refusing
+   to wrap, which pushed the score out of the panel rather than onto a second
+   line; with that fixed they read down to about here. */
+@media (max-width: 700px) {
+    .columns {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- 560: the phone ---
+   The point at which the header stops being a row and the boards stop having
+   room for a label beside them. */
+@media (max-width: 560px) {
+    /* 16px each side is 9% of a 360px screen, and the tiles want it more than
+       the margin does — it is worth a whole extra tile column. */
+    .app {
+        padding-left: var(--sp-3);
+        padding-right: var(--sp-3);
+    }
+
+    /* The wrap itself is a base rule now — it was needed a long way above this
+       width. What is left here is the alignment: `margin-left: auto` right-aligns
+       `.context` while it shares the mark's line, but once it is on a line of its
+       own the auto margin only shoves it against the right edge under a ragged
+       gap. Same for the status pill in the session row. */
+    .header .context {
+        margin-left: 0;
+    }
+
+    .session-status {
+        margin-left: 0;
+    }
+
+    /* The mode switch takes the line it is now on. Segments share it evenly so
+       the control still reads as one-of-three rather than three buttons.
+       The label stays: dropping it would leave the glyph carrying the choice
+       alone, which is the one thing this stylesheet never does. */
+    .modes {
+        flex: 1 1 100%;
+    }
+
+    .mode {
+        flex: 1 1 0;
+        justify-content: center;
+        gap: var(--sp-2);
+        padding: 8px var(--sp-2);
+        letter-spacing: 0.02em;
+    }
+
+    /* Anchored to the header rather than to its own button. `right: 0` on a
+       176px sheet is correct while the button is at the right end of a single
+       row; once the header wraps the button can be anywhere, and the sheet
+       hangs off the left edge of the screen. */
+    .header {
+        position: relative;
+    }
+
+    .keys {
+        position: static;
+    }
+
+    .keys-sheet {
+        left: 0;
+        right: 0;
+        min-width: 0;
+    }
+
+    /* The role label goes above its grid instead of beside it, which hands the
+       tiles back the whole gutter — a quarter of the usable width at 360px.
+
+       This keeps the reason the gutter was fixed rather than losing it: the
+       point was that all three rows' tiles start on the same column, because
+       the portraits are found by position and a ragged left edge would move
+       them. Stacked, every row starts at the board's own left edge, which is
+       that guarantee reached more strictly. */
+    .board-row {
+        flex-direction: column;
+        gap: var(--sp-1);
+        margin-bottom: var(--sp-3);
+    }
+
+    .board-role {
+        width: auto;
+        padding-top: 0;
+    }
+
+    /* Inline again. The block was only ever a workaround for "SUPPORT YOU" not
+       fitting a 66px column; on its own full-width line there is room, and the
+       block would spend a whole line saying one word. */
+    .board-free.you {
+        display: inline;
+        margin-left: 0.35rem;
+    }
+
+    /* Two inputs whose rem-based flex bases add up to more than the row is
+       wide, so they wrapped into a ragged stack. A line each is what they were
+       going to take anyway; this way they take it squarely. */
+    .session-name,
+    .session-entry {
+        flex: 1 1 100%;
+        max-width: none;
+    }
+}
+
+/* --- touch ---
+   `(hover: none) and (pointer: coarse)` together, not `pointer: coarse` alone:
+   a touchscreen laptop with a trackpad reports a coarse *secondary* pointer,
+   and 40px tiles on a 1920px screen with a mouse on it is a worse answer than
+   36. No width bound — a large tablet is still a thumb, and wants the same
+   targets a phone does. */
+@media (hover: none) and (pointer: coarse) {
+    :root {
+        /* 40 and not 44. 44 with its gap costs a whole extra row on the damage
+           board at 360px, which is a scroll tax charged for a tap that already
+           lands: 40 + 6 is a 46px pitch, and pitch — not the drawn box — is what
+           WCAG 2.5.8 measures. */
+        --tile: 40px;
+        --tile-gap: 6px;
+        --map-tile-w: 60px;
+        --map-tile-h: 34px;
+    }
+
+    /* Everything you aim at, brought up to a thumb. `.reset` is in the list
+       because on the ally, enemy and map boards it is passed `confirm: false`
+       and fires on the first tap — the one control here that cannot ask again,
+       and CSS cannot tell those three instances from the pool board's arming
+       one. `.keys-button` is deliberately left small: a tap that misses it
+       costs nothing at all. */
+    .mode,
+    .format,
+    .queue,
+    .side,
+    .session-action,
+    .session-name,
+    .session-entry,
+    .map-search,
+    .reset {
+        min-height: 44px;
+    }
+
+    /* No 300ms wait for a second tap that is never coming, and no grey flash
+       over artwork. Pinch zoom is untouched — `manipulation` only gives up
+       double-tap-to-zoom. */
+    .tile,
+    .rec,
+    .ban,
+    .mode,
+    .side,
+    .format,
+    .queue,
+    .session-action,
+    .reset {
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /* Press-and-hold is how a portrait is read on a touchscreen, and both of
+       these are what iOS otherwise does with that gesture instead: a selection,
+       or a save-image sheet over the board. */
+    .tile {
+        user-select: none;
+        -webkit-touch-callout: none;
+    }
+
+    /* The resting state is 50% opacity because a mouse restores it on the way
+       past. Nothing restores it on a touchscreen, so the whole roster would sit
+       permanently dimmed and the dimming would stop meaning "not picked". */
+    .tile {
+        opacity: 0.72;
+        filter: saturate(0.85);
+    }
+
+    /* The one control with no touch path to it. It hides once a side is chosen
+       and comes back on hover or focus-within — but the only thing inside the
+       slot that can take focus is the tile, and tapping that clears the map it
+       is configuring. So on a touchscreen it stays up. Repeating the `:has()`
+       is load-bearing: the rule this overrides is (0,3,0), and a bare
+       `.map-sides` would not reach it. */
+    .map-sides:has(.side.active) {
+        display: inline-flex;
+    }
+}
+
+/* --- the answer strip ---
+   Gated on the pointer *and* a width, never on width alone: a phone rotated
+   mid-draft crosses any portrait breakpoint, and a strip that vanished when the
+   screen turned would be exactly the disappearance this app does not do. 950
+   keeps it through an iPhone's landscape (932) and off an iPad's (1024). */
+@media (hover: none) and (pointer: coarse) and (max-width: 950px) {
+    .answer-strip {
+        display: block;
+    }
+
+    /* Room for it at the foot of the page, so the footer clears the bar rather
+       than sitting under it. `box-sizing: border-box` is already global, so
+       this is inside the min-height rather than added to it. */
+    .app {
+        padding-bottom: calc(
+            var(--strip-h) + var(--sp-5) + env(safe-area-inset-bottom, 0px)
+        );
+    }
+}
+
+/* --- landscape phone ---
+   932x430, and the scarce axis is height, not width. The boards keep their two
+   columns here — that is what the width is for — and everything that only costs
+   vertical room gives some back. */
+@media (orientation: landscape) and (max-height: 500px) {
+    .app {
+        padding-top: var(--sp-3);
+        padding-bottom: var(--sp-3);
+    }
+
+    .footer {
+        margin-top: var(--sp-4);
+    }
+
+    .session-qr img {
+        width: 120px;
+        height: 120px;
+    }
 }

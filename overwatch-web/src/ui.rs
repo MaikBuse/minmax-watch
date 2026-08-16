@@ -741,20 +741,26 @@ pub fn Header(
                 // queue, then map, then side — and because it never disappears,
                 // so the cluster keeps a stable left edge as picks land.
                 FormatSwitch { format, on_format }
-                match map {
-                    Some(map) => rsx! {
-                        span { class: "map-thumb", style: art(&map.icon) }
-                        span { class: "map", "{map.name}" }
-                        // A readout, not a control: the toggle lives on the map
-                        // board now, on the tile it is about. This is here so
-                        // the header still states the whole match in one line —
-                        // offering it twice would only make the two places
-                        // something to choose between.
-                        if let Some(side) = side.filter(|_| sides_apply) {
-                            span { class: "map-side", "{side.as_str()}" }
-                        }
-                    },
-                    None => rsx! { span { class: "map unset", "no map" } },
+                // The shot, the name and the side are one fact and one element,
+                // so a header that has run out of room wraps them together
+                // rather than leaving "attack" alone at the head of a line with
+                // nothing to say which map it is about.
+                div { class: "map-chip",
+                    match map {
+                        Some(map) => rsx! {
+                            span { class: "map-thumb", style: art(&map.icon) }
+                            span { class: "map", "{map.name}" }
+                            // A readout, not a control: the toggle lives on the map
+                            // board now, on the tile it is about. This is here so
+                            // the header still states the whole match in one line —
+                            // offering it twice would only make the two places
+                            // something to choose between.
+                            if let Some(side) = side.filter(|_| sides_apply) {
+                                span { class: "map-side", "{side.as_str()}" }
+                            }
+                        },
+                        None => rsx! { span { class: "map unset", "no map" } },
+                    }
                 }
                 // The pool count used to sit here, adrift between the map and
                 // the sync light. It lives on the mode segment it describes now,
@@ -1162,6 +1168,74 @@ pub fn Recommendations(
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// The top of [`Recommendations`], pinned to the bottom of a phone.
+///
+/// The stylesheet decides who sees this; it is rendered unconditionally and
+/// hidden by default. That is deliberate — the alternative is a component that
+/// mounts and unmounts as the viewport changes, which on a phone means it
+/// disappears when the screen is turned over, mid-draft, which is the one thing
+/// this screen never does.
+///
+/// Takes the same [`RecRow`] the pick column does rather than a shape of its
+/// own. Two renderings of one list are already a risk; two *resolutions* of it
+/// would be a build away from disagreeing about what the best pick is.
+///
+/// The reasons are dropped and only the name and the number survive. This is not
+/// the panel — it is the answer, for the moment when the panel is a scroll away.
+#[component]
+pub fn AnswerStrip(
+    /// Ranked, same order as the pick column. Everything past the third is
+    /// ignored here rather than by the caller, so the two lists cannot be
+    /// sliced differently.
+    items: Vec<RecRow>,
+    swap_mode: bool,
+    on_lock: EventHandler<HeroId>,
+) -> Element {
+    rsx! {
+        div {
+            class: "answer-strip",
+            // It mirrors a list that is also on the page. Naming it here is what
+            // stops a screen reader meeting the same three heroes twice with no
+            // account of why.
+            aria_label: if swap_mode { "best swaps" } else { "best picks" },
+            div { class: "strip-row",
+                if items.is_empty() {
+                    p { class: "strip-empty", "every hero in this role is already on your team" }
+                }
+                for (index, rec) in items.iter().take(3).enumerate() {
+                    button {
+                        key: "{rec.hero.0}",
+                        class: format!(
+                            "strip-pick{}{}{}",
+                            if rec.is_locked { " locked" } else { "" },
+                            if rec.worth_swapping { " swap" } else { "" },
+                            if rec.in_pool { " pooled" } else { "" },
+                        ),
+                        // The rank is the reading order here rather than a
+                        // column of its own — there is no room for one, and
+                        // three items left to right is already an order.
+                        aria_label: "{index + 1}. {rec.name}, {rec.score}",
+                        onclick: {
+                            let hero = rec.hero;
+                            move |evt: Event<MouseData>| {
+                                // The boards sit inside clickable regions and
+                                // the root takes focus back on every click; a
+                                // pick from down here must not also read as one
+                                // of those. Same guard `ResetButton` needs.
+                                evt.stop_propagation();
+                                on_lock.call(hero);
+                            }
+                        },
+                        span { class: "strip-portrait", style: art(&rec.icon) }
+                        span { class: "strip-name", "{rec.name}" }
+                        span { class: "strip-score", "{rec.score}" }
                     }
                 }
             }

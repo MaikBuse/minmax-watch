@@ -147,6 +147,81 @@ Tighter than the 3/4/5/6/8px the screen used to mix — a HUD wants harder
 corners. Deliberately *not* square: the 36px tiles are Blizzard portrait art and
 a zero-radius crop on them looks harsh.
 
+## Sizes
+
+Every media query lives in one `--- sizes ---` section at the foot of
+`style.css`, and **nothing may be appended after it** — a plain rule written
+below would silently outrank every override inside it, same specificity and
+later source, with no `!important` anywhere to make that visible.
+
+The breakpoints are not round numbers. Each is the width at which one specific
+thing stops fitting:
+
+| Width | What changes | Why that number |
+| --- | --- | --- |
+| `≥ 1600px` | shell cap 1400 → 1680 | Below it the cap is spending a quarter of a 1920px screen on gutter. The width goes to the boards, where it buys tiles per row and a shorter page. |
+| `≤ 880px` | boards go one column | Where a two-column board stops fitting eight tiles across: a column offers `(vw - 42)/2 - 96`, and eight tiles need `8×36 + 7×4 = 316`. Below it, two boards side by side come to nine tile rows where one full-width board stacked twice comes to eight — so stacking is the *denser* layout here. |
+| `≤ 700px` | pick column goes one column | These panels are text, not artwork. What used to break them earlier was `.rec-head` refusing to wrap, which pushed the score out of the panel instead of onto a second line. |
+| `≤ 560px` | phone | Role labels move above their tile grids, page padding drops to 8px, the session inputs take a line each. |
+
+Two things are keyed on the **pointer**, not the width, because a phone that is
+turned over crosses a width breakpoint mid-draft and must not change what is on
+the screen when it does:
+
+- `(hover: none) and (pointer: coarse)` — 40px tiles, 44px minimum on everything
+  you aim at. Both conditions, never `pointer: coarse` alone: a touchscreen
+  laptop with a trackpad reports a coarse *secondary* pointer, and 40px tiles on
+  a 1920px screen with a mouse on it is a worse answer than 36.
+- The same, plus `≤ 950px` — the answer strip. 950 keeps it through an iPhone's
+  landscape (932) and off an iPad's (1024).
+
+**40px and not 44.** 44 with its gap costs a whole extra row on the damage board
+at 360px, which is a scroll tax charged for a tap that already lands. 40 + 6 is a
+46px pitch, and pitch — not the drawn box — is what WCAG 2.5.8 measures.
+
+### Touch is a third pointer, not a narrow mouse
+
+Three things on this screen were reachable only with a cursor, and each needed
+its own answer rather than a smaller breakpoint:
+
+- **A tile's name.** It is bare artwork; the name is a `::after` on `:hover`.
+  `:focus` cannot carry it — a click anywhere inside `.app` is caught by the
+  root's own handler re-taking focus so the chords keep working, so a tapped
+  tile holds focus for less than a frame. `:active` is the answer, and it makes
+  press-and-hold the gesture: hold to read, slide off to put it back, lift to
+  pick. `:focus-visible` was added at the same time, for the keyboard.
+- **The attack/defend toggle.** It hides once a side is chosen and returns on
+  hover or focus-within — but the only thing inside the slot that can take focus
+  is the tile, and tapping that clears the map it is configuring. On a
+  touchscreen it stays up.
+- **The resting tile dimming.** 50% opacity is restored by a mouse passing over.
+  Nothing restores it on a touchscreen, so the whole roster sat permanently
+  dimmed and the dimming stopped meaning "not picked".
+
+### The answer strip
+
+The one component that exists on one class of device. On a phone every panel
+stacks and the pick column — the thing the app is for — ends up below six of
+them. The strip pins its top three to the foot of the viewport.
+
+It does not break *"nothing appears or disappears mid-draft"*: it is rendered
+unconditionally and shown by a media query on the pointer, so nothing that can
+change during a draft can remove it — not a pick, not a role, not turning the
+phone over. When there is nothing to suggest it says so in the same words the
+panel it mirrors uses, rather than collapsing.
+
+It takes the same `RecRow` the pick column does. Two renderings of one list are
+already a risk; two *resolutions* of it would be a build away from disagreeing
+about what the best pick is.
+
+### The root font-size is a preference, not a constant
+
+`html` is `font-size: 100%`, never a hard pixel value. Every step in the type
+scale is in `rem`, so pinning the root reduces a browser's own text-size setting
+to nothing. This is also why `--role-gutter` is `6em` rather than the 66px it
+used to be: at 200% text zoom, 66 hard pixels clip "SUPPORT 2" while still
+charging the tiles for all 66.
+
 ## The mark
 
 `assets/icon.svg` — three role arcs (tank, damage, support, in mode-switch

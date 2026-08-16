@@ -39,8 +39,18 @@
              "add to home screen" saves a screenshot of the page. -->
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
         <meta name="apple-mobile-web-app-capable" content="yes">
+        <!-- The standardised spelling of the line above; the `apple-` one stays
+             for the iOS versions that only read that. -->
+        <meta name="mobile-web-app-capable" content="yes">
         <meta name="apple-mobile-web-app-title" content="MinMax">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+        <!-- `black`, not `black-translucent`. Translucent makes the installed
+             web view extend *under* the status bar whatever the viewport says,
+             which put the header behind the clock — and buying it back would
+             mean `viewport-fit=cover` plus safe-area padding on all four sides,
+             including the ~50px the notch takes in landscape, which is the
+             orientation this screen actually wants. Nothing here is full-bleed,
+             so there is nothing to win. This matches `theme-color`. -->
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
 
         <!-- The UI face, self-hosted. Preloaded rather than left to the
              stylesheet: the CSS is itself a hashed asset the browser has to

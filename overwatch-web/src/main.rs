@@ -791,6 +791,24 @@ fn App() -> Element {
         .then(|| share_link.as_deref().and_then(session::qr_data_url))
         .flatten();
 
+    // Resolved once and rendered twice — the pick column, and the strip pinned
+    // to the foot of a phone. Built here rather than inline at either call site
+    // so the two cannot end up ranking, formatting or truncating differently:
+    // the strip takes its three from the front of this same list.
+    let rec_rows: Vec<ui::RecRow> = frame
+        .recommendations
+        .iter()
+        .take(8)
+        .map(|rec| {
+            ui::RecRow::build(
+                rec,
+                &dataset,
+                draft.locked.is_some(),
+                pool.contains(rec.hero),
+            )
+        })
+        .collect();
+
     rsx! {
         div {
             class: "app",
@@ -1121,24 +1139,24 @@ fn App() -> Element {
                 }
 
                 ui::Recommendations {
-                    items: frame.recommendations
-                        .iter()
-                        .take(8)
-                        .map(|rec| {
-                            ui::RecRow::build(
-                                rec,
-                                &dataset,
-                                draft.locked.is_some(),
-                                pool.contains(rec.hero),
-                            )
-                        })
-                        .collect::<Vec<_>>(),
+                    items: rec_rows.clone(),
                     swap_mode: draft.locked.is_some(),
                     on_lock: move |hero: HeroId| lock_hero.call(hero),
                 }
             }
 
             ui::Footer {}
+
+            // Inside .app rather than beside it, so the root's keyboard handler
+            // and its click-to-refocus still cover it — the strip's own buttons
+            // stop the click before it gets there. Last, because it is fixed:
+            // source order is what a screen reader follows, and the pick column
+            // it mirrors has already been read by this point.
+            ui::AnswerStrip {
+                items: rec_rows,
+                swap_mode: draft.locked.is_some(),
+                on_lock: move |hero: HeroId| lock_hero.call(hero),
+            }
         }
     }
 }
