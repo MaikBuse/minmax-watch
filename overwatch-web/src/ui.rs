@@ -67,10 +67,10 @@ pub struct ModeChip {
 /// `assets/icon.svg`.
 ///
 /// The glyph alone, never the `minmax.watch` wordmark. The header already
-/// carries the mode switch, the map, the side toggle, the sync light, the
-/// ingest date and a reset, and a screen whose entire argument is density
-/// cannot spend a hundred pixels of it naming the app you already opened. The
-/// wordmark does its work on the tab, the install prompt and the link preview.
+/// carries the mode switch, the map, the sync light, the ingest date and a
+/// reset, and a screen whose entire argument is density cannot spend a hundred
+/// pixels of it naming the app you already opened. The wordmark does its work
+/// on the tab, the install prompt and the link preview.
 ///
 /// Drawn inline rather than as an `<img>` so it needs no network round trip and
 /// cannot flash in after the first paint.
@@ -217,6 +217,12 @@ pub struct MapTile {
     pub name: String,
     pub icon: String,
     pub selected: bool,
+    /// Whether this map is one of the ones where attack and defend mean
+    /// something — [`GameMode::has_sides`], resolved at the call site, because
+    /// components here never see the dataset.
+    ///
+    /// [`GameMode::has_sides`]: overwatch_core::GameMode::has_sides
+    pub has_sides: bool,
 }
 
 /// What one tile is, on the board it is drawn on.
@@ -312,10 +318,15 @@ pub struct BoardRow {
 pub fn MapBoard(
     maps: Vec<MapTile>,
     query: String,
+    /// Attack or defend, for the one selected tile that has both. Lives here
+    /// rather than in the header because the side is a property of the map, and
+    /// the map is picked here.
+    side: Option<Side>,
     on_query: EventHandler<String>,
     on_submit: EventHandler<()>,
     on_focus: EventHandler<bool>,
     on_pick: EventHandler<MapId>,
+    on_side: EventHandler<Option<Side>>,
     on_reset: EventHandler<()>,
 ) -> Element {
     rsx! {
@@ -353,18 +364,34 @@ pub fn MapBoard(
             }
             div { class: "tiles",
                 for tile in maps.iter() {
-                    button {
-                        key: "{tile.map.0}",
-                        class: if tile.selected { "tile map-tile selected" } else { "tile map-tile" },
-                        style: art(&tile.icon),
-                        // The tile is bare artwork, so the name has to be
-                        // carried by the label rather than by any child text.
-                        aria_label: "{tile.name}",
-                        "data-name": "{tile.name}",
-                        onclick: {
-                            let map = tile.map;
-                            move |_| on_pick.call(map)
-                        },
+                    // Every tile gets the slot, not just the one wearing the
+                    // toggle: a wrapper that came and went with the selection
+                    // would change the shape of the list under the diff every
+                    // time you picked a different map.
+                    div { key: "{tile.map.0}", class: "map-slot",
+                        button {
+                            class: if tile.selected { "tile map-tile selected" } else { "tile map-tile" },
+                            style: art(&tile.icon),
+                            // The tile is bare artwork, so the name has to be
+                            // carried by the label rather than by any child text.
+                            aria_label: "{tile.name}",
+                            "data-name": "{tile.name}",
+                            onclick: {
+                                let map = tile.map;
+                                move |_| on_pick.call(map)
+                            },
+                        }
+                        // A sibling of the tile rather than a child of it — a
+                        // button inside a button is not markup, and the click
+                        // would carry on into the tile and take the map back.
+                        //
+                        // After it rather than before, though it is drawn above:
+                        // it floats, so source order costs nothing visually and
+                        // buys the tab order the eye expects — the map, then the
+                        // question about the map.
+                        if tile.selected && tile.has_sides {
+                            SideToggle { side, on_side, label: tile.name.clone() }
+                        }
                     }
                 }
             }
@@ -512,19 +539,34 @@ fn FormatSwitch(format: Format, on_format: EventHandler<Format>) -> Element {
     }
 }
 
-/// Attack or defend, for the payload modes that have both.
+/// Attack or defend, drawn on the map it is asking about.
+///
+/// It used to sit in the header, a control the width of the screen away from
+/// the board you had just clicked to raise the question. Pinned to the selected
+/// tile instead, picking the map and picking the half of it you are playing are
+/// one motion in one place, and the toggle is found by looking at the thing it
+/// belongs to rather than remembered.
 ///
 /// Rendered only where the question has an answer — Push, Control, Flashpoint
-/// and Clash start both teams in the same posture, so the caller passes `None`
-/// and this draws nothing rather than a disabled control nobody can use.
+/// and Clash start both teams in the same posture, so the board renders nothing
+/// on those tiles rather than a disabled control nobody can use.
+///
+/// `label` is the map's name: the pills say only "attack" and "defend", which
+/// is the whole point on a floating control, but a screen reader arriving at
+/// them needs to know which of 37 tiles they belong to.
 #[component]
-pub fn SideToggle(side: Option<Side>, on_side: EventHandler<Option<Side>>) -> Element {
+pub fn SideToggle(
+    side: Option<Side>,
+    label: String,
+    on_side: EventHandler<Option<Side>>,
+) -> Element {
     rsx! {
-        div { class: "sides",
+        div { class: "sides map-sides", role: "group", aria_label: "side on {label}",
             for option in Side::BOTH {
                 button {
                     key: "{option.as_str()}",
                     class: if side == Some(option) { "side active" } else { "side" },
+                    aria_pressed: "{side == Some(option)}",
                     // Clicking the active side clears it, the same way clicking
                     // a picked map or portrait takes it back.
                     onclick: move |_| on_side.call(if side == Some(option) { None } else { Some(option) }),
@@ -597,7 +639,8 @@ pub fn Header(
     /// The queue the room is in: team size and whether roles are split.
     format: Format,
     map: Option<MapChip>,
-    /// `None` on a symmetric mode, or when no map is picked yet.
+    /// Whether attack and defend mean anything on the map that is picked.
+    /// `false` on a symmetric mode, or when no map is picked yet.
     sides_apply: bool,
     side: Option<Side>,
     /// One per playable role, in switch order.
@@ -606,7 +649,6 @@ pub fn Header(
     sync_status: String,
     on_role: EventHandler<Role>,
     on_format: EventHandler<Format>,
-    on_side: EventHandler<Option<Side>>,
     on_reset_all: EventHandler<()>,
 ) -> Element {
     let sync_class = format!("sync sync-{}", sync_status.replace(' ', "-"));
@@ -623,19 +665,23 @@ pub fn Header(
             ModeSwitch { role, modes, on_role }
             div { class: "context",
                 // First, because it is the widest-scope fact about the match —
-                // queue, then map, then side — and because unlike the side
-                // toggle it never disappears, so the cluster keeps a stable
-                // left edge as picks land.
+                // queue, then map, then side — and because it never disappears,
+                // so the cluster keeps a stable left edge as picks land.
                 FormatSwitch { format, on_format }
                 match map {
                     Some(map) => rsx! {
                         span { class: "map-thumb", style: art(&map.icon) }
                         span { class: "map", "{map.name}" }
+                        // A readout, not a control: the toggle lives on the map
+                        // board now, on the tile it is about. This is here so
+                        // the header still states the whole match in one line —
+                        // offering it twice would only make the two places
+                        // something to choose between.
+                        if let Some(side) = side.filter(|_| sides_apply) {
+                            span { class: "map-side", "{side.as_str()}" }
+                        }
                     },
                     None => rsx! { span { class: "map unset", "no map" } },
-                }
-                if sides_apply {
-                    SideToggle { side, on_side }
                 }
                 // The pool count used to sit here, adrift between the map and
                 // the sync light. It lives on the mode segment it describes now,
