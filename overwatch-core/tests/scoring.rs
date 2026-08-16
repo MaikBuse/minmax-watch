@@ -10,8 +10,8 @@
 
 use overwatch_core::{
     ban_recommendations, difficulty_to_value, recommend, threats, BanBoard, BanSubject, Dataset,
-    DatasetParts, Draft, EnemyRoleWeights, GameMap, GameMode, Hero, HeroId, HeroSet, MapId, Matrix,
-    ReasonKind, Role, Side, UserContext,
+    DatasetParts, Defended, DefendedTeam, Draft, EnemyRoleWeights, GameMap, GameMode, Hero, HeroId,
+    Knowledge, MapId, Matrix, ReasonKind, Role, Side, UserContext,
 };
 
 const REINHARDT: HeroId = HeroId(0);
@@ -89,6 +89,7 @@ fn fixture() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: vec![0; n],
         base_strength: vec![0; n],
+        win_rate: vec![None; n],
         side_lean: vec![0; n],
         reasons,
         generated: "fixture".to_owned(),
@@ -389,6 +390,7 @@ fn symmetric_fixture() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: Vec::new(),
         base_strength: vec![0; n],
+        win_rate: vec![None; n],
         side_lean: vec![0; n],
         reasons: vec![String::new(); n * n],
         generated: "fixture".to_owned(),
@@ -563,6 +565,7 @@ fn sparse_fixture() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: Vec::new(),
         base_strength: vec![0; n],
+        win_rate: vec![None; n],
         side_lean: vec![0; n],
         reasons: vec![String::new(); n * n],
         generated: "fixture".to_owned(),
@@ -710,6 +713,7 @@ fn side_fixture() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: vec![0; 2 * n],
         base_strength: vec![0; n],
+        win_rate: vec![None; n],
         side_lean,
         reasons: vec![String::new(); n * n],
         generated: "fixture".to_owned(),
@@ -796,17 +800,112 @@ fn the_side_shows_up_in_the_reasoning_only_when_it_says_something() {
     );
 }
 
+// --- the patch rung ----------------------------------------------------------
+
+const P_REINHARDT: HeroId = HeroId(0);
+const P_SIGMA: HeroId = HeroId(1);
+const P_PHARAH: HeroId = HeroId(2);
+const P_ANA: HeroId = HeroId(3);
+
+/// A roster with strengths that differ, and one rated pair.
+///
+/// The other fixtures leave every strength at zero, which is right for them —
+/// nothing above this point scores on it. The patch rung does, so it needs a
+/// roster where "strongest" is a different answer from "worst matchup", or the
+/// test cannot tell which one produced the order.
+fn patch_fixture() -> Dataset {
+    let heroes = vec![
+        hero("reinhardt", "Reinhardt", Role::Tank),
+        hero("sigma", "Sigma", Role::Tank),
+        hero("pharah", "Pharah", Role::Damage),
+        hero("ana", "Ana", Role::Support),
+    ];
+    let n = heroes.len();
+
+    // Pharah beats Reinhardt, and is the weakest hero on the patch. Ana is the
+    // strongest and beats nobody. The two orders disagree by construction.
+    let mut matchups = Matrix::unrated(n);
+    matchups.set(P_PHARAH, P_REINHARDT, 100).expect("in range");
+    matchups.set(P_REINHARDT, P_PHARAH, -100).expect("in range");
+
+    Dataset::new(DatasetParts {
+        heroes,
+        maps: Vec::new(),
+        matchups,
+        synergy: Matrix::unrated(n),
+        map_affinity: Vec::new(),
+        base_strength: vec![-20, 40, -60, 80],
+        win_rate: vec![Some(48.5), Some(52.0), Some(46.0), Some(54.0)],
+        side_lean: vec![0; n],
+        reasons: vec![String::new(); n * n],
+        generated: "fixture".to_owned(),
+        patch: "fixture".to_owned(),
+    })
+    .expect("fixture is internally consistent")
+}
+
 // --- ban recommendations -----------------------------------------------------
 //
 // The ban phase runs before anyone picks, so these cases are mostly about who
-// the answer is *for*: one locked hero, or the whole set you might end up on.
+// the answer is *for*. A ban is spent once for the whole team, so that is
+// everyone on it — and the interesting part is how the answer sharpens as more
+// of them say what they play.
 
-fn pool_of(heroes: [HeroId; 2]) -> HeroSet {
-    HeroSet::from_iter_checked(heroes).expect("fixture indices are in range")
+fn locked(who: &str, is_me: bool, role: Role, hero: HeroId) -> Defended {
+    Defended {
+        who: who.to_owned(),
+        is_me,
+        is_typed: false,
+        role,
+        knowledge: Knowledge::Locked(hero),
+        heroes: vec![hero],
+    }
+}
+
+fn pooled(who: &str, is_me: bool, role: Role, heroes: Vec<HeroId>) -> Defended {
+    Defended {
+        who: who.to_owned(),
+        is_me,
+        is_typed: false,
+        role,
+        knowledge: Knowledge::Pool,
+        heroes,
+    }
+}
+
+/// Somebody who has said only what they queued as, which resolves to the whole
+/// role — the state everybody is in before they touch the pool board.
+fn unknown(ds: &Dataset, who: &str, is_me: bool, role: Role) -> Defended {
+    Defended {
+        who: who.to_owned(),
+        is_me,
+        is_typed: false,
+        role,
+        knowledge: Knowledge::Unknown,
+        heroes: ds.heroes_in_role(role).collect(),
+    }
+}
+
+fn team(members: Vec<Defended>) -> DefendedTeam {
+    DefendedTeam { members }
+}
+
+/// Drafting alone, having marked a pool. The one-member case, which is what the
+/// solo screen actually passes.
+fn solo_pool(heroes: Vec<HeroId>) -> DefendedTeam {
+    team(vec![pooled("me", true, Role::Tank, heroes)])
 }
 
 fn ban_rank_of(board: &BanBoard, hero: HeroId) -> Option<usize> {
     board.candidates.iter().position(|c| c.hero == hero)
+}
+
+fn ban_score_of(board: &BanBoard, hero: HeroId) -> Option<f32> {
+    board
+        .candidates
+        .iter()
+        .find(|c| c.hero == hero)
+        .map(|c| c.score)
 }
 
 #[test]
@@ -817,9 +916,22 @@ fn a_locked_pick_is_banned_for_by_its_own_matchups() {
     let mut draft = Draft::new();
     draft.locked = Some(REINHARDT);
 
-    let board = ban_recommendations(&ds, &draft, &ctx, &HeroSet::empty());
+    let board = ban_recommendations(
+        &ds,
+        &draft,
+        &ctx,
+        &team(vec![locked("me", true, Role::Tank, REINHARDT)]),
+    );
 
-    assert_eq!(board.subject, BanSubject::Locked(REINHARDT));
+    assert_eq!(
+        board.subject,
+        BanSubject::One {
+            who: "me".to_owned(),
+            is_me: true,
+            locked: true,
+            heroes: 1,
+        }
+    );
     // Pharah is a 9/10 for Reinhardt and Widowmaker a 7/10, so the order is the
     // order of the two matchups and nothing else.
     assert_eq!(
@@ -831,7 +943,11 @@ fn a_locked_pick_is_banned_for_by_its_own_matchups() {
     // flat zero would put four heroes with no argument behind them on a list
     // whose whole content is the argument.
     assert!((board.candidates[0].severity - 1.0).abs() < 1e-6);
-    assert_eq!(board.candidates[0].worst, REINHARDT);
+    assert_eq!(board.candidates[0].worst, Some(REINHARDT));
+    assert_eq!(
+        board.candidates[0].worst_owner, None,
+        "your own hero is not credited back to you"
+    );
     assert!(!board.candidates[0].text.is_empty(), "the scraped sentence");
 }
 
@@ -843,11 +959,17 @@ fn an_unpicked_draft_bans_for_the_average_of_your_pool() {
     // interesting one: she beats Reinhardt outright (+0.5) and so tops a list
     // built from the worst case, but D.Va beats her by twice that, so across
     // the pool she is not a problem at all.
-    let pool = pool_of([REINHARDT, DVA]);
+    let board = ban_recommendations(&ds, &Draft::new(), &ctx, &solo_pool(vec![REINHARDT, DVA]));
 
-    let board = ban_recommendations(&ds, &Draft::new(), &ctx, &pool);
-
-    assert_eq!(board.subject, BanSubject::Pool);
+    assert_eq!(
+        board.subject,
+        BanSubject::One {
+            who: "me".to_owned(),
+            is_me: true,
+            locked: false,
+            heroes: 2,
+        }
+    );
     assert_eq!(
         board.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
         vec![PHARAH],
@@ -855,28 +977,10 @@ fn an_unpicked_draft_bans_for_the_average_of_your_pool() {
     // (+1.0 against Reinhardt, -0.75 against D.Va) / 2.
     assert!((board.candidates[0].severity - 0.125).abs() < 1e-6);
     assert_eq!(
-        board.candidates[0].worst, REINHARDT,
+        board.candidates[0].worst,
+        Some(REINHARDT),
         "the average decides the ranking; the worst case names who it is for"
     );
-}
-
-#[test]
-fn an_empty_pool_bans_for_the_whole_role() {
-    let ds = fixture();
-    let ctx = tank_context(&ds);
-
-    let board = ban_recommendations(&ds, &Draft::new(), &ctx, &HeroSet::empty());
-
-    // An unmarked pool means "I have not said who I play", which is a reason to
-    // answer for the role rather than a reason to answer nothing.
-    assert_eq!(board.subject, BanSubject::Role(Role::Tank));
-    assert_eq!(
-        board.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
-        vec![PHARAH],
-    );
-    // (+1.0, +0.25, -0.75) / 3 across all three tanks — a different number from
-    // the two-hero pool above, which is the point of the distinction.
-    assert!((board.candidates[0].severity - 1.0 / 6.0).abs() < 1e-6);
 }
 
 #[test]
@@ -887,7 +991,12 @@ fn heroes_your_side_of_the_draft_beats_are_not_worth_banning() {
     let mut draft = Draft::new();
     draft.locked = Some(DVA);
 
-    let board = ban_recommendations(&ds, &draft, &ctx, &HeroSet::empty());
+    let board = ban_recommendations(
+        &ds,
+        &draft,
+        &ctx,
+        &team(vec![locked("me", true, Role::Tank, DVA)]),
+    );
 
     // D.Va beats everyone the fixture rates her against, so there is no ban to
     // spend — and saying so with an empty list is the honest answer.
@@ -898,20 +1007,20 @@ fn heroes_your_side_of_the_draft_beats_are_not_worth_banning() {
 fn a_hero_already_in_the_draft_is_not_a_ban() {
     let ds = fixture();
     let ctx = tank_context(&ds);
-    let pool = pool_of([REINHARDT, SIGMA]);
+    let mine = solo_pool(vec![REINHARDT, SIGMA]);
 
-    let open = ban_recommendations(&ds, &Draft::new(), &ctx, &pool);
+    let open = ban_recommendations(&ds, &Draft::new(), &ctx, &mine);
     assert!(ban_rank_of(&open, PHARAH).is_some(), "worth banning");
 
     // Picked, so the ban phase is over for her either way.
     let mut drafted = Draft::new();
     drafted.add_enemy(PHARAH);
-    assert!(ban_rank_of(&ban_recommendations(&ds, &drafted, &ctx, &pool), PHARAH).is_none());
+    assert!(ban_rank_of(&ban_recommendations(&ds, &drafted, &ctx, &mine), PHARAH).is_none());
 
     // On your own team, so banning her is banning yourself.
     let mut allied = Draft::new();
     allied.add_ally(PHARAH);
-    assert!(ban_rank_of(&ban_recommendations(&ds, &allied, &ctx, &pool), PHARAH).is_none());
+    assert!(ban_rank_of(&ban_recommendations(&ds, &allied, &ctx, &mine), PHARAH).is_none());
 }
 
 #[test]
@@ -922,7 +1031,12 @@ fn the_enemy_tank_is_worth_more_to_ban_for_a_tank_player() {
     let mut draft = Draft::new();
     draft.locked = Some(W_SIGMA);
 
-    let board = ban_recommendations(&ds, &draft, &ctx, &HeroSet::empty());
+    let board = ban_recommendations(
+        &ds,
+        &draft,
+        &ctx,
+        &team(vec![locked("me", true, Role::Tank, W_SIGMA)]),
+    );
 
     // Reinhardt, Ana and Sojourn all beat Sigma by exactly 60, so the matchups
     // cannot break the tie — only the role weighting can, and for a tank player
@@ -934,4 +1048,300 @@ fn the_enemy_tank_is_worth_more_to_ban_for_a_tank_player() {
     );
     assert_eq!(board.candidates[0].hero, W_REINHARDT);
     assert!(ban_rank_of(&board, W_REINHARDT) < ban_rank_of(&board, W_ANA));
+}
+
+// --- what the team adds ------------------------------------------------------
+//
+// The ladder the panel climbs: nobody has said anything, then somebody marks a
+// pool, then somebody else does, then people lock in. Each rung has to move the
+// answer, or the panel is claiming to use information it is throwing away.
+
+/// Nobody has said anything, so there is no team to answer about. Ranked by
+/// patch strength instead — a role-wide matchup average is nearly flat, and a
+/// flat list presented as an answer is worse than one that says what it is.
+#[test]
+fn with_nobody_known_the_list_is_the_patch() {
+    let ds = patch_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let board = ban_recommendations(
+        &ds,
+        &Draft::new(),
+        &ctx,
+        &team(vec![
+            unknown(&ds, "me", true, Role::Tank),
+            unknown(&ds, "mika", false, Role::Support),
+        ]),
+    );
+
+    assert_eq!(board.subject, BanSubject::Patch);
+    assert_eq!(
+        board.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
+        vec![P_ANA, P_SIGMA],
+        "strongest first, and only the above-average half"
+    );
+    assert!((board.candidates[0].score - 0.80).abs() < 1e-6);
+    assert_eq!(
+        board.candidates[0].worst, None,
+        "no pair produced this, so naming one would invent a claim"
+    );
+}
+
+/// The moment anybody says anything, strength stops being consulted at all.
+/// "Strong right now" and "bad for us" are two different arguments for a ban,
+/// and a number that mixes them can only be read as neither.
+#[test]
+fn one_pool_anywhere_leaves_the_patch_rung_for_good() {
+    let ds = patch_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let board = ban_recommendations(
+        &ds,
+        &Draft::new(),
+        &ctx,
+        &team(vec![
+            pooled("me", true, Role::Tank, vec![P_REINHARDT]),
+            unknown(&ds, "mika", false, Role::Support),
+        ]),
+    );
+
+    assert!(!matches!(board.subject, BanSubject::Patch));
+    // Ana is the strongest hero in this fixture by a distance and beats nobody
+    // on the team, so a list still reading strength would have her top. It is
+    // Pharah, who is the only hero rated against anything the team plays.
+    assert_eq!(
+        board.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
+        vec![P_PHARAH],
+    );
+}
+
+/// The reported bug, as a test: adding an ally used to remove one candidate and
+/// change nothing else. A ban is spent for the team, so a teammate arriving has
+/// to be able to change the whole answer.
+#[test]
+fn a_teammate_locking_in_changes_what_is_worth_banning() {
+    let ds = symmetric_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    // Reinhardt beats Sigma and loses to Ana; D.Va is the exact mirror. Across
+    // the two of them every candidate averages out to dead even, so there is
+    // nothing here to spend a ban on.
+    let alone = team(vec![pooled(
+        "me",
+        true,
+        Role::Tank,
+        vec![W_REINHARDT, W_DVA],
+    )]);
+    let solo = ban_recommendations(&ds, &Draft::new(), &ctx, &alone);
+    assert!(
+        solo.candidates.is_empty(),
+        "nothing beats the pool on average: {:?}",
+        solo.candidates
+    );
+
+    // A support teammate locks Ana, who loses to Baptiste by 60. That is a real
+    // argument for a ban and it was not on the board a moment ago — nobody in
+    // the pool is rated against Baptiste at all.
+    let mut with_mika = alone.clone();
+    with_mika
+        .members
+        .push(locked("mika", false, Role::Support, W_ANA));
+    let board = ban_recommendations(&ds, &Draft::new(), &ctx, &with_mika);
+
+    assert_eq!(
+        board.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
+        vec![W_BAPTISTE],
+    );
+    assert_eq!(board.candidates[0].worst, Some(W_ANA));
+    assert_eq!(
+        board.candidates[0].worst_owner.as_deref(),
+        Some("mika"),
+        "whose hero takes the worst of it, since it is not yours"
+    );
+}
+
+/// Same again for a pool rather than a lock — the rung before anybody has
+/// picked, which is where a ban actually lands.
+#[test]
+fn a_teammates_pool_changes_what_is_worth_banning() {
+    let ds = symmetric_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let alone = team(vec![pooled("me", true, Role::Tank, vec![W_REINHARDT])]);
+    let solo = ban_recommendations(&ds, &Draft::new(), &ctx, &alone);
+    assert_eq!(
+        solo.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
+        vec![W_ANA],
+        "Ana is the only hero that beats Reinhardt"
+    );
+
+    // Mika plays Ana. She stops being a candidate — banning her would cost Mika
+    // the pick — and what beats *her* takes over the list instead: D.Va, who
+    // nothing in the draft had a reason to care about a moment ago, then
+    // Baptiste. D.Va leads because Mika reads an enemy tank through the 1.6 a
+    // support pays one, while Baptiste is a support against a support at 0.6.
+    let mut with_mika = alone.clone();
+    with_mika
+        .members
+        .push(pooled("mika", false, Role::Support, vec![W_ANA]));
+    let board = ban_recommendations(&ds, &Draft::new(), &ctx, &with_mika);
+
+    assert_eq!(
+        board.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
+        vec![W_DVA, W_BAPTISTE],
+    );
+    assert_eq!(
+        board.subject,
+        BanSubject::Team {
+            known: 2,
+            locked: 0
+        }
+    );
+}
+
+/// A ban takes the hero off the table for everyone, so recommending one the team
+/// plays is recommending they lose a pick to deny it. The pool highlights rather
+/// than restricts everywhere else in this app; here it is the cost.
+#[test]
+fn nothing_the_team_plays_is_ever_a_candidate() {
+    let ds = symmetric_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let board = ban_recommendations(
+        &ds,
+        &Draft::new(),
+        &ctx,
+        &team(vec![
+            pooled("me", true, Role::Tank, vec![W_REINHARDT, W_DVA]),
+            pooled("mika", false, Role::Support, vec![W_ANA]),
+            locked("sam", false, Role::Damage, W_TRACER),
+        ]),
+    );
+
+    for hero in [W_REINHARDT, W_DVA, W_ANA, W_TRACER] {
+        assert!(
+            ban_rank_of(&board, hero).is_none(),
+            "{hero:?} is one of ours"
+        );
+    }
+}
+
+/// Somebody who has only queued still holds a slot, and a candidate that beats
+/// their whole role matters more than one that does not — but they have made no
+/// claim about any hero, so they must not out-vote the people who have.
+#[test]
+fn a_member_who_has_said_nothing_dilutes_without_deciding() {
+    let ds = symmetric_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let alone = team(vec![pooled("me", true, Role::Tank, vec![W_REINHARDT])]);
+    let mut with_quiet = alone.clone();
+    with_quiet
+        .members
+        .push(unknown(&ds, "mika", false, Role::Support));
+
+    let solo = ban_recommendations(&ds, &Draft::new(), &ctx, &alone);
+    let joined = ban_recommendations(&ds, &Draft::new(), &ctx, &with_quiet);
+
+    assert_eq!(
+        solo.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
+        joined.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
+        "a quiet teammate cannot reorder the answer"
+    );
+    let before = ban_score_of(&solo, W_ANA).expect("ranked alone");
+    let after = ban_score_of(&joined, W_ANA).expect("still ranked");
+    assert!(
+        after < before,
+        "but they do dilute it: {before} then {after}"
+    );
+    // Their own worst case is a hero of a role nobody claimed, so it must not be
+    // what the row names.
+    assert_eq!(joined.candidates[0].worst, Some(W_REINHARDT));
+    assert_eq!(joined.candidates[0].worst_owner, None);
+}
+
+/// The other half of the same rule, and the sharper one.
+///
+/// D.Va beats Ana, and Ana is only on the board because somebody queued support.
+/// Nothing in the pool is rated against D.Va at all — so putting her on the list
+/// would rank a hero off a role nobody claimed, above one the pool is actually
+/// measured against. Worse, the certainty discount cannot stop it: the mean
+/// divides by the certainty of the members that contributed, so a candidate
+/// carried by one quiet member divides its 0.25 straight back out.
+#[test]
+fn a_quiet_member_alone_cannot_put_a_hero_on_the_list() {
+    let ds = symmetric_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let board = ban_recommendations(
+        &ds,
+        &Draft::new(),
+        &ctx,
+        &team(vec![
+            pooled("me", true, Role::Tank, vec![W_REINHARDT]),
+            unknown(&ds, "mika", false, Role::Support),
+        ]),
+    );
+
+    assert_eq!(
+        board.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
+        vec![W_ANA],
+        "only the hero the pool is rated against"
+    );
+    assert!(
+        board.candidates.iter().all(|c| c.worst.is_some()),
+        "every row on a team rung names whose hero takes the worst of it"
+    );
+}
+
+/// The compatibility pin. Drafting alone is the one-member case rather than a
+/// separate path, so the answer a solo player gets must be the one the old
+/// per-person scorer gave: the pool's mean, through their own role's weights.
+#[test]
+fn drafting_alone_still_scores_the_pool_through_your_own_role() {
+    let ds = symmetric_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let board = ban_recommendations(
+        &ds,
+        &Draft::new(),
+        &ctx,
+        &team(vec![pooled("me", true, Role::Tank, vec![W_REINHARDT])]),
+    );
+
+    // Ana beats Reinhardt by 60. One member, so the certainty average is a
+    // no-op and the score is exactly `severity * enemy_roles[tank][support]`.
+    let ana = board.candidates.first().expect("Ana is ranked");
+    assert_eq!(ana.hero, W_ANA);
+    assert!((ana.severity - 0.60).abs() < 1e-6);
+    let weight = ctx.weights.enemy_roles.get(Role::Tank, Role::Support);
+    assert!((ana.score - 0.60 * weight).abs() < 1e-6);
+}
+
+/// Averaging the role weight across the team is what makes the ban list
+/// format-aware without a second weight table: a 6v6 roster holds two tank
+/// slots, so the enemy tank is read through the tank row twice.
+#[test]
+fn a_second_tank_on_the_team_raises_what_an_enemy_tank_is_worth() {
+    let ds = symmetric_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    // Ana beats Sigma, and so does Reinhardt, so Sigma is nobody's problem —
+    // Baptiste is the one who loses to him. One tank alongside, then two.
+    let base = vec![
+        pooled("me", true, Role::Support, vec![W_BAPTISTE]),
+        pooled("mika", false, Role::Tank, vec![W_DVA]),
+    ];
+    let five = ban_recommendations(&ds, &Draft::new(), &ctx, &team(base.clone()));
+
+    let mut six = base;
+    six.push(pooled("sam", false, Role::Tank, vec![W_DVA]));
+    let six = ban_recommendations(&ds, &Draft::new(), &ctx, &team(six));
+
+    let before = ban_score_of(&five, W_SIGMA).expect("ranked");
+    let after = ban_score_of(&six, W_SIGMA).expect("still ranked");
+    assert!(
+        after > before,
+        "a second tank slot reads the enemy tank through the tank row twice: {before} then {after}"
+    );
 }

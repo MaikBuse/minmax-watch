@@ -620,14 +620,6 @@ body {
     margin-bottom: 5px;
 }
 
-/* A ban takes the hero off the table for both teams, so one of yours landing on
-   this list is a cost rather than a highlight. Same marker as the pick list all
-   the same: it is the same fact, and inventing a second one for it would only
-   make you learn two. */
-.ban.pooled {
-    border-left: 3px solid var(--warn);
-}
-
 /* Every number on this list is a matchup you lose — that is what puts a hero on
    it — so the colour is not distinguishing rows from each other. It is
    distinguishing this column from the pick column beside it, where the same
@@ -1261,6 +1253,31 @@ body {
     background-size: cover;
     background-position: center top;
     border: 1px solid var(--line);
+}
+
+/* What a seat plays, where its pick would go. Smaller and quieter than a locked
+   portrait, because it is a set of possibilities rather than a fact — and
+   capped in the markup, so the pill cannot grow past the one beside it. */
+.roster-pool {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.roster-pool-portrait {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background-size: cover;
+    background-position: center top;
+    border: 1px solid var(--line);
+    opacity: 0.75;
+}
+
+.roster-pool-more {
+    color: var(--text-faint);
+    font-size: var(--fs-micro);
+    margin-left: 2px;
 }
 
 .roster-state {

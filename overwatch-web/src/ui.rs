@@ -713,14 +713,14 @@ pub struct BanRow {
     pub icon: String,
     /// The weighted danger, already formatted.
     pub score: String,
-    /// Which of your heroes this hurts most. `None` when you are locked in, in
-    /// which case the answer is "you" and saying so would be noise.
+    /// Which of the team's heroes this hurts most. `None` when the team comes to
+    /// one locked hero, in which case the answer is "you" and saying so would be
+    /// noise, and on the patch rung, where no pair produced the score.
     pub worst: Option<String>,
-    /// The scraped sentence for that pair, where one exists.
+    /// Who plays `worst`, when it is somebody other than you.
+    pub worst_owner: Option<String>,
+    /// The scraped sentence for that pair, or the win rate on the patch rung.
     pub text: String,
-    /// One of yours. The same read-out as the pick list's star, and it means
-    /// something sharper here: a ban costs you the hero too.
-    pub in_pool: bool,
 }
 
 /// Who to deny the enemy, before anyone has picked.
@@ -728,8 +728,13 @@ pub struct BanRow {
 /// The counterpart to [`Recommendations`], and the one panel that is about the
 /// phase *before* the draft. `subject` is spelled out in the heading rather than
 /// left to be inferred, because the number in each row means something different
-/// depending on it — your locked hero's own matchup, or an average over every
-/// hero you might still end up on.
+/// depending on it — one locked hero's own matchup, an average over everything
+/// the team might end up on, or, before anybody has said anything, the patch.
+///
+/// Nothing the team plays is ever on this list. A ban takes the hero off the
+/// table for everyone, so a row here is only an argument at all if denying it
+/// costs your side nothing — which is why there is no longer a "one of yours"
+/// marker to explain: the case it explained cannot occur.
 #[component]
 pub fn BanPanel(subject: String, items: Vec<BanRow>) -> Element {
     rsx! {
@@ -739,30 +744,31 @@ pub fn BanPanel(subject: String, items: Vec<BanRow>) -> Element {
                 span { class: "subject", "{subject}" }
             }
             if items.is_empty() {
-                p { class: "empty", "nothing here beats you — no ban worth spending" }
+                p { class: "empty", "nothing here beats your team — no ban worth spending" }
             }
             for (index, ban) in items.iter().enumerate() {
                 div {
                     key: "{ban.hero.0}",
-                    class: if ban.in_pool { "ban pooled" } else { "ban" },
+                    class: "ban",
                     span { class: "rank", "{index + 1}" }
                     span { class: "rec-portrait", style: art(&ban.icon) }
                     div { class: "rec-body",
                         div { class: "rec-head",
                             span { class: "rec-name", "{ban.name}" }
                             span { class: "score", "{ban.score}" }
-                            // A ban takes the hero off the table for everyone,
-                            // so one of yours landing here is a real cost and
-                            // not just a highlight.
-                            if ban.in_pool {
-                                span { class: "star on", title: "one of yours — banning it costs you the pick too", aria_label: "in your pool", "★" }
-                            }
                         }
-                        // Two separate claims, so they are two lines: which of
-                        // your heroes takes the worst of it, and whatever the
-                        // sources actually say about that pair.
+                        // Two separate claims, so they are two lines: whose hero
+                        // takes the worst of it, and whatever the sources
+                        // actually say about that pair.
                         if let Some(worst) = &ban.worst {
-                            p { class: "ban-worst", "hardest on {worst}" }
+                            match &ban.worst_owner {
+                                Some(owner) => rsx! {
+                                    p { class: "ban-worst", "hardest on {worst} · {owner}" }
+                                },
+                                None => rsx! {
+                                    p { class: "ban-worst", "hardest on {worst}" }
+                                },
+                            }
                         }
                         if !ban.text.is_empty() {
                             p { class: "ban-text", "{ban.text}" }
@@ -954,6 +960,16 @@ pub struct RosterRow {
     pub connected: bool,
     /// Whether this row is the person looking at it.
     pub is_me: bool,
+    /// The portraits of what they play, for a seat that has not picked yet.
+    ///
+    /// Shown where the pick will go, because until it arrives this is the better
+    /// answer to the same question — "picking…" says only that they have not,
+    /// while a pool says what they are choosing between. Empty once they lock,
+    /// where the pick itself is the answer.
+    pub pool: Vec<String>,
+    /// How many more are in that pool than the strip has room for. A pill row
+    /// that grew with somebody's pool would push the rest of the roster around.
+    pub pool_extra: usize,
     /// Somebody else in the session has taken the same hero.
     ///
     /// The team cannot field two of them, so the derivation counts the hero
@@ -1000,7 +1016,23 @@ pub fn Roster(rows: Vec<RosterRow>) -> Element {
                                 }
                             },
                             // An empty slot is information: they are still
-                            // choosing, which is worth seeing during a draft.
+                            // choosing, which is worth seeing during a draft —
+                            // and what they are choosing between is worth more,
+                            // where they have said.
+                            _ if !row.pool.is_empty() => rsx! {
+                                span { class: "roster-pool", title: "what they play",
+                                    for (index, icon) in row.pool.iter().enumerate() {
+                                        span {
+                                            key: "{index}",
+                                            class: "roster-pool-portrait",
+                                            style: art(icon),
+                                        }
+                                    }
+                                    if row.pool_extra > 0 {
+                                        span { class: "roster-pool-more", "+{row.pool_extra}" }
+                                    }
+                                }
+                            },
                             _ => rsx! { span { class: "roster-hero unset", "picking…" } },
                         }
                         if !row.connected {

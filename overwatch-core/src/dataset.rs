@@ -17,6 +17,16 @@ pub struct Dataset {
     /// Row-major `maps.len() x heroes.len()`.
     map_affinity: Vec<i8>,
     base_strength: Vec<i8>,
+    /// The raw published win rate behind `base_strength`, as a percentage.
+    ///
+    /// Carried alongside rather than derived back out of it, because
+    /// `base_strength` is a normalised i8 and the reverse mapping is lossy. It
+    /// is never scored on — the scorer reads `base_strength` — and exists so a
+    /// panel arguing from patch strength can show the evidence rather than a
+    /// rescaled number nobody can check against a stats site.
+    ///
+    /// `None` for a hero the source published no rate for.
+    win_rate: Vec<Option<f32>>,
     /// Positive leans attack, negative leans defend. Only consulted on the modes
     /// that have sides at all.
     side_lean: Vec<i8>,
@@ -37,6 +47,7 @@ pub struct DatasetParts {
     pub synergy: Matrix,
     pub map_affinity: Vec<i8>,
     pub base_strength: Vec<i8>,
+    pub win_rate: Vec<Option<f32>>,
     pub side_lean: Vec<i8>,
     pub reasons: Vec<String>,
     pub generated: String,
@@ -70,6 +81,13 @@ impl Dataset {
                 actual: parts.base_strength.len(),
             });
         }
+        if parts.win_rate.len() != n {
+            return Err(CoreError::RosterLengthMismatch {
+                what: "win_rate",
+                expected: n,
+                actual: parts.win_rate.len(),
+            });
+        }
         if parts.side_lean.len() != n {
             return Err(CoreError::RosterLengthMismatch {
                 what: "side_lean",
@@ -100,6 +118,7 @@ impl Dataset {
             synergy: parts.synergy,
             map_affinity: parts.map_affinity,
             base_strength: parts.base_strength,
+            win_rate: parts.win_rate,
             side_lean: parts.side_lean,
             reasons: parts.reasons,
             generated: parts.generated,
@@ -165,6 +184,15 @@ impl Dataset {
 
     pub fn base_strength(&self, hero: HeroId) -> i8 {
         self.base_strength.get(hero.index()).copied().unwrap_or(0)
+    }
+
+    /// The published win rate as a percentage, where the source gave one.
+    ///
+    /// For display only. Ranking on it directly would disagree with
+    /// [`Self::base_strength`], which is what the scorer uses and what the
+    /// heroes missing a rate are still ordered by.
+    pub fn win_rate(&self, hero: HeroId) -> Option<f32> {
+        self.win_rate.get(hero.index()).copied().flatten()
     }
 
     /// How much this hero prefers attacking over defending, on -100..=100.

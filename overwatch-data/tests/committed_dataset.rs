@@ -6,8 +6,8 @@
 //! here rather than in the middle of a hero select.
 
 use overwatch_core::{
-    ban_recommendations, recommend, threats, BanSubject, Draft, HeroId, HeroSet, MapId, Role,
-    UserContext,
+    ban_recommendations, recommend, threats, BanSubject, Defended, DefendedTeam, Draft, HeroId,
+    Knowledge, MapId, Role, UserContext,
 };
 use overwatch_data::load;
 use overwatch_data::schema::MatchupsFile;
@@ -319,12 +319,29 @@ fn the_ban_list_answers_for_a_pool_before_anyone_picks() {
     };
 
     let ctx = UserContext::new(Role::Tank, ds.hero_count());
-    let pool = HeroSet::from_iter_checked([hero("reinhardt"), hero("winston")])
-        .expect("both are on the roster");
+    let alone = |knowledge, heroes| DefendedTeam {
+        members: vec![Defended {
+            who: "me".to_owned(),
+            is_me: true,
+            is_typed: false,
+            role: Role::Tank,
+            knowledge,
+            heroes,
+        }],
+    };
+    let pool = alone(Knowledge::Pool, vec![hero("reinhardt"), hero("winston")]);
 
     let board = ban_recommendations(&ds, &Draft::new(), &ctx, &pool);
 
-    assert_eq!(board.subject, BanSubject::Pool);
+    assert_eq!(
+        board.subject,
+        BanSubject::One {
+            who: "me".to_owned(),
+            is_me: true,
+            locked: false,
+            heroes: 2,
+        }
+    );
     assert!(
         board.candidates.len() >= 10,
         "only {} heroes rate as a threat to a two-hero pool",
@@ -348,9 +365,16 @@ fn the_ban_list_answers_for_a_pool_before_anyone_picks() {
         "unexpected top bans for a Reinhardt/Winston pool: {top:?}"
     );
     assert!(
-        board.candidates[0].worst == hero("reinhardt")
-            || board.candidates[0].worst == hero("winston"),
+        board.candidates[0].worst == Some(hero("reinhardt"))
+            || board.candidates[0].worst == Some(hero("winston")),
         "the worst case has to be one of the heroes being defended"
+    );
+    assert!(
+        board
+            .candidates
+            .iter()
+            .all(|c| c.hero != hero("reinhardt") && c.hero != hero("winston")),
+        "a ban takes the hero from you too, so your own pool is never on the list"
     );
     assert!(
         !board.candidates[0].text.is_empty(),
@@ -361,13 +385,29 @@ fn the_ban_list_answers_for_a_pool_before_anyone_picks() {
     // with it: Winston's problems stop counting once you are on Reinhardt.
     let mut draft = Draft::new();
     draft.locked = Some(hero("reinhardt"));
-    let locked = ban_recommendations(&ds, &draft, &ctx, &pool);
+    let locked = ban_recommendations(
+        &ds,
+        &draft,
+        &ctx,
+        &alone(
+            Knowledge::Locked(hero("reinhardt")),
+            vec![hero("reinhardt")],
+        ),
+    );
 
-    assert_eq!(locked.subject, BanSubject::Locked(hero("reinhardt")));
+    assert_eq!(
+        locked.subject,
+        BanSubject::One {
+            who: "me".to_owned(),
+            is_me: true,
+            locked: true,
+            heroes: 1,
+        }
+    );
     assert!(locked
         .candidates
         .iter()
-        .all(|c| c.worst == hero("reinhardt")));
+        .all(|c| c.worst == Some(hero("reinhardt"))));
     assert!(
         locked.candidates.iter().any(|c| c.hero == hero("pharah")),
         "Reinhardt cannot touch a hero in the air"

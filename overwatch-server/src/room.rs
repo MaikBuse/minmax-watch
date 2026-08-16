@@ -543,6 +543,31 @@ mod tests {
         );
     }
 
+    /// The pool rides on the seat, and the rest of the team bans on it — so the
+    /// server overwriting `id` and `connected` must leave the rest of the seat
+    /// exactly as it arrived.
+    #[test]
+    fn a_seat_carries_its_pool_through_the_room() {
+        let rooms = Rooms::new();
+        let (code, _first) = open(&rooms, "era");
+
+        rooms.publish_seat(
+            &code,
+            Seat {
+                role: Role::Support,
+                pool: vec![HeroId(2), HeroId(7)],
+                ..Seat::new("era")
+            },
+            "era",
+        );
+
+        let state = rooms.state_of(&code).expect("the session");
+        assert_eq!(
+            state.seat("era").map(|s| s.pool.clone()),
+            Some(vec![HeroId(2), HeroId(7)])
+        );
+    }
+
     /// The one ownership rule the server can enforce without authentication.
     /// A client that claims someone else's id in the payload gets its own seat
     /// moved instead, because the socket it arrived on is the authority.
