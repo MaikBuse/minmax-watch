@@ -45,7 +45,24 @@ use crate::ui::{
     TileState,
 };
 
-static CSS: Asset = asset!("/assets/style.css");
+/// The stylesheet, put in the head by `dx` at build time rather than by the app.
+///
+/// `with_static_head` is the load-bearing part. Rendering `document::Stylesheet`
+/// — which is what this used to do — inserts the `<link>` from an effect that
+/// only runs after the first render, so the CSS could not even begin
+/// downloading until the whole wasm bundle had arrived and run once. The
+/// browser filled that window with its own defaults: a white page, and then the
+/// draft screen as unstyled black-on-white text. Written into `index.html`
+/// instead, the stylesheet is discovered in the initial HTML parse and blocks
+/// the first paint, so there is no unstyled window at all.
+///
+/// Never read. The `asset!()` call still has to exist: it is what registers the
+/// file with the bundler and pins its content-hashed name.
+#[allow(dead_code)]
+static CSS: Asset = asset!(
+    "/assets/style.css",
+    AssetOptions::css().with_static_head(true)
+);
 
 fn main() {
     dioxus::launch(App);
@@ -775,8 +792,6 @@ fn App() -> Element {
         .flatten();
 
     rsx! {
-        document::Stylesheet { href: CSS }
-
         div {
             class: "app",
             // There is no text input to hold focus any more, so the shortcuts

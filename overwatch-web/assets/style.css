@@ -153,6 +153,76 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+/* --- the boot splash ---
+   The markup is in index.html, because nothing this crate compiles to is
+   running yet; this file only says what it looks like and when it leaves.
+
+   It leaves when #main stops being empty, which is Dioxus appending its first
+   render into it — the only "the app is here" signal available without script.
+   That works as a handover only because `dx` writes this stylesheet into the
+   head at build time (`with_static_head` in main.rs), so by the time the app
+   mounts the page behind the splash is already styled. Deliver the CSS from the
+   app again and the splash would lift onto an unstyled screen.
+
+   #boot has to stay a sibling *after* #main; the combinator cannot look
+   backwards. See the comment in index.html. */
+#boot {
+    position: fixed;
+    /* Not `height: 100vh` — that leaves a strip of unpainted page under iOS
+       Safari's toolbar. */
+    inset: 0;
+    /* Above everything: the highest the app itself goes is 20. */
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    gap: var(--sp-4);
+    background: var(--bg);
+    color: var(--accent);
+    /* Declared here rather than on the hide rule, so the element already
+       carries it when the hide lands and the change is animated rather than
+       snapped. Visibility waits out the fade instead of cutting it short. */
+    transition:
+        opacity 180ms ease,
+        visibility 0s linear 180ms;
+}
+
+#boot noscript {
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+}
+
+/* The only animation in the app. Everything else is deliberately still, and a
+   waiting screen is the one place where stillness reads as "hung" rather than
+   as calm. Slow enough to be a heartbeat rather than a blink. */
+#boot svg {
+    animation: boot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes boot-pulse {
+    0%,
+    100% {
+        opacity: 0.45;
+    }
+    50% {
+        opacity: 0.9;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #boot svg {
+        animation: none;
+        opacity: 0.75;
+    }
+}
+
+#main:not(:empty) ~ #boot {
+    opacity: 0;
+    /* Not opacity alone: this is what takes the splash out of the hit-testing
+       and the accessibility tree once it has faded. */
+    visibility: hidden;
+    pointer-events: none;
+}
+
 /* The root holds the keyboard focus, because with no text input there is
    nowhere else for the shortcuts to live. A focus ring around the entire page
    would be pure noise, so it is suppressed here and only here — every actual

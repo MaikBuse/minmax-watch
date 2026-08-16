@@ -59,8 +59,10 @@ build-web:
     # because it content-hashes the name and nothing here can know the hash.
     #
     # Anything added to index.html or manifest.json as an absolute path has to
-    # be added here too, or it silently 404s in the bundle while working fine
-    # under `just dev`.
+    # be added here too, and to docker/build.sh, or it 404s in that bundle.
+    # Note the direction: it is this list that makes them exist. `dx serve`
+    # copies none of them, so under `just dev` every one of these paths 404s —
+    # which is why nothing on the first-paint path may depend on one.
     cp overwatch-web/assets/icon.svg {{web_out}}/icon.svg
     cp overwatch-web/assets/logo.svg {{web_out}}/logo.svg
     cp overwatch-web/assets/favicon.ico {{web_out}}/favicon.ico

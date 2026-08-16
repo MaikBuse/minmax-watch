@@ -51,6 +51,43 @@
     </head>
     <body>
         <div id="main"></div>
+
+        <!-- What fills the second or two the wasm takes to arrive.
+             Deliberately a sibling *after* #main, for two reasons: Dioxus
+             appends its tree into #main rather than clearing it, so a splash
+             nested inside would sit under the app forever; and the rule that
+             hides this one (`#main:not(:empty) ~ #boot` in style.css) uses the
+             general sibling combinator, which cannot look backwards. Move it
+             above #main and it never goes away.
+
+             The mark is written out here rather than pulled from /icon.svg so
+             it paints in the first frame with no request, and so it works under
+             `just dev`, which does not serve the root-path assets. Same drawing
+             as assets/icon.svg and ui.rs's brand_mark(); being in the page
+             rather than inside an <img> it can read the palette tokens. -->
+        <div id="boot">
+            <svg viewBox="0 0 96 96" width="96" height="96" aria-hidden="true">
+                <g fill="none" stroke-width="10" stroke-linecap="round"
+                   transform="rotate(-90 48 48)">
+                    <circle cx="48" cy="48" r="32" stroke="var(--role-tank)"
+                            stroke-dasharray="55.85 145.2" />
+                    <circle cx="48" cy="48" r="32" stroke="var(--role-damage)"
+                            stroke-dasharray="55.85 145.2" stroke-dashoffset="-67.02" />
+                    <circle cx="48" cy="48" r="32" stroke="var(--role-support)"
+                            stroke-dasharray="55.85 145.2" stroke-dashoffset="-134.04" />
+                </g>
+                <g stroke="currentColor" stroke-width="8" stroke-linecap="round" fill="none">
+                    <circle cx="48" cy="48" r="10" />
+                    <path d="M48 30v-6M48 66v6M30 48h-6M66 48h6" />
+                </g>
+            </svg>
+            <!-- The one case where this screen is the final state rather than a
+                 waiting one, so it is also the only chance to say why. Not
+                 aria-hidden, unlike the mark above: this is the part a screen
+                 reader should reach. -->
+            <noscript>MinMax needs JavaScript to score a draft.</noscript>
+        </div>
+
         <script>
             // Cache the shell so the app still opens when the LAN server is
             // off. Scoring is local anyway, so a cached shell is a fully
