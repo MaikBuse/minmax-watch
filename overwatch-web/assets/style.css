@@ -1109,8 +1109,17 @@ body {
 
 /* The row whose last slot is the one you are holding open yourself. A count
    here would read zero against a row of live tiles, because your own unspent
-   reservation is what took it — the slot is not gone, it is yours. */
+   reservation is what took it — the slot is not gone, it is yours.
+
+   On its own line, not inline like the count: the column is sized for
+   "SUPPORT 2", and "SUPPORT YOU" is wider than that. There is no whitespace
+   between the label and this span — the gap is the count's margin — so an
+   inline "you" has no break opportunity and spills over the portraits instead
+   of wrapping. Making it a block gives it the line it needs; the row is
+   flex-start aligned, so the taller label costs nothing. */
 .board-free.you {
+    display: block;
+    margin-left: 0;
     color: var(--warn);
     text-transform: uppercase;
     letter-spacing: 0.04em;
