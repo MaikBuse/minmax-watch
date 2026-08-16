@@ -728,12 +728,20 @@ pub fn Header(
 
     rsx! {
         header { class: "header",
-            a {
-                class: "brand",
-                href: "/",
-                "aria-label": "MinMax — minmax.watch",
-                title: "minmax.watch",
-                {brand_mark()}
+            // The page's only heading once the boot splash has gone. The name
+            // is real text rather than an aria-label so that it is content a
+            // crawler indexes and not just an accessible name — the mark itself
+            // is a glyph, and the rest of this screen is hero names and
+            // one-word board titles. `.sr-only` keeps the header looking
+            // exactly as it did; see the note above `.brand-heading`.
+            h1 { class: "brand-heading",
+                a {
+                    class: "brand",
+                    href: "/",
+                    title: "minmax.watch",
+                    {brand_mark()}
+                    span { class: "sr-only", "MinMax — Overwatch 2 draft assistant" }
+                }
             }
             ModeSwitch { role, modes, on_role }
             div { class: "context",

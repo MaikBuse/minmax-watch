@@ -2,7 +2,7 @@
     "id": "/",
     "name": "MinMax",
     "short_name": "MinMax",
-    "description": "Keyboard-first Overwatch 2 draft assistant. Scores every pick locally, so the network is never between a keystroke and an answer.",
+    "description": "Overwatch 2 draft assistant. Counter picks, hero matchups and team synergy, scored in your browser as hero select runs — keyboard-first, nothing to install.",
     "lang": "en",
     "dir": "ltr",
     "start_url": "/",

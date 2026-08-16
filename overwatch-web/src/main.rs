@@ -870,278 +870,286 @@ fn App() -> Element {
                 },
             }
 
-            ui::SessionBar {
-                code: membership.read().code().map(str::to_owned),
-                share_url: share_link.clone(),
-                qr: qr_image.clone(),
-                qr_open: qr_open(),
-                status: status.read().label(),
-                name: profile.read().name.clone(),
-                entry: join_entry(),
-                on_entry: move |next: String| join_entry.set(next),
-                on_name: {
-                    let ds = dataset.clone();
-                    move |next: String| {
-                        {
-                            let mut p = profile.write();
-                            p.name = next.clone();
-                            p.save(&ds);
+            // The draft itself. A landmark around it and not around the
+            // whole of .app, so that "skip to main content" actually skips
+            // the header — the mark, the mode switch and the match context
+            // are navigation and status, not the content being navigated to.
+            // A plain block box inside a plain block box, so it changes no
+            // layout.
+            main { class: "app-main",
+                ui::SessionBar {
+                    code: membership.read().code().map(str::to_owned),
+                    share_url: share_link.clone(),
+                    qr: qr_image.clone(),
+                    qr_open: qr_open(),
+                    status: status.read().label(),
+                    name: profile.read().name.clone(),
+                    entry: join_entry(),
+                    on_entry: move |next: String| join_entry.set(next),
+                    on_name: {
+                        let ds = dataset.clone();
+                        move |next: String| {
+                            {
+                                let mut p = profile.write();
+                                p.name = next.clone();
+                                p.save(&ds);
+                            }
+                            // The roster is showing this to four other people, so it
+                            // travels with the seat rather than waiting for a reload.
+                            me.write().name = next;
                         }
-                        // The roster is showing this to four other people, so it
-                        // travels with the seat rather than waiting for a reload.
-                        me.write().name = next;
-                    }
-                },
-                on_focus: move |focused: bool| search_focused.set(focused),
-                on_create: move |_| {
-                    spawn(async move {
-                        if let Some(code) = session::create().await {
+                    },
+                    on_focus: move |focused: bool| search_focused.set(focused),
+                    on_create: move |_| {
+                        spawn(async move {
+                            if let Some(code) = session::create().await {
+                                join.call(code);
+                            }
+                            // No server means no session, and nothing to say about
+                            // it: the app carries on exactly as it did before.
+                        });
+                    },
+                    on_join: move |_| {
+                        if let Some(code) = session::parse_code(&join_entry()) {
+                            join_entry.set(String::new());
                             join.call(code);
                         }
-                        // No server means no session, and nothing to say about
-                        // it: the app carries on exactly as it did before.
-                    });
-                },
-                on_join: move |_| {
-                    if let Some(code) = session::parse_code(&join_entry()) {
-                        join_entry.set(String::new());
-                        join.call(code);
-                    }
-                },
-                on_leave: move |_| leave.call(()),
-                on_copy: {
-                    let share = share_link.clone();
-                    move |_| {
-                        if let Some(url) = &share {
-                            session::copy_to_clipboard(url);
-                        }
-                    }
-                },
-                on_qr: move |_| {
-                    let open = qr_open();
-                    qr_open.set(!open);
-                },
-            }
-
-            // Shown when drafting alone too. It is one row, and it is the
-            // legend for the ally board's amber tile: this is you, this is what
-            // you are on. Hiding it solo left the board's one "mine" marker
-            // with nothing on screen to explain it.
-            if !roster_rows.is_empty() {
-                ui::Roster { rows: roster_rows }
-            }
-
-            // Above the map, because this is the one board that is not about the
-            // match in front of you: it is who you play, set once and then left
-            // alone, so it sits where you configure rather than where you draft.
-            ui::HeroBoard {
-                title: format!("my pool · {}", role.label()),
-                side: "pool".to_owned(),
-                rows: pool_board,
-                // Your pool is weeks of accumulated configuration, not draft
-                // state, so this one asks before it throws it away.
-                reset_confirm: true,
-                on_toggle: {
-                    let ds = dataset.clone();
-                    move |hero: HeroId| {
-                        let mut p = profile.write();
-                        let _ = p.pool_mut(role).toggle(hero);
-                        p.save(&ds);
-                    }
-                },
-                on_reset: {
-                    let ds = dataset.clone();
-                    move |_| {
-                        let mut p = profile.write();
-                        *p.pool_mut(role) = overwatch_core::HeroSet::empty();
-                        p.save(&ds);
-                    }
-                },
-            }
-
-            ui::MapBoard {
-                maps: map_tiles,
-                query: map_query.read().clone(),
-                side: draft.side,
-                on_query: move |next: String| map_query.set(next),
-                on_submit: {
-                    let ds = dataset.clone();
-                    move |_| {
-                        // Enter takes the best match, which is the whole point
-                        // of typing rather than hunting for the tile.
-                        let Some(id) = overwatch_core::resolve_map(&ds, &map_query.read()) else {
-                            return;
-                        };
-                        logged.set(None);
-                        let mut b = board.write();
-                        b.map = Some(id);
-                        // Same invariant the click path holds: a side belongs to
-                        // the map it was picked on, and typing your way to a
-                        // symmetric one has to drop it too.
-                        if !ds.map(id).is_ok_and(|m| m.mode.has_sides()) {
-                            b.side = None;
-                        }
-                        drop(b);
-                        map_query.set(String::new());
-                    }
-                },
-                on_focus: move |focused: bool| search_focused.set(focused),
-                on_side: move |next: Option<Side>| { board.write().side = next; },
-                on_pick: {
-                    let ds = dataset.clone();
-                    move |id: MapId| {
-                        logged.set(None);
-                        let mut b = board.write();
-                        // Clicking the map you are on clears it, the same way
-                        // clicking a picked hero takes the pick back.
-                        b.map = if b.map == Some(id) { None } else { Some(id) };
-                        // A side is a property of the map you are on; carrying
-                        // one over to a mode that has no sides would leave it
-                        // set and invisible.
-                        let keeps_side = b
-                            .map
-                            .and_then(|id| ds.map(id).ok())
-                            .is_some_and(|m| m.mode.has_sides());
-                        if !keeps_side {
-                            b.side = None;
-                        }
-                    }
-                },
-                on_reset: move |_| {
-                    map_query.set(String::new());
-                    let mut b = board.write();
-                    b.map = None;
-                    b.side = None;
-                },
-            }
-
-            // Ally on the left, enemy on the right. Swapped in source order
-            // rather than with a CSS `order`, so tab order still follows what
-            // you see.
-            div { class: "boards",
-                ui::HeroBoard {
-                    // The board is your whole team, you included, so it says
-                    // which of the two the next click is about.
-                    title: if my_lock.is_none() {
-                        "ally · click to take yours".to_owned()
-                    } else {
-                        "ally".to_owned()
                     },
-                    side: "ally".to_owned(),
-                    rows: ally_board,
-                    claiming: my_lock.is_none(),
-                    shape: ally_shape,
-                    // Dispatches on the same ladder the tiles were drawn from,
-                    // so what a click does is what the tile said it would. A
-                    // teammate's pick never reaches here — the component drops
-                    // those before they leave it.
-                    on_toggle: move |hero: HeroId| {
-                        logged.set(None);
-                        if my_lock == Some(hero) {
-                            unlock.call(());
-                        } else if board.peek().extra_allies.contains(&hero) {
-                            board.write().remove_extra_ally(hero);
-                        } else if my_lock.is_none() {
-                            // Nothing of yours yet, so this is you. Your role
-                            // follows the hero, which is what keeps the slot you
-                            // hold and the hero you are on the same statement.
-                            lock_hero.call(hero);
-                        } else {
-                            // Already picked, so this is a teammate who is not
-                            // in the session and whom somebody has to type in.
-                            board.write().add_extra_ally(hero);
+                    on_leave: move |_| leave.call(()),
+                    on_copy: {
+                        let share = share_link.clone();
+                        move |_| {
+                            if let Some(url) = &share {
+                                session::copy_to_clipboard(url);
+                            }
                         }
                     },
-                    // Your own pick goes with the typed names. A reset that
-                    // visibly left one tile lit would read as broken.
-                    on_reset: move |_| {
-                        board.write().extra_allies.clear();
-                        unlock.call(());
+                    on_qr: move |_| {
+                        let open = qr_open();
+                        qr_open.set(!open);
                     },
                 }
 
+                // Shown when drafting alone too. It is one row, and it is the
+                // legend for the ally board's amber tile: this is you, this is what
+                // you are on. Hiding it solo left the board's one "mine" marker
+                // with nothing on screen to explain it.
+                if !roster_rows.is_empty() {
+                    ui::Roster { rows: roster_rows }
+                }
+
+                // Above the map, because this is the one board that is not about the
+                // match in front of you: it is who you play, set once and then left
+                // alone, so it sits where you configure rather than where you draft.
                 ui::HeroBoard {
-                    title: "enemy".to_owned(),
-                    side: "enemy".to_owned(),
-                    rows: enemy_board,
-                    shape: enemy_shape,
+                    title: format!("my pool · {}", role.label()),
+                    side: "pool".to_owned(),
+                    rows: pool_board,
+                    // Your pool is weeks of accumulated configuration, not draft
+                    // state, so this one asks before it throws it away.
+                    reset_confirm: true,
                     on_toggle: {
                         let ds = dataset.clone();
                         move |hero: HeroId| {
-                            logged.set(None);
-                            board.write().toggle_enemy(&ds, hero);
+                            let mut p = profile.write();
+                            let _ = p.pool_mut(role).toggle(hero);
+                            p.save(&ds);
                         }
                     },
-                    on_reset: move |_| { board.write().enemies.clear(); },
+                    on_reset: {
+                        let ds = dataset.clone();
+                        move |_| {
+                            let mut p = profile.write();
+                            *p.pool_mut(role) = overwatch_core::HeroSet::empty();
+                            p.save(&ds);
+                        }
+                    },
                 }
-            }
 
-            div { class: "columns",
-                // Ban and matchups share a column because they are the two
-                // halves of one question, split by whether the hero is on the
-                // enemy board yet: the ban list drains as picks land and this
-                // one fills with those same heroes, so the column is never
-                // dead. Wrapped rather than left to grid auto-placement, which
-                // would drop the second panel below the *tallest* row and leave
-                // a hole under the ban list.
-                div { class: "column-stack",
-                ui::BanPanel {
-                    subject: ban_subject,
-                    items: frame.bans.candidates
-                        .iter()
-                        .take(8)
-                        .map(|ban| {
-                            let chip = chip_of(ban.hero);
-                            BanRow {
-                                hero: ban.hero,
-                                name: chip.name,
-                                icon: chip.icon,
-                                // The weighted score rather than the raw
-                                // matchup, because this is the number the list
-                                // is *sorted* by and a column ordered by one
-                                // figure while displaying another reads as
-                                // broken. Negated so it carries the same sign
-                                // as every other number on screen: below zero
-                                // is losing, exactly as in the pick column,
-                                // whose score is a weighted sum too.
-                                score: format!("{:+.0}", ban.score * -100.0),
-                                worst: (!locked_subject)
-                                    .then(|| ban.worst.map(|hero| chip_of(hero).name))
-                                    .flatten(),
-                                worst_owner: ban.worst_owner.clone(),
-                                // The patch rung ranks on strength rather than
-                                // on any pair, so it shows the figure it ranked
-                                // on instead of a rationale there is none of.
-                                text: match dataset.win_rate(ban.hero) {
-                                    Some(rate) if patch_subject => format!("{rate:.1}% win rate"),
-                                    _ => ban.text.clone(),
-                                },
+                ui::MapBoard {
+                    maps: map_tiles,
+                    query: map_query.read().clone(),
+                    side: draft.side,
+                    on_query: move |next: String| map_query.set(next),
+                    on_submit: {
+                        let ds = dataset.clone();
+                        move |_| {
+                            // Enter takes the best match, which is the whole point
+                            // of typing rather than hunting for the tile.
+                            let Some(id) = overwatch_core::resolve_map(&ds, &map_query.read()) else {
+                                return;
+                            };
+                            logged.set(None);
+                            let mut b = board.write();
+                            b.map = Some(id);
+                            // Same invariant the click path holds: a side belongs to
+                            // the map it was picked on, and typing your way to a
+                            // symmetric one has to drop it too.
+                            if !ds.map(id).is_ok_and(|m| m.mode.has_sides()) {
+                                b.side = None;
                             }
-                        })
-                        .collect::<Vec<_>>(),
+                            drop(b);
+                            map_query.set(String::new());
+                        }
+                    },
+                    on_focus: move |focused: bool| search_focused.set(focused),
+                    on_side: move |next: Option<Side>| { board.write().side = next; },
+                    on_pick: {
+                        let ds = dataset.clone();
+                        move |id: MapId| {
+                            logged.set(None);
+                            let mut b = board.write();
+                            // Clicking the map you are on clears it, the same way
+                            // clicking a picked hero takes the pick back.
+                            b.map = if b.map == Some(id) { None } else { Some(id) };
+                            // A side is a property of the map you are on; carrying
+                            // one over to a mode that has no sides would leave it
+                            // set and invisible.
+                            let keeps_side = b
+                                .map
+                                .and_then(|id| ds.map(id).ok())
+                                .is_some_and(|m| m.mode.has_sides());
+                            if !keeps_side {
+                                b.side = None;
+                            }
+                        }
+                    },
+                    on_reset: move |_| {
+                        map_query.set(String::new());
+                        let mut b = board.write();
+                        b.map = None;
+                        b.side = None;
+                    },
                 }
 
-                ui::ThreatPanel {
-                    // Named for the hero, not for the relation: the ban panel
-                    // right above already spends "vs" on the opposite one, and
-                    // two adjacent headers reading "vs" about inverse things
-                    // would be worse than no label.
-                    subject: my_lock.map(|hero| format!("as {}", chip_of(hero).name)),
-                    items: frame.threats
-                        .iter()
-                        .filter_map(|threat| {
-                            my_lock.map(|locked| ui::ThreatRow::build(threat, locked, &dataset))
-                        })
-                        .collect::<Vec<_>>(),
-                    unrated: draft.enemies.len().saturating_sub(frame.threats.len()),
-                    empty: threat_empty,
-                }
+                // Ally on the left, enemy on the right. Swapped in source order
+                // rather than with a CSS `order`, so tab order still follows what
+                // you see.
+                div { class: "boards",
+                    ui::HeroBoard {
+                        // The board is your whole team, you included, so it says
+                        // which of the two the next click is about.
+                        title: if my_lock.is_none() {
+                            "ally · click to take yours".to_owned()
+                        } else {
+                            "ally".to_owned()
+                        },
+                        side: "ally".to_owned(),
+                        rows: ally_board,
+                        claiming: my_lock.is_none(),
+                        shape: ally_shape,
+                        // Dispatches on the same ladder the tiles were drawn from,
+                        // so what a click does is what the tile said it would. A
+                        // teammate's pick never reaches here — the component drops
+                        // those before they leave it.
+                        on_toggle: move |hero: HeroId| {
+                            logged.set(None);
+                            if my_lock == Some(hero) {
+                                unlock.call(());
+                            } else if board.peek().extra_allies.contains(&hero) {
+                                board.write().remove_extra_ally(hero);
+                            } else if my_lock.is_none() {
+                                // Nothing of yours yet, so this is you. Your role
+                                // follows the hero, which is what keeps the slot you
+                                // hold and the hero you are on the same statement.
+                                lock_hero.call(hero);
+                            } else {
+                                // Already picked, so this is a teammate who is not
+                                // in the session and whom somebody has to type in.
+                                board.write().add_extra_ally(hero);
+                            }
+                        },
+                        // Your own pick goes with the typed names. A reset that
+                        // visibly left one tile lit would read as broken.
+                        on_reset: move |_| {
+                            board.write().extra_allies.clear();
+                            unlock.call(());
+                        },
+                    }
+
+                    ui::HeroBoard {
+                        title: "enemy".to_owned(),
+                        side: "enemy".to_owned(),
+                        rows: enemy_board,
+                        shape: enemy_shape,
+                        on_toggle: {
+                            let ds = dataset.clone();
+                            move |hero: HeroId| {
+                                logged.set(None);
+                                board.write().toggle_enemy(&ds, hero);
+                            }
+                        },
+                        on_reset: move |_| { board.write().enemies.clear(); },
+                    }
                 }
 
-                ui::Recommendations {
-                    items: rec_rows.clone(),
-                    swap_mode: draft.locked.is_some(),
-                    on_lock: move |hero: HeroId| lock_hero.call(hero),
+                div { class: "columns",
+                    // Ban and matchups share a column because they are the two
+                    // halves of one question, split by whether the hero is on the
+                    // enemy board yet: the ban list drains as picks land and this
+                    // one fills with those same heroes, so the column is never
+                    // dead. Wrapped rather than left to grid auto-placement, which
+                    // would drop the second panel below the *tallest* row and leave
+                    // a hole under the ban list.
+                    div { class: "column-stack",
+                    ui::BanPanel {
+                        subject: ban_subject,
+                        items: frame.bans.candidates
+                            .iter()
+                            .take(8)
+                            .map(|ban| {
+                                let chip = chip_of(ban.hero);
+                                BanRow {
+                                    hero: ban.hero,
+                                    name: chip.name,
+                                    icon: chip.icon,
+                                    // The weighted score rather than the raw
+                                    // matchup, because this is the number the list
+                                    // is *sorted* by and a column ordered by one
+                                    // figure while displaying another reads as
+                                    // broken. Negated so it carries the same sign
+                                    // as every other number on screen: below zero
+                                    // is losing, exactly as in the pick column,
+                                    // whose score is a weighted sum too.
+                                    score: format!("{:+.0}", ban.score * -100.0),
+                                    worst: (!locked_subject)
+                                        .then(|| ban.worst.map(|hero| chip_of(hero).name))
+                                        .flatten(),
+                                    worst_owner: ban.worst_owner.clone(),
+                                    // The patch rung ranks on strength rather than
+                                    // on any pair, so it shows the figure it ranked
+                                    // on instead of a rationale there is none of.
+                                    text: match dataset.win_rate(ban.hero) {
+                                        Some(rate) if patch_subject => format!("{rate:.1}% win rate"),
+                                        _ => ban.text.clone(),
+                                    },
+                                }
+                            })
+                            .collect::<Vec<_>>(),
+                    }
+
+                    ui::ThreatPanel {
+                        // Named for the hero, not for the relation: the ban panel
+                        // right above already spends "vs" on the opposite one, and
+                        // two adjacent headers reading "vs" about inverse things
+                        // would be worse than no label.
+                        subject: my_lock.map(|hero| format!("as {}", chip_of(hero).name)),
+                        items: frame.threats
+                            .iter()
+                            .filter_map(|threat| {
+                                my_lock.map(|locked| ui::ThreatRow::build(threat, locked, &dataset))
+                            })
+                            .collect::<Vec<_>>(),
+                        unrated: draft.enemies.len().saturating_sub(frame.threats.len()),
+                        empty: threat_empty,
+                    }
+                    }
+
+                    ui::Recommendations {
+                        items: rec_rows.clone(),
+                        swap_mode: draft.locked.is_some(),
+                        on_lock: move |hero: HeroId| lock_hero.call(hero),
+                    }
                 }
             }
 

@@ -215,6 +215,42 @@ body {
         visibility 0s linear 180ms;
 }
 
+/* The splash is the only place the product says its own name in words, so this
+   is a heading in the document outline and a wordmark on screen at the same
+   time. Sized down to --fs-md rather than left at the browser's 2em h1: it is
+   on screen for about a second, under a 96px mark that is already the louder
+   half, and BRAND.md's voice does not shout. */
+#boot h1 {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text);
+    text-align: center;
+}
+
+/* The tagline half of the heading, dimmed so the name reads first. A span
+   inside the h1 rather than its own element, because splitting them would put
+   "Overwatch 2 draft assistant" outside the heading — which is the half worth
+   having in the outline. */
+#boot h1 span {
+    color: var(--text-muted);
+    font-weight: 400;
+}
+
+/* Wraps to two lines at most on a phone, which is what the max-width is for:
+   a single 90-character line of --fs-sm across a desktop viewport reads as a
+   banner rather than as a caption. */
+#boot .boot-blurb {
+    margin: 0;
+    max-width: 34ch;
+    color: var(--text-faint);
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+    text-align: center;
+    text-wrap: balance;
+}
+
 #boot noscript {
     color: var(--text-muted);
     font-size: var(--fs-sm);
@@ -275,6 +311,40 @@ body {
    switch, the map, the sync light, the ingest date and a reset, and a screen
    whose whole argument is density cannot spend a hundred pixels of it telling
    you which app you already opened. */
+
+/* The app's own h1, wrapping the mark. The boot splash carries one too, but it
+   is display-hidden the moment the app mounts, so a crawler that renders the
+   page would find a document with no heading at all without this one. Purely
+   structural: it takes the flex behaviour the mark used to have so nothing
+   moves.
+
+   Not `display: contents`, which would be the tidier way to make .brand stay a
+   direct child of .header — browsers have historically dropped such elements
+   from the accessibility tree, and a heading nobody can reach is the one thing
+   this must not be. */
+.brand-heading {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    margin: 0;
+    font: inherit;
+}
+
+/* The words the h1 above needs to actually contain. The mark is a glyph, and a
+   heading whose entire text is an SVG says nothing to a crawler or a screen
+   reader; this is the string that used to be the link's aria-label. Clipped
+   rather than `display: none`, which would take it back out of both. */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
 
 .brand {
     display: flex;

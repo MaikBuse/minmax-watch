@@ -18,9 +18,19 @@ the app is for — "Overwatch 2 draft assistant" — is nominative use and is fi
 | PWA name / short name | `MinMax` |
 | Tagline | `Overwatch 2 draft assistant` |
 | Supporting line | `keyboard-first · scored locally · nothing to install` |
+| Description | `Overwatch 2 draft assistant. Counter picks, hero matchups and team synergy, scored in your browser as hero select runs — keyboard-first, nothing to install.` |
 
 > `index.html` carries an empty `<title></title>` on purpose: `dx` appends the
 > Dioxus.toml title *into* that element, so text in both places duplicates.
+
+> The description is the one string written for a search box rather than for a
+> reader: "counter picks" and "hero matchups" are in it because those are the
+> words a player types. It is capped at ~155 characters, which is where Google
+> truncates, and it is repeated in **five** places that have no way to notice
+> they disagree — `index.html` three times (`description`, `og:description`,
+> `twitter:description`) plus the JSON-LD block, and `manifest.json`. Change one,
+> change all five. `overwatch-web/Cargo.toml` carries its own shorter variant for
+> `cargo metadata`; it is not user-facing and does not have to match verbatim.
 
 ## Direction
 

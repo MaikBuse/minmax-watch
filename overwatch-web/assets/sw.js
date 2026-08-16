@@ -12,7 +12,12 @@
 // v2: the artwork moved from /assets/{heroes,maps}/*.{png,jpg} to
 // /{heroes,maps}/*.webp, so every v1 cache is holding ~1.8 MB of entries nothing
 // will ever request again. Bumping the name drops them on activate.
-const CACHE = 'minmax-v2';
+//
+// v3: the cached `/` from before the boot splash is a shell with an empty body
+// and no h1. Network-first means an online client would replace it on the next
+// load anyway — this is for the offline one, which would otherwise keep opening
+// the old shell indefinitely with nothing to trigger the update.
+const CACHE = 'minmax-v3';
 
 self.addEventListener('install', event => {
     // Take over immediately rather than waiting for every tab to close.

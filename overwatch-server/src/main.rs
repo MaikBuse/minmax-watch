@@ -113,12 +113,107 @@ fn router(state: AppState, assets: &std::path::Path) -> Router {
         .route("/api/session", post(post_session))
         // Registered even when the match log is off, in which case the handlers
         // answer 404. Dropping the route instead would hand `/api/matches` to
-        // the SPA fallback below, which answers 200 with the index page — a
+        // the SPA fallback below, which serves the index page as the body — a
         // disabled endpoint that returns the app is worse than either a working
-        // one or an honest 404.
+        // one or an honest 404, whatever status comes with it.
         .route("/api/matches", post(post_match).get(get_matches))
         .fallback_service(static_files)
+        .layer(axum::middleware::from_fn(cache_and_robots))
         .with_state(state)
+}
+
+/// How long a response of each kind may be reused.
+///
+/// Only `/assets/` is content-hashed — that is where `dx` writes the wasm, the
+/// JS shim and the stylesheet, each under a name containing a digest of its own
+/// bytes, so a changed file is a changed URL and the old one can never be
+/// wrongly reused. Everything else is served under a stable name and has to be
+/// revalidated eventually.
+///
+/// The artwork is the interesting middle case: `/heroes/ana.webp` keeps its name
+/// across an `ingest-art` run, so it cannot be immutable, but a hero portrait
+/// changes about as often as Blizzard redraws one. A week is long enough that a
+/// returning player re-downloads none of the ~2 MB of it, and short enough that
+/// a re-ingest reaches everybody within a patch cycle.
+fn cache_control_for(path: &str) -> &'static str {
+    match path {
+        // The two files that decide how the shell updates. A stale `sw.js` is
+        // the one genuinely unrecoverable cache mistake a PWA can make: the old
+        // worker keeps serving the old shell and is itself the thing that would
+        // have to be replaced to stop. (The shell is handled by content type
+        // instead — see the caller.)
+        "/sw.js" | "/manifest.json" => "no-cache",
+        _ if path.starts_with("/assets/") => "public, max-age=31536000, immutable",
+        _ if path.starts_with("/heroes/")
+            || path.starts_with("/maps/")
+            || path.starts_with("/fonts/") =>
+        {
+            "public, max-age=604800"
+        }
+        // Favicons, og.png, robots.txt. Rarely change, cheap to revalidate, and
+        // nothing breaks if one is a day out of date.
+        _ => "public, max-age=86400",
+    }
+}
+
+/// Attaches caching and indexing headers to every response.
+///
+/// Two jobs, both of which need the request path, which is why they are one
+/// layer rather than a `ServeDir` per prefix.
+///
+/// The second job is the less obvious one. `not_found_service` above answers
+/// every unknown path with the shell, so that a deep link still opens the app.
+/// tower-http keeps the 404 status while doing it, which is already the right
+/// answer — but a 404 is a status, not an instruction, and the body it comes
+/// with is a complete, plausible-looking page. `rel=canonical` in the head is a
+/// hint; `X-Robots-Tag` is not. It is safe to say `noindex` here because no
+/// real deep path exists: a session is a query string (`?room=...`, see
+/// `session.rs`), so `/` is the only page there has ever been.
+///
+/// Both rules key on the response content type rather than the path, because
+/// that is the only thing that distinguishes the shell-as-fallback from the
+/// shell-as-front-page — the fallback is served for a path that matches no rule
+/// and would otherwise pick up the day-long default, which would mean caching a
+/// 404. Assets are left alone by the `noindex` half on purpose: `og.png` should
+/// stay indexable, since image search is where a link preview gets found.
+async fn cache_and_robots(
+    request: axum::extract::Request,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    use axum::http::header::{HeaderValue, CACHE_CONTROL, CONTENT_TYPE};
+
+    // `dx` writes the stylesheet into the head as `/./assets/style-<hash>.css`.
+    // Every browser resolves the dot segment away before sending (RFC 3986
+    // §5.2.4), so the prefix match below is normally fine — but a client that
+    // does not would quietly get the one-day default on a file that could be
+    // cached for a year, and nothing would look wrong.
+    let raw = request.uri().path();
+    let path = raw.strip_prefix("/.").unwrap_or(raw).to_owned();
+
+    let mut response = next.run(request).await;
+
+    let headers = response.headers_mut();
+    let is_html = headers
+        .get(CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.starts_with("text/html"));
+
+    // Never overwrite: a handler that has said something specific about its own
+    // cacheability knows more than a path prefix does.
+    if !headers.contains_key(CACHE_CONTROL) {
+        let value = if is_html {
+            "no-cache"
+        } else {
+            cache_control_for(&path)
+        };
+        headers.insert(CACHE_CONTROL, HeaderValue::from_static(value));
+    }
+
+    if is_html && path != "/" && path != "/index.html" {
+        headers.insert("x-robots-tag", HeaderValue::from_static("noindex"));
+    }
+
+    response
 }
 
 struct Config {
@@ -460,8 +555,10 @@ mod e2e {
             rooms: Rooms::new(),
             matches,
         };
-        let app = router(state, std::path::Path::new("/nonexistent"));
+        launch(router(state, std::path::Path::new("/nonexistent"))).await
+    }
 
+    async fn launch(app: Router) -> String {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
             .await
             .expect("an ephemeral port");
@@ -470,6 +567,55 @@ mod e2e {
             let _ = axum::serve(listener, app).await;
         });
         format!("127.0.0.1:{}", addr.port())
+    }
+
+    /// A unique path under the temp directory, so concurrent tests never share
+    /// one. Same shape as the match-log path above and for the same reason.
+    fn scratch(what: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "overwatch-e2e-{what}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|since| since.as_nanos())
+                .unwrap_or(0),
+        ))
+    }
+
+    /// The real router over a real bundle on disk.
+    ///
+    /// The other tests point it at `/nonexistent`, which is enough when the
+    /// answer under test is a 404 — but the caching rules are about the two
+    /// file kinds the bundle actually contains: the shell, served under a name
+    /// that never changes, and something under `/assets/` whose name contains
+    /// its own digest.
+    async fn serve_bundle() -> String {
+        let dir = scratch("bundle");
+        std::fs::create_dir_all(dir.join("assets")).expect("a bundle directory");
+        std::fs::write(
+            dir.join("index.html"),
+            "<!DOCTYPE html><title>shell</title>",
+        )
+        .expect("a shell");
+        std::fs::write(dir.join("assets").join("style-dxhbeef.css"), "body{}").expect("an asset");
+
+        let state = AppState {
+            rooms: Rooms::new(),
+            matches: None,
+        };
+        launch(router(state, &dir)).await
+    }
+
+    /// The response headers of a bare GET, lowercased.
+    ///
+    /// Header *names* are case-insensitive, and every value asserted on through
+    /// this is lowercase anyway, so folding case here keeps the assertions to
+    /// one `contains` each.
+    async fn headers_of(url: &str) -> String {
+        let raw = raw_get(url).await;
+        raw.split_once("\r\n\r\n")
+            .map(|(head, _)| head.to_lowercase())
+            .expect("a header block")
     }
 
     async fn create_session(base: &str) -> String {
@@ -899,5 +1045,79 @@ mod e2e {
     async fn an_enabled_match_log_serves_the_endpoint() {
         let base = serve().await;
         assert_eq!(status_of(&format!("http://{base}/api/matches")).await, 200);
+    }
+
+    /// `immutable` is only safe on a name that changes when the bytes do, and
+    /// the shell's name never does. Getting these two the same way round is the
+    /// difference between a fast repeat visit and one that cannot be updated.
+    #[tokio::test]
+    async fn a_content_hashed_asset_is_cached_forever_and_the_shell_is_not() {
+        let base = serve_bundle().await;
+
+        let asset = headers_of(&format!("http://{base}/assets/style-dxhbeef.css")).await;
+        assert!(
+            asset.contains("cache-control: public, max-age=31536000, immutable"),
+            "a hashed asset should be immutable, got: {asset}"
+        );
+
+        let shell = headers_of(&format!("http://{base}/")).await;
+        assert!(
+            shell.contains("cache-control: no-cache"),
+            "the shell must be revalidated, got: {shell}"
+        );
+
+        // The form `dx` actually writes into the head. Browsers resolve the dot
+        // segment before sending, so this is about the ones that do not.
+        let dotted = headers_of(&format!("http://{base}/./assets/style-dxhbeef.css")).await;
+        assert!(
+            dotted.contains("cache-control: public, max-age=31536000, immutable"),
+            "a dot segment should not cost the asset its cache, got: {dotted}"
+        );
+    }
+
+    /// The SPA fallback hands the shell to every unknown path, so that a deep
+    /// link still opens the app. It keeps the 404 status while doing it, which
+    /// is asserted here because it is the half that stops those paths being
+    /// indexed as copies of the front page — and it is a property of
+    /// tower-http's `not_found_service` rather than of anything in this file,
+    /// so an upgrade could take it away silently.
+    ///
+    /// Only the HTML is marked. `og.png` and the rest stay indexable, which is
+    /// the point of keying the rule on the content type.
+    #[tokio::test]
+    async fn an_unknown_path_serves_the_shell_but_asks_not_to_be_indexed() {
+        let base = serve_bundle().await;
+
+        let bogus = headers_of(&format!("http://{base}/no/such/page")).await;
+        assert!(bogus.contains(" 404 "), "still an honest 404, got: {bogus}");
+        assert!(
+            bogus.contains("x-robots-tag: noindex"),
+            "the shell served as a fallback must not be indexed, got: {bogus}"
+        );
+        // A 404 cached for a day is a 404 that outlives the deploy that fixes
+        // it. This is why the rule keys on the content type and not the path.
+        assert!(
+            bogus.contains("cache-control: no-cache"),
+            "an HTML fallback must not be cached, got: {bogus}"
+        );
+
+        let asset = headers_of(&format!("http://{base}/assets/style-dxhbeef.css")).await;
+        assert!(
+            !asset.contains("x-robots-tag"),
+            "assets are not pages and should be left alone, got: {asset}"
+        );
+    }
+
+    /// The one page there is. Marking this one would take the whole site out of
+    /// the index, which is the failure mode the test above is one typo away
+    /// from causing.
+    #[tokio::test]
+    async fn the_front_page_itself_stays_indexable() {
+        let base = serve_bundle().await;
+        let shell = headers_of(&format!("http://{base}/")).await;
+        assert!(
+            !shell.contains("x-robots-tag"),
+            "the front page must stay indexable, got: {shell}"
+        );
     }
 }

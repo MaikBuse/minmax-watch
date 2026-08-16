@@ -7,7 +7,12 @@
         <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta charset="UTF-8">
-        <meta name="description" content="Keyboard-first Overwatch 2 draft assistant. Scores every pick locally, so the network is never between a keystroke and an answer.">
+        <!-- Written for what a player actually types into a search box —
+             "counter picks", "hero matchups" — rather than for what the app is
+             proudest of. The same sentence appears in manifest.json, in the
+             JSON-LD below, twice more in this file, and in docs/BRAND.md's
+             string table; they are meant to be one string and drift silently. -->
+        <meta name="description" content="Overwatch 2 draft assistant. Counter picks, hero matchups and team synergy, scored in your browser as hero select runs — keyboard-first, nothing to install.">
         <link rel="canonical" href="https://minmax.watch/">
         <meta name="theme-color" content="#0B0D11">
 
@@ -17,16 +22,46 @@
         <meta property="og:type" content="website">
         <meta property="og:site_name" content="minmax.watch">
         <meta property="og:url" content="https://minmax.watch/">
+        <meta property="og:locale" content="en_US">
         <meta property="og:title" content="MinMax — Overwatch 2 draft assistant">
-        <meta property="og:description" content="Keyboard-first Overwatch 2 draft assistant. Scores every pick locally, so the network is never between a keystroke and an answer.">
+        <meta property="og:description" content="Overwatch 2 draft assistant. Counter picks, hero matchups and team synergy, scored in your browser as hero select runs — keyboard-first, nothing to install.">
         <meta property="og:image" content="https://minmax.watch/og.png">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
         <meta property="og:image:alt" content="minmax.watch — Overwatch 2 draft assistant">
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="MinMax — Overwatch 2 draft assistant">
-        <meta name="twitter:description" content="Keyboard-first Overwatch 2 draft assistant. Scores every pick locally, so the network is never between a keystroke and an answer.">
+        <meta name="twitter:description" content="Overwatch 2 draft assistant. Counter picks, hero matchups and team synergy, scored in your browser as hero select runs — keyboard-first, nothing to install.">
         <meta name="twitter:image" content="https://minmax.watch/og.png">
+        <meta name="twitter:image:alt" content="minmax.watch — Overwatch 2 draft assistant">
+
+        <!-- Structured data. Static rather than rendered, which is the whole
+             point: it is the one description of the app that reaches a crawler
+             that never runs the wasm. `GameApplication` is schema.org's own
+             category value; the app is free and needs no account, so saying so
+             is what `offers` and `isAccessibleForFree` are for. -->
+        <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "WebApplication",
+            "name": "MinMax",
+            "alternateName": "minmax.watch",
+            "url": "https://minmax.watch/",
+            "description": "Overwatch 2 draft assistant. Counter picks, hero matchups and team synergy, scored in your browser as hero select runs — keyboard-first, nothing to install.",
+            "applicationCategory": "GameApplication",
+            "operatingSystem": "Any (web browser)",
+            "browserRequirements": "Requires WebAssembly",
+            "image": "https://minmax.watch/og.png",
+            "inLanguage": "en",
+            "isAccessibleForFree": true,
+            "license": "https://opensource.org/licenses/MIT",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            }
+        }
+        </script>
 
         <link rel="manifest" href="/manifest.json">
         <!-- Served from the bundle root, not through `asset!()`: manifest.json
@@ -91,6 +126,22 @@
                     <path d="M48 30v-6M48 66v6M30 48h-6M66 48h6" />
                 </g>
             </svg>
+            <!-- The only prose in the document, and the only thing a crawler
+                 that does not execute wasm has to go on: everything else on
+                 this screen is drawn by the app after it boots. It is visible
+                 rather than hidden off-screen deliberately — text that only a
+                 search engine can read is the definition of cloaking, and this
+                 is also simply what a loading screen ought to say.
+
+                 The heading is repeated as a visually-hidden one inside the
+                 app's own header (`.brand-heading` in ui.rs), because this
+                 element is display-hidden the moment the app mounts and a
+                 crawler that *does* render would otherwise find no h1 at all. -->
+            <h1>MinMax <span>— Overwatch 2 draft assistant</span></h1>
+            <p class="boot-blurb">
+                Counter picks, hero matchups and team synergy, scored in your
+                browser as hero select runs.
+            </p>
             <!-- The one case where this screen is the final state rather than a
                  waiting one, so it is also the only chance to say why. Not
                  aria-hidden, unlike the mark above: this is the part a screen
