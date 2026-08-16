@@ -4,7 +4,7 @@
 //! no scraping and stays current with Blizzard's releases on its own.
 
 use anyhow::{Context, Result};
-use overwatch_core::{GameMode, Role};
+use overwatch_core::{GameMode, Role, Subrole};
 use overwatch_data::schema::{HeroEntry, HeroesFile, MapEntry, MapsFile};
 use serde::Deserialize;
 
@@ -18,6 +18,11 @@ struct ApiHero {
     key: String,
     name: String,
     role: String,
+    /// Which passive the hero gets. Required rather than defaulted: it is the
+    /// only classification in the dataset that is published rather than curated,
+    /// and silently dropping it would disable the guard that uses it to check
+    /// `archetype.toml` has not drifted.
+    subrole: String,
     /// Square portrait on Blizzard's CDN. Defaulted rather than required: a
     /// missing image should cost us an icon, not the whole roster.
     #[serde(default)]
@@ -50,10 +55,24 @@ pub async fn fetch_heroes(fetcher: &mut Fetcher, generated: &str) -> Result<Hero
         // would change how the whole app is laid out.
         let role = Role::parse(&hero.role)
             .with_context(|| format!("hero {:?} has role {:?}", hero.key, hero.role))?;
+        // Same reasoning as the role above, and the same treatment: a sub-role
+        // nobody has heard of means the taxonomy has changed, which is a thing
+        // to look at rather than to write into the roster and forget.
+        let subrole = Subrole::parse(&hero.subrole)
+            .with_context(|| format!("hero {:?} has subrole {:?}", hero.key, hero.subrole))?;
+        anyhow::ensure!(
+            subrole.role() == role,
+            "hero {:?} is {} but carries the {} sub-role {:?}",
+            hero.key,
+            role.as_str(),
+            subrole.role().as_str(),
+            subrole.as_str(),
+        );
         heroes.push(HeroEntry {
             key: hero.key.clone(),
             name: hero.name.clone(),
             role: role.as_str().to_owned(),
+            subrole: Some(subrole.as_str().to_owned()),
             aliases: aliases::for_hero(&hero.key, &hero.name),
         });
     }

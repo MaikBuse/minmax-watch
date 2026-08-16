@@ -11,7 +11,9 @@ pub mod schema;
 
 use std::collections::HashMap;
 
-use overwatch_core::{Dataset, DatasetParts, GameMap, GameMode, Hero, HeroId, MapId, Matrix, Role};
+use overwatch_core::{
+    Dataset, DatasetParts, GameMap, GameMode, Hero, HeroId, MapId, Matrix, Role, Subrole,
+};
 use thiserror::Error;
 
 use crate::schema::{
@@ -104,10 +106,12 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
             });
         }
         hero_index.insert(entry.key.clone(), HeroId(heroes.len() as u16));
+        let subrole = entry.subrole.as_deref().map(Subrole::parse).transpose()?;
         heroes.push(Hero {
             key: entry.key.clone(),
             name: entry.name.clone(),
             role: Role::parse(&entry.role)?,
+            subrole,
             aliases: entry.aliases.clone(),
         });
     }
@@ -159,9 +163,10 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     for entry in &synergy_file.entries {
         let a = hero_id("synergy.toml", &entry.hero)?;
         let b = hero_id("synergy.toml", &entry.with)?;
-        synergy.set(a, b, entry.value)?;
+        let value = entry.resolved();
+        synergy.set(a, b, value)?;
         if entry.symmetric {
-            synergy.set(b, a, entry.value)?;
+            synergy.set(b, a, value)?;
         }
     }
 

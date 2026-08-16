@@ -83,12 +83,107 @@ impl Role {
     }
 }
 
+/// The sub-role the game assigns a hero, which decides which passive it gets.
+///
+/// Published per hero by the roster API, so unlike [`crate::Archetype`] this is
+/// not a judgement call — it is what Blizzard says the hero is. The two answer
+/// different questions and are deliberately kept apart: a sub-role is *what
+/// passive you get*, a shape is *how your team wants the fight to go*. Only four
+/// of the ten happen to imply a shape at all (see the roster guard in
+/// `overwatch-data`); the rest are sustain and utility passives that say nothing
+/// about range.
+///
+/// Carried on the roster rather than scored. It exists so a future ingest cannot
+/// silently re-classify a hero without something noticing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Subrole {
+    // tank
+    Stalwart,
+    Initiator,
+    Bruiser,
+    // damage
+    Recon,
+    Flanker,
+    Specialist,
+    Sharpshooter,
+    // support
+    Medic,
+    Survivor,
+    Tactician,
+}
+
+impl Subrole {
+    pub const ALL: [Subrole; 10] = [
+        Subrole::Stalwart,
+        Subrole::Initiator,
+        Subrole::Bruiser,
+        Subrole::Recon,
+        Subrole::Flanker,
+        Subrole::Specialist,
+        Subrole::Sharpshooter,
+        Subrole::Medic,
+        Subrole::Survivor,
+        Subrole::Tactician,
+    ];
+
+    /// Which role a sub-role belongs to. Asserted against the roster rather than
+    /// trusted, because a sub-role appearing under the wrong role would mean the
+    /// upstream taxonomy has changed shape.
+    pub const fn role(self) -> Role {
+        match self {
+            Subrole::Stalwart | Subrole::Initiator | Subrole::Bruiser => Role::Tank,
+            Subrole::Recon | Subrole::Flanker | Subrole::Specialist | Subrole::Sharpshooter => {
+                Role::Damage
+            }
+            Subrole::Medic | Subrole::Survivor | Subrole::Tactician => Role::Support,
+        }
+    }
+
+    pub fn parse(s: &str) -> Result<Self, CoreError> {
+        match s.trim().to_ascii_lowercase().as_str() {
+            "stalwart" => Ok(Subrole::Stalwart),
+            "initiator" => Ok(Subrole::Initiator),
+            "bruiser" => Ok(Subrole::Bruiser),
+            "recon" => Ok(Subrole::Recon),
+            "flanker" => Ok(Subrole::Flanker),
+            "specialist" => Ok(Subrole::Specialist),
+            "sharpshooter" => Ok(Subrole::Sharpshooter),
+            "medic" => Ok(Subrole::Medic),
+            "survivor" => Ok(Subrole::Survivor),
+            "tactician" => Ok(Subrole::Tactician),
+            other => Err(CoreError::UnknownSubrole(other.to_owned())),
+        }
+    }
+
+    /// The stable key, as the roster file stores it.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Subrole::Stalwart => "stalwart",
+            Subrole::Initiator => "initiator",
+            Subrole::Bruiser => "bruiser",
+            Subrole::Recon => "recon",
+            Subrole::Flanker => "flanker",
+            Subrole::Specialist => "specialist",
+            Subrole::Sharpshooter => "sharpshooter",
+            Subrole::Medic => "medic",
+            Subrole::Survivor => "survivor",
+            Subrole::Tactician => "tactician",
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Hero {
     /// Stable slug, matching the OverFast API key (e.g. `wrecking-ball`).
     pub key: String,
     pub name: String,
     pub role: Role,
+    /// Absent for a roster written before sub-roles existed, which is why this
+    /// is an `Option` rather than a required field: an older `heroes.toml` must
+    /// still load rather than failing the whole dataset.
+    #[serde(default)]
+    pub subrole: Option<Subrole>,
     /// Short forms typed during a draft: `rein`, `rh`, `hog`, `ball`, `jq`.
     /// These are what make a pick resolvable in one or two keystrokes.
     #[serde(default)]

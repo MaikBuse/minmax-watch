@@ -29,7 +29,7 @@ pub use dataset::{Dataset, DatasetParts};
 pub use draft::{enemies_in_role, fit_to_format, Draft};
 pub use error::CoreError;
 pub use format::{Capacity, Format, Queue, TeamSize};
-pub use hero::{Hero, HeroId, HeroSet, Role};
+pub use hero::{Hero, HeroId, HeroSet, Role, Subrole};
 pub use map::{GameMap, GameMode, MapId, Side};
 pub use matrix::Matrix;
 pub use score::{

@@ -1,4 +1,4 @@
-generated = "2026-08-15"
+generated = "2026-08-16"
 
 [[affinity]]
 map = "aatlis"
@@ -138,11 +138,6 @@ value = 45
 [[affinity]]
 map = "circuit-royal"
 hero = "juno"
-value = 30
-
-[[affinity]]
-map = "circuit-royal"
-hero = "mei"
 value = 30
 
 [[affinity]]
@@ -638,6 +633,11 @@ value = 30
 [[affinity]]
 map = "rialto"
 hero = "brigitte"
+value = 30
+
+[[affinity]]
+map = "rialto"
+hero = "mei"
 value = 30
 
 [[affinity]]

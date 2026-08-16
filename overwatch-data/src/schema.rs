@@ -22,6 +22,11 @@ pub struct HeroEntry {
     pub key: String,
     pub name: String,
     pub role: String,
+    /// The sub-role the roster API publishes, which decides the hero's passive.
+    /// Skipped when absent so a roster generated before sub-roles existed still
+    /// round-trips unchanged rather than growing an empty column.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub subrole: Option<String>,
     #[serde(default)]
     pub aliases: Vec<String>,
 }
@@ -112,8 +117,14 @@ pub struct MapAffinityEntry {
     pub value: i8,
 }
 
-/// Hand-curated pair synergies. No scraped source publishes these, so this file
-/// starts empty and is filled in by hand as we learn what actually works for us.
+/// Pair synergies.
+///
+/// The one file in `data/` that is both generated and hand-curated, which is
+/// why it carries a source column and an override column rather than a bare
+/// value. counterwatch publishes a short top-N of duo partners per hero with a
+/// measured "% above expected" beside each, which is real evidence but covers
+/// only the pairs it chose to list; `curated` is how a pair it does not list
+/// gets an opinion, and it wins wherever both are present.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SynergyFile {
     #[serde(default)]
@@ -126,11 +137,36 @@ pub struct SynergyFile {
 pub struct SynergyEntry {
     pub hero: String,
     pub with: String,
+    /// The resolved number the loader reads: `curated` if set, else `cwatch`.
     pub value: i8,
+    /// counterwatch's reading, kept beside the resolved value so a suspicious
+    /// number can be traced back to the source that produced it — the same
+    /// reason `matchups.toml` keeps its per-source columns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwatch: Option<i8>,
+    /// A hand-written override. The ingest never writes this and must never
+    /// drop it: it is the only way to rate a pair no source has listed, and
+    /// re-running the scrape must not silently discard somebody's judgement.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub curated: Option<i8>,
+    /// Why the curated value is what it is. Same bar as `side.toml`: a number
+    /// with no source behind it is indistinguishable from a typo unless it
+    /// says why.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub note: String,
     /// Synergy is a property of the pair, so entries apply in both directions
     /// unless this is explicitly cleared.
     #[serde(default = "default_true")]
     pub symmetric: bool,
+}
+
+impl SynergyEntry {
+    /// What the loader should score. Curated judgement beats the scrape,
+    /// because the only reason to write one is that the scrape is wrong or
+    /// silent about this pair.
+    pub fn resolved(&self) -> i8 {
+        self.curated.or(self.cwatch).unwrap_or(self.value)
+    }
 }
 
 /// General hero strength independent of matchup, derived from published win
@@ -148,8 +184,18 @@ pub struct StrengthFile {
 pub struct StrengthEntry {
     pub hero: String,
     pub value: i8,
+    /// The blended rate `value` was derived from. Display only — nothing scores
+    /// on it, because ranking on it directly would disagree with `value`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub win_rate: Option<f32>,
+    /// The two published readings behind the blend, kept for the same reason
+    /// `matchups.toml` keeps its per-source columns: the sites disagree
+    /// systematically, and a surprising number should be traceable to whichever
+    /// one produced it without re-running the scrape.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cpgg: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cwatch: Option<f32>,
 }
 
 /// Hand-curated attack/defend leanings. No source publishes these, so like

@@ -1,2 +1,3097 @@
-# Hand-curated pair synergies. No scraped source publishes these; fill in by hand.
-generated = ""
+generated = "2026-08-16"
+
+[[synergy]]
+hero = "ana"
+with = "brigitte"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "ana"
+with = "domina"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "ana"
+with = "echo"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "ana"
+with = "emre"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "ana"
+with = "freja"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "ana"
+with = "lifeweaver"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "ana"
+with = "mercy"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "ana"
+with = "reinhardt"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "ana"
+with = "wrecking-ball"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "anran"
+with = "brigitte"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "anran"
+with = "emre"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "anran"
+with = "freja"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "anran"
+with = "hazard"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "anran"
+with = "lifeweaver"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "anran"
+with = "mauga"
+value = 90
+cwatch = 90
+symmetric = true
+
+[[synergy]]
+hero = "anran"
+with = "sierra"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "anran"
+with = "wrecking-ball"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "anran"
+with = "wuyang"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "ashe"
+with = "ana"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "ashe"
+with = "baptiste"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "ashe"
+with = "domina"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "ashe"
+with = "doomfist"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "ashe"
+with = "mercy"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "ashe"
+with = "pharah"
+value = 63
+cwatch = 63
+symmetric = true
+
+[[synergy]]
+hero = "ashe"
+with = "reaper"
+value = 70
+cwatch = 70
+symmetric = true
+
+[[synergy]]
+hero = "ashe"
+with = "sigma"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "ashe"
+with = "tracer"
+value = 53
+cwatch = 53
+symmetric = true
+
+[[synergy]]
+hero = "baptiste"
+with = "ashe"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "baptiste"
+with = "brigitte"
+value = 67
+cwatch = 67
+symmetric = true
+
+[[synergy]]
+hero = "baptiste"
+with = "freja"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "baptiste"
+with = "mizuki"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "baptiste"
+with = "orisa"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "baptiste"
+with = "sigma"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "baptiste"
+with = "torbjorn"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "baptiste"
+with = "zarya"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "baptiste"
+with = "zenyatta"
+value = 90
+cwatch = 90
+symmetric = true
+
+[[synergy]]
+hero = "bastion"
+with = "baptiste"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "bastion"
+with = "dmon"
+value = 67
+cwatch = 67
+symmetric = true
+
+[[synergy]]
+hero = "bastion"
+with = "domina"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "bastion"
+with = "jetpack-cat"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "bastion"
+with = "kiriko"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "bastion"
+with = "mei"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "bastion"
+with = "mercy"
+value = 45
+curated = 45
+note = "Damage boost multiplies sustained damage, and nothing on the roster sustains more of it than Configuration: Assault."
+symmetric = true
+
+[[synergy]]
+hero = "bastion"
+with = "reaper"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "bastion"
+with = "sigma"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "bastion"
+with = "sombra"
+value = 97
+cwatch = 97
+symmetric = true
+
+[[synergy]]
+hero = "brigitte"
+with = "ana"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "brigitte"
+with = "baptiste"
+value = 67
+cwatch = 67
+symmetric = true
+
+[[synergy]]
+hero = "brigitte"
+with = "dva"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "brigitte"
+with = "lifeweaver"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "brigitte"
+with = "mauga"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "brigitte"
+with = "reinhardt"
+value = 40
+curated = 40
+note = "Armour and a shield both pay off in the same sustained close fight, and she is one of the few supports that wants to be standing in it."
+symmetric = true
+
+[[synergy]]
+hero = "brigitte"
+with = "sombra"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "brigitte"
+with = "vendetta"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "brigitte"
+with = "widowmaker"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "brigitte"
+with = "winston"
+value = 53
+cwatch = 53
+symmetric = true
+
+[[synergy]]
+hero = "cassidy"
+with = "anran"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "cassidy"
+with = "domina"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "cassidy"
+with = "dva"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "cassidy"
+with = "genji"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "cassidy"
+with = "jetpack-cat"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "cassidy"
+with = "junker-queen"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "cassidy"
+with = "lucio"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "cassidy"
+with = "mercy"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "cassidy"
+with = "reaper"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "dmon"
+with = "bastion"
+value = 67
+cwatch = 67
+symmetric = true
+
+[[synergy]]
+hero = "dmon"
+with = "kiriko"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "dmon"
+with = "moira"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "dmon"
+with = "soldier-76"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "dmon"
+with = "tracer"
+value = 67
+cwatch = 67
+symmetric = true
+
+[[synergy]]
+hero = "dmon"
+with = "zenyatta"
+value = 53
+cwatch = 53
+symmetric = true
+
+[[synergy]]
+hero = "domina"
+with = "illari"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "domina"
+with = "jetpack-cat"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "domina"
+with = "mei"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "domina"
+with = "symmetra"
+value = 60
+cwatch = 60
+symmetric = true
+
+[[synergy]]
+hero = "domina"
+with = "torbjorn"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "domina"
+with = "wuyang"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "doomfist"
+with = "jetpack-cat"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "doomfist"
+with = "lucio"
+value = 67
+cwatch = 67
+symmetric = true
+
+[[synergy]]
+hero = "doomfist"
+with = "moira"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "doomfist"
+with = "reaper"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "doomfist"
+with = "sojourn"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "doomfist"
+with = "soldier-76"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "dva"
+with = "baptiste"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "dva"
+with = "brigitte"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "dva"
+with = "mei"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "dva"
+with = "moira"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "dva"
+with = "pharah"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "dva"
+with = "venture"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "echo"
+with = "ana"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "echo"
+with = "genji"
+value = 67
+cwatch = 67
+symmetric = true
+
+[[synergy]]
+hero = "echo"
+with = "junker-queen"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "echo"
+with = "ramattra"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "echo"
+with = "sojourn"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "echo"
+with = "symmetra"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "echo"
+with = "winston"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "echo"
+with = "wuyang"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "echo"
+with = "zenyatta"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "emre"
+with = "brigitte"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "emre"
+with = "hazard"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "emre"
+with = "illari"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "emre"
+with = "mei"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "emre"
+with = "ramattra"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "emre"
+with = "symmetra"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "emre"
+with = "vendetta"
+value = 63
+cwatch = 63
+symmetric = true
+
+[[synergy]]
+hero = "emre"
+with = "wrecking-ball"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "emre"
+with = "wuyang"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "freja"
+with = "ana"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "freja"
+with = "anran"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "freja"
+with = "echo"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "freja"
+with = "hazard"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "freja"
+with = "lucio"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "freja"
+with = "sigma"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "freja"
+with = "vendetta"
+value = 77
+cwatch = 77
+symmetric = true
+
+[[synergy]]
+hero = "freja"
+with = "winston"
+value = 53
+cwatch = 53
+symmetric = true
+
+[[synergy]]
+hero = "freja"
+with = "zenyatta"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "genji"
+with = "ana"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "genji"
+with = "brigitte"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "genji"
+with = "echo"
+value = 67
+cwatch = 67
+symmetric = true
+
+[[synergy]]
+hero = "genji"
+with = "hazard"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "genji"
+with = "juno"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "genji"
+with = "mauga"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "genji"
+with = "sojourn"
+value = 60
+cwatch = 60
+symmetric = true
+
+[[synergy]]
+hero = "genji"
+with = "soldier-76"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "genji"
+with = "wrecking-ball"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "hanzo"
+with = "dmon"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "hanzo"
+with = "illari"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "hanzo"
+with = "lucio"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "hanzo"
+with = "mei"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "hanzo"
+with = "reinhardt"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "hanzo"
+with = "sombra"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "hanzo"
+with = "venture"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "hanzo"
+with = "zarya"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "hanzo"
+with = "zenyatta"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "hazard"
+with = "jetpack-cat"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "hazard"
+with = "lifeweaver"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "hazard"
+with = "mercy"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "hazard"
+with = "pharah"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "hazard"
+with = "sojourn"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "hazard"
+with = "vendetta"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "illari"
+with = "domina"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "illari"
+with = "hanzo"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "illari"
+with = "juno"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "illari"
+with = "lifeweaver"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "illari"
+with = "orisa"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "illari"
+with = "symmetra"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "illari"
+with = "widowmaker"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "illari"
+with = "wrecking-ball"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "illari"
+with = "wuyang"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "jetpack-cat"
+with = "bastion"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "jetpack-cat"
+with = "cassidy"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "jetpack-cat"
+with = "domina"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "jetpack-cat"
+with = "hazard"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "jetpack-cat"
+with = "illari"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "jetpack-cat"
+with = "junkrat"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "jetpack-cat"
+with = "lucio"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "jetpack-cat"
+with = "moira"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "jetpack-cat"
+with = "winston"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "junker-queen"
+with = "echo"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "junker-queen"
+with = "lucio"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "junker-queen"
+with = "mercy"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "junker-queen"
+with = "mizuki"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "junker-queen"
+with = "shion"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "junker-queen"
+with = "tracer"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "junkrat"
+with = "ashe"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "junkrat"
+with = "domina"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "junkrat"
+with = "jetpack-cat"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "junkrat"
+with = "lifeweaver"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "junkrat"
+with = "moira"
+value = 7
+cwatch = 7
+symmetric = true
+
+[[synergy]]
+hero = "junkrat"
+with = "sigma"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "junkrat"
+with = "soldier-76"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "junkrat"
+with = "widowmaker"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "junkrat"
+with = "winston"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "juno"
+with = "dmon"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "juno"
+with = "illari"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "juno"
+with = "mercy"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "juno"
+with = "mizuki"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "juno"
+with = "pharah"
+value = 40
+curated = 40
+note = "The one support whose healing and speed reach an air angle without giving it up."
+symmetric = true
+
+[[synergy]]
+hero = "juno"
+with = "ramattra"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "juno"
+with = "reinhardt"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "juno"
+with = "sombra"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "juno"
+with = "tracer"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "juno"
+with = "venture"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "kiriko"
+with = "bastion"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "kiriko"
+with = "cassidy"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "kiriko"
+with = "dmon"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "kiriko"
+with = "genji"
+value = 45
+curated = 45
+note = "Suzu clears the crowd control that is what actually kills a diver, and Swift Step reaches him where he lands."
+symmetric = true
+
+[[synergy]]
+hero = "kiriko"
+with = "mauga"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "kiriko"
+with = "mizuki"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "kiriko"
+with = "orisa"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "kiriko"
+with = "symmetra"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "kiriko"
+with = "wuyang"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "kiriko"
+with = "zenyatta"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "lifeweaver"
+with = "anran"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "lifeweaver"
+with = "brigitte"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "lifeweaver"
+with = "hazard"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "lifeweaver"
+with = "junkrat"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "lifeweaver"
+with = "lucio"
+value = 60
+cwatch = 60
+symmetric = true
+
+[[synergy]]
+hero = "lifeweaver"
+with = "sigma"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "lifeweaver"
+with = "tracer"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "lifeweaver"
+with = "wuyang"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "lifeweaver"
+with = "zarya"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "lucio"
+with = "doomfist"
+value = 67
+cwatch = 67
+symmetric = true
+
+[[synergy]]
+hero = "lucio"
+with = "hanzo"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "lucio"
+with = "lifeweaver"
+value = 60
+cwatch = 60
+symmetric = true
+
+[[synergy]]
+hero = "lucio"
+with = "moira"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "lucio"
+with = "pharah"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "lucio"
+with = "roadhog"
+value = 70
+cwatch = 70
+symmetric = true
+
+[[synergy]]
+hero = "lucio"
+with = "venture"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "lucio"
+with = "winston"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "lucio"
+with = "wuyang"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "mauga"
+with = "anran"
+value = 90
+cwatch = 90
+symmetric = true
+
+[[synergy]]
+hero = "mauga"
+with = "brigitte"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "mauga"
+with = "kiriko"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "mauga"
+with = "mercy"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "mauga"
+with = "sombra"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "mauga"
+with = "vendetta"
+value = 90
+cwatch = 90
+symmetric = true
+
+[[synergy]]
+hero = "mei"
+with = "bastion"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "mei"
+with = "domina"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "mei"
+with = "dva"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "mei"
+with = "hanzo"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "mei"
+with = "illari"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "mei"
+with = "juno"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "mei"
+with = "mizuki"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "mei"
+with = "ramattra"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "mei"
+with = "reaper"
+value = 45
+curated = 45
+note = "Wall cuts a fight down to the range Reaper's shotguns already win, and takes away the exit."
+symmetric = true
+
+[[synergy]]
+hero = "mei"
+with = "sierra"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "mercy"
+with = "ana"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "mercy"
+with = "ashe"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "mercy"
+with = "junker-queen"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "mercy"
+with = "juno"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "mercy"
+with = "mauga"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "mercy"
+with = "pharah"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "mercy"
+with = "ramattra"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "mercy"
+with = "soldier-76"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "mercy"
+with = "zenyatta"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "mizuki"
+with = "baptiste"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "mizuki"
+with = "domina"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "mizuki"
+with = "junker-queen"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "mizuki"
+with = "juno"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "mizuki"
+with = "kiriko"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "mizuki"
+with = "mei"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "mizuki"
+with = "reaper"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "mizuki"
+with = "sigma"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "mizuki"
+with = "venture"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "moira"
+with = "brigitte"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "moira"
+with = "dmon"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "moira"
+with = "dva"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "moira"
+with = "jetpack-cat"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "moira"
+with = "lucio"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "moira"
+with = "mauga"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "moira"
+with = "sombra"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "moira"
+with = "vendetta"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "moira"
+with = "widowmaker"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "orisa"
+with = "baptiste"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "orisa"
+with = "bastion"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "orisa"
+with = "illari"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "orisa"
+with = "junkrat"
+value = 45
+curated = 45
+note = "Halt gathers a group into one place, which is the only thing trap and mine ask for."
+symmetric = true
+
+[[synergy]]
+hero = "orisa"
+with = "kiriko"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "orisa"
+with = "symmetra"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "orisa"
+with = "widowmaker"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "pharah"
+with = "ashe"
+value = 63
+cwatch = 63
+symmetric = true
+
+[[synergy]]
+hero = "pharah"
+with = "dva"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "pharah"
+with = "hazard"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "pharah"
+with = "lifeweaver"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "pharah"
+with = "lucio"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "pharah"
+with = "mercy"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "pharah"
+with = "roadhog"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "pharah"
+with = "sojourn"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "pharah"
+with = "symmetra"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "ramattra"
+with = "juno"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "ramattra"
+with = "mercy"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "ramattra"
+with = "sombra"
+value = 60
+cwatch = 60
+symmetric = true
+
+[[synergy]]
+hero = "ramattra"
+with = "venture"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "ramattra"
+with = "widowmaker"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "ramattra"
+with = "zenyatta"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "reaper"
+with = "ashe"
+value = 70
+cwatch = 70
+symmetric = true
+
+[[synergy]]
+hero = "reaper"
+with = "bastion"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "reaper"
+with = "doomfist"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "reaper"
+with = "dva"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "reaper"
+with = "lucio"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "reaper"
+with = "mercy"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "reaper"
+with = "sierra"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "reaper"
+with = "wrecking-ball"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "reaper"
+with = "wuyang"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "reinhardt"
+with = "ana"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "reinhardt"
+with = "hanzo"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "reinhardt"
+with = "juno"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "reinhardt"
+with = "lifeweaver"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "reinhardt"
+with = "sierra"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "reinhardt"
+with = "sombra"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "reinhardt"
+with = "zarya"
+value = 55
+curated = 55
+note = "Bubble covers the window where the shield drops, which is the one thing that beats a Reinhardt. Unreachable from the source: it publishes 5v5 duos and these two share a role there."
+symmetric = true
+
+[[synergy]]
+hero = "roadhog"
+with = "jetpack-cat"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "roadhog"
+with = "kiriko"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "roadhog"
+with = "lucio"
+value = 70
+cwatch = 70
+symmetric = true
+
+[[synergy]]
+hero = "roadhog"
+with = "pharah"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "roadhog"
+with = "venture"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "roadhog"
+with = "widowmaker"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "shion"
+with = "brigitte"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "shion"
+with = "freja"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "shion"
+with = "junker-queen"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "shion"
+with = "kiriko"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "shion"
+with = "lucio"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "shion"
+with = "torbjorn"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "shion"
+with = "tracer"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "shion"
+with = "winston"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "shion"
+with = "wrecking-ball"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "sierra"
+with = "dmon"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "sierra"
+with = "illari"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "sierra"
+with = "kiriko"
+value = 10
+cwatch = 10
+symmetric = true
+
+[[synergy]]
+hero = "sierra"
+with = "mei"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "sierra"
+with = "mercy"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "sierra"
+with = "orisa"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "sierra"
+with = "reaper"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "sierra"
+with = "reinhardt"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "sierra"
+with = "vendetta"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "sigma"
+with = "baptiste"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "sigma"
+with = "bastion"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "sigma"
+with = "freja"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "sigma"
+with = "lifeweaver"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "sigma"
+with = "sojourn"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "sigma"
+with = "zenyatta"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "sojourn"
+with = "baptiste"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "sojourn"
+with = "doomfist"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "sojourn"
+with = "echo"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "sojourn"
+with = "genji"
+value = 60
+cwatch = 60
+symmetric = true
+
+[[synergy]]
+hero = "sojourn"
+with = "hazard"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "sojourn"
+with = "illari"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "sojourn"
+with = "mercy"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "sojourn"
+with = "tracer"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "sojourn"
+with = "wrecking-ball"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "soldier-76"
+with = "dmon"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "soldier-76"
+with = "doomfist"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "soldier-76"
+with = "genji"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "soldier-76"
+with = "jetpack-cat"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "soldier-76"
+with = "kiriko"
+value = 7
+cwatch = 7
+symmetric = true
+
+[[synergy]]
+hero = "soldier-76"
+with = "mercy"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "soldier-76"
+with = "reaper"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "soldier-76"
+with = "tracer"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "soldier-76"
+with = "wrecking-ball"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "sombra"
+with = "bastion"
+value = 97
+cwatch = 97
+symmetric = true
+
+[[synergy]]
+hero = "sombra"
+with = "brigitte"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "sombra"
+with = "hanzo"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "sombra"
+with = "jetpack-cat"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "sombra"
+with = "mauga"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "sombra"
+with = "ramattra"
+value = 60
+cwatch = 60
+symmetric = true
+
+[[synergy]]
+hero = "sombra"
+with = "reinhardt"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "sombra"
+with = "soldier-76"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "sombra"
+with = "zenyatta"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "symmetra"
+with = "ana"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "symmetra"
+with = "domina"
+value = 60
+cwatch = 60
+symmetric = true
+
+[[synergy]]
+hero = "symmetra"
+with = "emre"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "symmetra"
+with = "illari"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "symmetra"
+with = "kiriko"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "symmetra"
+with = "orisa"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "symmetra"
+with = "pharah"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "symmetra"
+with = "torbjorn"
+value = 97
+cwatch = 97
+symmetric = true
+
+[[synergy]]
+hero = "symmetra"
+with = "wrecking-ball"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "torbjorn"
+with = "baptiste"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "torbjorn"
+with = "domina"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "torbjorn"
+with = "doomfist"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "torbjorn"
+with = "illari"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "torbjorn"
+with = "juno"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "torbjorn"
+with = "ramattra"
+value = 20
+cwatch = 20
+symmetric = true
+
+[[synergy]]
+hero = "torbjorn"
+with = "shion"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "torbjorn"
+with = "symmetra"
+value = 97
+cwatch = 97
+symmetric = true
+
+[[synergy]]
+hero = "torbjorn"
+with = "tracer"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "tracer"
+with = "ashe"
+value = 53
+cwatch = 53
+symmetric = true
+
+[[synergy]]
+hero = "tracer"
+with = "dmon"
+value = 67
+cwatch = 67
+symmetric = true
+
+[[synergy]]
+hero = "tracer"
+with = "hazard"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "tracer"
+with = "juno"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "tracer"
+with = "lifeweaver"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "tracer"
+with = "sojourn"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "tracer"
+with = "soldier-76"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "tracer"
+with = "winston"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "tracer"
+with = "wuyang"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "vendetta"
+with = "ana"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "vendetta"
+with = "brigitte"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "vendetta"
+with = "emre"
+value = 63
+cwatch = 63
+symmetric = true
+
+[[synergy]]
+hero = "vendetta"
+with = "freja"
+value = 77
+cwatch = 77
+symmetric = true
+
+[[synergy]]
+hero = "vendetta"
+with = "hazard"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "vendetta"
+with = "lucio"
+value = 13
+cwatch = 13
+symmetric = true
+
+[[synergy]]
+hero = "vendetta"
+with = "mauga"
+value = 90
+cwatch = 90
+symmetric = true
+
+[[synergy]]
+hero = "vendetta"
+with = "sierra"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "vendetta"
+with = "zarya"
+value = 100
+cwatch = 100
+symmetric = true
+
+[[synergy]]
+hero = "venture"
+with = "ashe"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "venture"
+with = "bastion"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "venture"
+with = "dva"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "venture"
+with = "hanzo"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "venture"
+with = "juno"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "venture"
+with = "lucio"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "venture"
+with = "mizuki"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "venture"
+with = "ramattra"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "venture"
+with = "wrecking-ball"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "widowmaker"
+with = "brigitte"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "widowmaker"
+with = "illari"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "widowmaker"
+with = "junkrat"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "widowmaker"
+with = "mei"
+value = 40
+cwatch = 40
+symmetric = true
+
+[[synergy]]
+hero = "widowmaker"
+with = "orisa"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "widowmaker"
+with = "ramattra"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "widowmaker"
+with = "reaper"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "widowmaker"
+with = "zarya"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "widowmaker"
+with = "zenyatta"
+value = 53
+cwatch = 53
+symmetric = true
+
+[[synergy]]
+hero = "winston"
+with = "brigitte"
+value = 53
+cwatch = 53
+symmetric = true
+
+[[synergy]]
+hero = "winston"
+with = "dva"
+value = 50
+curated = 50
+note = "Two initiators arriving on the same target at the same time, and Matrix covers the jump out. Same 5v5 blind spot as the pair above."
+symmetric = true
+
+[[synergy]]
+hero = "winston"
+with = "echo"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "winston"
+with = "freja"
+value = 53
+cwatch = 53
+symmetric = true
+
+[[synergy]]
+hero = "winston"
+with = "jetpack-cat"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "winston"
+with = "lucio"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "winston"
+with = "vendetta"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "wrecking-ball"
+with = "brigitte"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "wrecking-ball"
+with = "emre"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "wrecking-ball"
+with = "genji"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "wrecking-ball"
+with = "illari"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "wrecking-ball"
+with = "venture"
+value = 57
+cwatch = 57
+symmetric = true
+
+[[synergy]]
+hero = "wrecking-ball"
+with = "zenyatta"
+value = 43
+cwatch = 43
+symmetric = true
+
+[[synergy]]
+hero = "wuyang"
+with = "anran"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "wuyang"
+with = "domina"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "wuyang"
+with = "echo"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "wuyang"
+with = "illari"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "wuyang"
+with = "kiriko"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "wuyang"
+with = "lifeweaver"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "wuyang"
+with = "tracer"
+value = 37
+cwatch = 37
+symmetric = true
+
+[[synergy]]
+hero = "wuyang"
+with = "winston"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "wuyang"
+with = "zarya"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "zarya"
+with = "baptiste"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "zarya"
+with = "genji"
+value = 50
+curated = 50
+note = "A bubble on a diving Genji is a second life at the moment he is most alone, and it charges her beam for using it."
+symmetric = true
+
+[[synergy]]
+hero = "zarya"
+with = "hanzo"
+value = 50
+cwatch = 50
+symmetric = true
+
+[[synergy]]
+hero = "zarya"
+with = "lucio"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "zarya"
+with = "vendetta"
+value = 100
+cwatch = 100
+symmetric = true
+
+[[synergy]]
+hero = "zarya"
+with = "widowmaker"
+value = 27
+cwatch = 27
+symmetric = true
+
+[[synergy]]
+hero = "zarya"
+with = "wuyang"
+value = 30
+cwatch = 30
+symmetric = true
+
+[[synergy]]
+hero = "zenyatta"
+with = "baptiste"
+value = 90
+cwatch = 90
+symmetric = true
+
+[[synergy]]
+hero = "zenyatta"
+with = "dmon"
+value = 53
+cwatch = 53
+symmetric = true
+
+[[synergy]]
+hero = "zenyatta"
+with = "freja"
+value = 33
+cwatch = 33
+symmetric = true
+
+[[synergy]]
+hero = "zenyatta"
+with = "kiriko"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "zenyatta"
+with = "lifeweaver"
+value = 23
+cwatch = 23
+symmetric = true
+
+[[synergy]]
+hero = "zenyatta"
+with = "sigma"
+value = 17
+cwatch = 17
+symmetric = true
+
+[[synergy]]
+hero = "zenyatta"
+with = "sombra"
+value = 47
+cwatch = 47
+symmetric = true
+
+[[synergy]]
+hero = "zenyatta"
+with = "widowmaker"
+value = 53
+cwatch = 53
+symmetric = true
+
+[[synergy]]
+hero = "zenyatta"
+with = "wrecking-ball"
+value = 43
+cwatch = 43
+symmetric = true

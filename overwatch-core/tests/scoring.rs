@@ -29,6 +29,7 @@ fn hero(key: &str, name: &str, role: Role) -> Hero {
         key: key.to_owned(),
         name: name.to_owned(),
         role,
+        subrole: None,
         aliases: Vec::new(),
     }
 }
@@ -653,6 +654,34 @@ fn an_unrated_enemy_produces_no_reasoning_and_no_threat() {
 }
 
 #[test]
+fn a_rated_even_matchup_stays_in_the_mean_but_claims_nothing() {
+    let ds = sparse_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    // The mirror is the one matchup guaranteed to be a rated 0.0.
+    let mut draft = Draft::new();
+    draft.add_enemy(C_PHARAH);
+    draft.add_enemy(C_DVA);
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    let dva = recs.iter().find(|r| r.hero == C_DVA).expect("ranked");
+
+    // It counts: without it D.Va would keep the full +0.40 Pharah reading.
+    assert!(
+        score_of(&recs, C_DVA) < 0.40,
+        "the even matchup dropped out of the mean"
+    );
+    // It says nothing: a 0.0 is not an argument for the pick, and rendering it
+    // as one puts "strong into D.Va" under D.Va's own portrait.
+    assert!(
+        !dva.reasons
+            .iter()
+            .any(|r| r.kind == ReasonKind::BeatsEnemy(C_DVA)),
+        "a dead-even matchup rendered as a claim of strength"
+    );
+}
+
+#[test]
 fn mirroring_an_enemy_still_counts_as_an_even_matchup() {
     let ds = sparse_fixture();
     let ctx = UserContext::new(Role::Tank, ds.hero_count());
@@ -671,6 +700,82 @@ fn mirroring_an_enemy_still_counts_as_an_even_matchup() {
         dva < 0.40 && dva > 0.0,
         "the mirror should dilute the Pharah reading, got {dva}"
     );
+}
+
+// --- synergy ---------------------------------------------------------------
+
+const Y_REINHARDT: HeroId = HeroId(0);
+const Y_DVA: HeroId = HeroId(1);
+const Y_LUCIO: HeroId = HeroId(2);
+const Y_MIZUKI: HeroId = HeroId(3);
+
+/// One ally the sources have paired a candidate with, and one nobody has.
+///
+/// The shape the real file has: duo data is published as a short top-N per
+/// hero, so most of the grid is silence rather than a measured "these two do
+/// nothing for each other".
+fn synergy_fixture() -> Dataset {
+    let heroes = vec![
+        hero("reinhardt", "Reinhardt", Role::Tank),
+        hero("dva", "D.Va", Role::Tank),
+        hero("lucio", "Lúcio", Role::Support),
+        hero("mizuki", "Mizuki", Role::Support),
+    ];
+    let n = heroes.len();
+
+    let mut synergy = Matrix::unrated(n);
+    synergy.set(Y_REINHARDT, Y_LUCIO, 60).expect("in range");
+    synergy.set(Y_LUCIO, Y_REINHARDT, 60).expect("in range");
+    // Nothing pairs D.Va with anyone, and nothing pairs anyone with Mizuki.
+
+    Dataset::new(DatasetParts {
+        heroes,
+        maps: Vec::new(),
+        matchups: Matrix::unrated(n),
+        synergy,
+        map_affinity: Vec::new(),
+        base_strength: vec![0; n],
+        win_rate: vec![None; n],
+        side_lean: vec![0; n],
+        shape: vec![[0; 3]; n],
+        reasons: vec![String::new(); n * n],
+        generated: "fixture".to_owned(),
+        patch: "fixture".to_owned(),
+    })
+    .expect("fixture is internally consistent")
+}
+
+#[test]
+fn an_unrated_ally_is_left_out_of_the_synergy_mean_rather_than_counted_as_even() {
+    let ds = synergy_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let mut rated_only = Draft::new();
+    rated_only.add_ally(Y_LUCIO);
+
+    let mut with_unknown = Draft::new();
+    with_unknown.add_ally(Y_LUCIO);
+    with_unknown.add_ally(Y_MIZUKI);
+
+    let a = recommend(&ds, &rated_only, &ctx).expect("scoring succeeds");
+    let b = recommend(&ds, &with_unknown, &ctx).expect("scoring succeeds");
+
+    // Reinhardt/Lúcio is the only rated pair in the file. Dividing by every ally
+    // instead of the rated ones would report it at half its strength the moment
+    // a hero nobody has paired him with joins the team.
+    assert!(
+        score_of(&a, Y_REINHARDT) > 0.0,
+        "the rated pair should score at all"
+    );
+    assert!(
+        (score_of(&a, Y_REINHARDT) - score_of(&b, Y_REINHARDT)).abs() < 1e-6,
+        "an unrated ally moved the score from {} to {}",
+        score_of(&a, Y_REINHARDT),
+        score_of(&b, Y_REINHARDT)
+    );
+    // And a candidate nobody has any reading for stays flat rather than being
+    // dragged toward the middle of the field.
+    assert!((score_of(&b, Y_DVA)).abs() < 1e-6);
 }
 
 // --- side ------------------------------------------------------------------

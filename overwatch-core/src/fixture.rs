@@ -48,6 +48,7 @@ pub fn roster() -> Vec<Hero> {
         key: key.to_owned(),
         name: key.to_owned(),
         role,
+        subrole: None,
         aliases: Vec::new(),
     })
     .collect()

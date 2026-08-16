@@ -56,6 +56,22 @@ pub fn counterpickgg_to_ours(slug: &str) -> String {
         .unwrap_or_else(|| slug.to_owned())
 }
 
+/// The same, for counterwatch. Its duo pages link partners by slug rather than
+/// by display name, which is the spelling worth reading: it survives `Lúcio`
+/// and `Soldier: 76` without a single accent or colon.
+///
+/// The dehyphenated forms cannot be undone mechanically — `wreckingball` and
+/// `jetpackcat` look identical as strings — so this resolves against the
+/// override table and leaves anything else alone. A caller that gets back a key
+/// the roster does not know should drop the row rather than guess.
+pub fn counterwatch_to_ours(slug: &str) -> String {
+    COUNTERWATCH
+        .iter()
+        .find(|(_, theirs)| *theirs == slug)
+        .map(|(ours, _)| (*ours).to_owned())
+        .unwrap_or_else(|| slug.to_owned())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -91,5 +107,14 @@ mod tests {
     fn opponent_slugs_map_back_to_our_keys() {
         assert_eq!(counterpickgg_to_ours("freya"), "freja");
         assert_eq!(counterpickgg_to_ours("reinhardt"), "reinhardt");
+    }
+
+    #[test]
+    fn partner_slugs_map_back_to_our_keys() {
+        assert_eq!(counterwatch_to_ours("jetpackcat"), "jetpack-cat");
+        assert_eq!(counterwatch_to_ours("soldier76"), "soldier-76");
+        // Already ours, and hyphenated on their side too.
+        assert_eq!(counterwatch_to_ours("wrecking-ball"), "wrecking-ball");
+        assert_eq!(counterwatch_to_ours("lucio"), "lucio");
     }
 }

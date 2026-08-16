@@ -18,8 +18,14 @@
 //! into a value anchored on the one published number. It covers roughly a
 //! quarter of each row and is blended in at a low weight, mostly as an
 //! independent check on the two opinion-based sources.
+//!
+//! The site's `best-duos` pages are the other half of what it is worth here,
+//! and the only reason `synergy.toml` is not still empty. Those *are* rendered
+//! server-side, but as markup rather than JSON-LD, so [`parse_duos`] reads the
+//! anchors instead. See [`scrape_duos`] for what the numbers mean and what they
+//! do not cover.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use anyhow::{Context, Result};
 use scraper::{Html, Selector};
@@ -289,6 +295,246 @@ pub async fn scrape(
     Ok(out)
 }
 
+/// Reads the hero's *own* win rate out of a stats page.
+///
+/// The figure lives in the JSON-LD `description`, phrased as
+/// `"Zenyatta (Support) Overwatch stats: 53.6% win rate across 128,636
+/// community-tracked matches in 5V5, All Ranks."`. Worth having beside
+/// counterpickgg's column because the two disagree systematically and this is
+/// the better-instrumented of the pair: one decimal rather than a rounded
+/// integer, a published sample size, and Bayesian shrinkage applied.
+///
+/// Anchored on the whole `Overwatch stats: ` phrase rather than on `% win rate`
+/// alone. The page carries sixty-odd win rates — every hero in the counters and
+/// duos tables has one — and only this sentence is about the hero whose page
+/// it is. Matching the bare label would silently read a neighbour's number.
+pub fn parse_win_rate(html: &str) -> Option<f32> {
+    const MARKER: &str = "Overwatch stats: ";
+    let rest = &html[html.find(MARKER)? + MARKER.len()..];
+    let end = rest
+        .find(|c: char| !c.is_ascii_digit() && c != '.')
+        .unwrap_or(rest.len());
+    if end == 0 || !rest[end..].starts_with("% win rate") {
+        return None;
+    }
+    rest[..end].parse::<f32>().ok()
+}
+
+/// Fetches every hero's stats page for its win rate.
+///
+/// Heroes the site has no page for are simply absent, which the blend reads as
+/// "this source has no opinion" rather than as a zero.
+pub async fn scrape_win_rates(
+    fetcher: &mut Fetcher,
+    hero_keys: &[String],
+) -> Result<HashMap<String, f32>> {
+    let mut out = HashMap::new();
+    let mut unresolved: Vec<&str> = Vec::new();
+
+    for (i, key) in hero_keys.iter().enumerate() {
+        let cache_slug = format!("counterwatch-stats-{key}.html");
+
+        if fetcher.is_missing(&cache_slug).await {
+            unresolved.push(key);
+            continue;
+        }
+
+        let mut rate = None;
+        for candidate in crate::slugs::counterwatch(key) {
+            let url = format!("{BASE}/stats/overwatch/heroes/{candidate}");
+
+            let Ok(body) = fetcher.get(&url, &cache_slug).await else {
+                continue;
+            };
+            rate = parse_win_rate(&body);
+            if rate.is_some() {
+                break;
+            }
+            fetcher.forget(&cache_slug).await;
+        }
+
+        match rate {
+            Some(rate) => {
+                out.insert(key.clone(), rate);
+            }
+            None => {
+                fetcher.mark_missing(&cache_slug).await;
+                unresolved.push(key);
+            }
+        }
+
+        if (i + 1) % 10 == 0 {
+            eprintln!("  counterwatch stats: {}/{} heroes", i + 1, hero_keys.len());
+        }
+    }
+
+    if !unresolved.is_empty() {
+        eprintln!(
+            "  warn: counterwatch has no win rate for: {}",
+            unresolved.join(", ")
+        );
+    }
+
+    Ok(out)
+}
+
+/// The band a duo's "% above expected" is stretched over to reach -100..=100.
+///
+/// Fixed rather than fitted, for the same reason [`crate::stats`] anchors win
+/// rates on a fixed band: a season in which every duo converges on its expected
+/// win rate should read as "nothing stands out", not have the remaining noise
+/// amplified to fill the scale. Three points above expected is an enormous
+/// effect for a pair of heroes — the observed spread across the roster runs
+/// from about +0.3 to +3.0 — so that is the ceiling.
+const SYNERGY_CEILING: f32 = 3.0;
+
+/// One duo entry: the partner, in our hero keys, and its value on -100..=100.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Duo {
+    pub with: String,
+    pub value: i8,
+}
+
+/// Pulls the duo partners off one `best-duos` page.
+///
+/// The published list is short — three partners per role — and the site chooses
+/// it by kit combo before annotating each with its measured effect, so this is
+/// a curated shortlist carrying real numbers rather than a full ranking. That
+/// makes the signal positive-only: a pair that is not listed is not "measured to
+/// do nothing for each other", it is simply not in the top three, which is why
+/// the loader must treat an absent pair as unrated.
+///
+/// Partners are read off the `href` rather than the displayed name. The slug
+/// survives `Lúcio` and `Soldier: 76` without an accent or a colon to normalise,
+/// and it is the same spelling [`crate::slugs`] already knows how to translate.
+fn parse_duos(html: &str) -> Result<Vec<Duo>> {
+    let anchor = Selector::parse(r#"a[href^="/stats/overwatch/heroes/"]"#)
+        .map_err(|e| anyhow::anyhow!("invalid selector: {e}"))?;
+    let document = Html::parse_document(html);
+
+    let mut out: Vec<Duo> = Vec::new();
+    for element in document.select(&anchor) {
+        let text: String = element.text().collect::<Vec<_>>().join(" ");
+        // The percentage alone is not enough to identify the row: the page
+        // carries other figures. The label beside it is what makes it a duo.
+        if !text.contains("above expected") {
+            continue;
+        }
+        let Some(href) = element.value().attr("href") else {
+            continue;
+        };
+        let Some(slug) = href.rsplit('/').next().filter(|s| !s.is_empty()) else {
+            continue;
+        };
+        let with = crate::slugs::counterwatch_to_ours(slug);
+
+        let Some(percent) = first_percentage(&text) else {
+            continue;
+        };
+        let value = overwatch_core::normalize(percent, -SYNERGY_CEILING, SYNERGY_CEILING);
+
+        // The page repeats its top pick in a highlight strip above the list, so
+        // the same partner arrives twice with the same number.
+        if out.iter().any(|d| d.with == with) {
+            continue;
+        }
+        out.push(Duo { with, value });
+    }
+
+    Ok(out)
+}
+
+/// Reads the first signed percentage out of a duo row, e.g. `+1.7%` or `-0.4%`.
+///
+/// Deliberately stricter than [`first_rating`]: the trailing `%` is required, so
+/// a digit that wandered in from a hero name — `Soldier: 76` shares the row —
+/// cannot be mistaken for the measurement.
+fn first_percentage(text: &str) -> Option<f32> {
+    for (i, &b) in text.as_bytes().iter().enumerate() {
+        if b != b'+' && b != b'-' {
+            continue;
+        }
+        let rest = &text[i + 1..];
+        let end = rest
+            .find(|c: char| !c.is_ascii_digit() && c != '.')
+            .unwrap_or(rest.len());
+        if end == 0 || !rest[end..].starts_with('%') {
+            continue;
+        }
+        if let Ok(value) = rest[..end].parse::<f32>() {
+            return Some(if b == b'-' { -value } else { value });
+        }
+    }
+    None
+}
+
+/// Fetches every hero's duo page and returns `(hero, partner) -> value`.
+///
+/// One direction per row as published. The caller decides what to do about the
+/// other direction; the site lists a pair from both sides often enough that
+/// forcing symmetry here would hide a genuine disagreement.
+pub async fn scrape_duos(
+    fetcher: &mut Fetcher,
+    hero_keys: &[String],
+) -> Result<HashMap<(String, String), i8>> {
+    let known: HashSet<&str> = hero_keys.iter().map(String::as_str).collect();
+    let mut out = HashMap::new();
+    let mut unresolved: Vec<&str> = Vec::new();
+
+    for (i, key) in hero_keys.iter().enumerate() {
+        let cache_slug = format!("counterwatch-duos-{key}.html");
+
+        if fetcher.is_missing(&cache_slug).await {
+            unresolved.push(key);
+            continue;
+        }
+
+        let mut duos: Vec<Duo> = Vec::new();
+        for candidate in crate::slugs::counterwatch(key) {
+            let url = format!("{BASE}/stats/overwatch/best-duos/{candidate}");
+
+            let Ok(body) = fetcher.get(&url, &cache_slug).await else {
+                continue;
+            };
+            duos = parse_duos(&body)
+                .with_context(|| format!("parsing the counterwatch duos page for {key}"))?;
+            if !duos.is_empty() {
+                break;
+            }
+            fetcher.forget(&cache_slug).await;
+        }
+
+        if duos.is_empty() {
+            fetcher.mark_missing(&cache_slug).await;
+            unresolved.push(key);
+            continue;
+        }
+
+        for duo in duos {
+            // A slug the roster cannot name is a hero we do not draft, or a
+            // spelling nobody has taught `slugs` about yet. Either way it is a
+            // row to drop rather than to invent a key for.
+            if duo.with == *key || !known.contains(duo.with.as_str()) {
+                continue;
+            }
+            out.insert((key.clone(), duo.with), duo.value);
+        }
+
+        if (i + 1) % 10 == 0 {
+            eprintln!("  counterwatch duos: {}/{} heroes", i + 1, hero_keys.len());
+        }
+    }
+
+    if !unresolved.is_empty() {
+        eprintln!(
+            "  warn: counterwatch has no duo page for: {}",
+            unresolved.join(", ")
+        );
+    }
+
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,5 +620,94 @@ mod tests {
             vec!["Roadhog", "Mauga"]
         );
         assert!(parse_punishes("nothing relevant").is_empty());
+    }
+
+    /// Trimmed from a real `best-duos` page: the highlight strip repeats the
+    /// top pick, and the partner is only identifiable from the `href`.
+    const DUOS_FIXTURE: &str = r##"
+      <html><body>
+      <a class="group" href="/stats/overwatch/heroes/echo">
+        <div>Best <!-- -->Damage</div>
+        <p class="truncate">Echo</p>
+        <p><span>+1.7%</span><span> <!-- -->above expected</span></p>
+      </a>
+      <a class="group" href="/stats/overwatch/heroes/echo">
+        <p>Echo</p><p><span>+1.7%</span><span> above expected</span></p>
+      </a>
+      <a class="group" href="/stats/overwatch/heroes/soldier76">
+        <p>Soldier: 76</p><p><span>+0.8%</span><span> above expected</span></p>
+      </a>
+      <a class="group" href="/stats/overwatch/heroes/jetpackcat">
+        <p>Jetpack Cat</p><p><span>-0.4%</span><span> above expected</span></p>
+      </a>
+      <a class="group" href="/stats/overwatch/heroes/mercy">
+        <p>Mercy</p><p><span>54.2%</span><span> win rate</span></p>
+      </a>
+      </body></html>
+    "##;
+
+    #[test]
+    fn duo_partners_are_read_from_the_slug_not_the_displayed_name() {
+        let duos = parse_duos(DUOS_FIXTURE).expect("the fixture parses");
+        let keys: Vec<&str> = duos.iter().map(|d| d.with.as_str()).collect();
+
+        // Translated back out of counterwatch's spelling, and deduplicated
+        // against the highlight strip that repeats the top pick.
+        assert_eq!(keys, vec!["echo", "soldier-76", "jetpack-cat"]);
+    }
+
+    #[test]
+    fn a_row_without_the_above_expected_label_is_not_a_duo() {
+        let duos = parse_duos(DUOS_FIXTURE).expect("the fixture parses");
+        assert!(
+            !duos.iter().any(|d| d.with == "mercy"),
+            "a win-rate row was read as a synergy"
+        );
+    }
+
+    #[test]
+    fn the_published_percentage_is_stretched_onto_our_scale() {
+        let duos = parse_duos(DUOS_FIXTURE).expect("the fixture parses");
+        let value = |key: &str| duos.iter().find(|d| d.with == key).expect("present").value;
+
+        // +3.0 is the ceiling, so +1.7 lands a little over half way up.
+        assert_eq!(value("echo"), 57);
+        assert_eq!(value("soldier-76"), 27);
+        // Nothing forces the sign positive: if the site ever publishes a
+        // negative pairing, it has to survive as one.
+        assert_eq!(value("jetpack-cat"), -13);
+    }
+
+    #[test]
+    fn a_heros_own_win_rate_is_read_and_not_a_neighbours() {
+        // The counters table above the description carries other heroes' rates,
+        // and the hero's own sentence is the one that names the page.
+        let page = concat!(
+            r#"<div title="Reinhardt · 54.5% win rate · 12,580 tracked matches"></div>"#,
+            r#"<script type="application/ld+json">{"description":"Zenyatta (Support) "#,
+            r#"Overwatch stats: 53.6% win rate across 128,636 community-tracked "#,
+            r#"matches in 5V5, All Ranks."}</script>"#,
+        );
+        assert_eq!(parse_win_rate(page), Some(53.6));
+    }
+
+    #[test]
+    fn a_page_missing_the_stats_sentence_yields_nothing_rather_than_a_guess() {
+        assert_eq!(parse_win_rate("<html>no stats here</html>"), None);
+        assert_eq!(
+            parse_win_rate("Overwatch stats: coming soon"),
+            None,
+            "a sentence without a number is not a measurement"
+        );
+    }
+
+    #[test]
+    fn a_percentage_is_only_read_when_it_carries_its_sign_and_its_sigil() {
+        assert_eq!(first_percentage("+1.7% above expected"), Some(1.7));
+        assert_eq!(first_percentage("-0.4% above expected"), Some(-0.4));
+        // A hero name shares the row, and 76 is not a measurement.
+        assert_eq!(first_percentage("Soldier: 76"), None);
+        // A bare number without the sigil is some other figure entirely.
+        assert_eq!(first_percentage("+12 games"), None);
     }
 }

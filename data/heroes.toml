@@ -5,12 +5,14 @@ source = "https://overfast-api.tekrop.fr/heroes"
 key = "ana"
 name = "Ana"
 role = "support"
+subrole = "tactician"
 aliases = ["ana"]
 
 [[hero]]
 key = "anran"
 name = "Anran"
 role = "damage"
+subrole = "flanker"
 aliases = [
     "anran",
     "anr",
@@ -20,6 +22,7 @@ aliases = [
 key = "ashe"
 name = "Ashe"
 role = "damage"
+subrole = "sharpshooter"
 aliases = [
     "ashe",
     "ash",
@@ -29,6 +32,7 @@ aliases = [
 key = "baptiste"
 name = "Baptiste"
 role = "support"
+subrole = "tactician"
 aliases = [
     "bap",
     "bapt",
@@ -39,6 +43,7 @@ aliases = [
 key = "bastion"
 name = "Bastion"
 role = "damage"
+subrole = "specialist"
 aliases = [
     "bast",
     "bastion",
@@ -49,6 +54,7 @@ aliases = [
 key = "brigitte"
 name = "Brigitte"
 role = "support"
+subrole = "survivor"
 aliases = [
     "brig",
     "brigitte",
@@ -59,6 +65,7 @@ aliases = [
 key = "cassidy"
 name = "Cassidy"
 role = "damage"
+subrole = "sharpshooter"
 aliases = [
     "cass",
     "mccree",
@@ -70,6 +77,7 @@ aliases = [
 key = "dmon"
 name = "D.Mon"
 role = "tank"
+subrole = "stalwart"
 aliases = [
     "dmon",
     "dm",
@@ -80,6 +88,7 @@ aliases = [
 key = "domina"
 name = "Domina"
 role = "tank"
+subrole = "stalwart"
 aliases = [
     "domina",
     "dom",
@@ -89,6 +98,7 @@ aliases = [
 key = "doomfist"
 name = "Doomfist"
 role = "tank"
+subrole = "initiator"
 aliases = [
     "doom",
     "df",
@@ -100,6 +110,7 @@ aliases = [
 key = "dva"
 name = "D.Va"
 role = "tank"
+subrole = "initiator"
 aliases = [
     "dva",
     "dv",
@@ -109,6 +120,7 @@ aliases = [
 key = "echo"
 name = "Echo"
 role = "damage"
+subrole = "recon"
 aliases = [
     "echo",
     "ech",
@@ -118,6 +130,7 @@ aliases = [
 key = "emre"
 name = "Emre"
 role = "damage"
+subrole = "specialist"
 aliases = [
     "emre",
     "emr",
@@ -127,6 +140,7 @@ aliases = [
 key = "freja"
 name = "Freja"
 role = "damage"
+subrole = "recon"
 aliases = [
     "freja",
     "fre",
@@ -136,6 +150,7 @@ aliases = [
 key = "genji"
 name = "Genji"
 role = "damage"
+subrole = "flanker"
 aliases = [
     "genji",
     "gen",
@@ -145,6 +160,7 @@ aliases = [
 key = "hanzo"
 name = "Hanzo"
 role = "damage"
+subrole = "sharpshooter"
 aliases = [
     "hanzo",
     "han",
@@ -154,6 +170,7 @@ aliases = [
 key = "hazard"
 name = "Hazard"
 role = "tank"
+subrole = "initiator"
 aliases = [
     "haz",
     "hazard",
@@ -163,6 +180,7 @@ aliases = [
 key = "illari"
 name = "Illari"
 role = "support"
+subrole = "survivor"
 aliases = [
     "illari",
     "ill",
@@ -172,6 +190,7 @@ aliases = [
 key = "jetpack-cat"
 name = "Jetpack Cat"
 role = "support"
+subrole = "tactician"
 aliases = [
     "cat",
     "jpc",
@@ -184,6 +203,7 @@ aliases = [
 key = "junker-queen"
 name = "Junker Queen"
 role = "tank"
+subrole = "stalwart"
 aliases = [
     "jq",
     "queen",
@@ -195,6 +215,7 @@ aliases = [
 key = "junkrat"
 name = "Junkrat"
 role = "damage"
+subrole = "specialist"
 aliases = [
     "rat",
     "junk",
@@ -206,6 +227,7 @@ aliases = [
 key = "juno"
 name = "Juno"
 role = "support"
+subrole = "survivor"
 aliases = [
     "juno",
     "jun",
@@ -215,6 +237,7 @@ aliases = [
 key = "kiriko"
 name = "Kiriko"
 role = "support"
+subrole = "medic"
 aliases = [
     "kiri",
     "kiriko",
@@ -225,6 +248,7 @@ aliases = [
 key = "lifeweaver"
 name = "Lifeweaver"
 role = "support"
+subrole = "medic"
 aliases = [
     "lw",
     "weaver",
@@ -236,6 +260,7 @@ aliases = [
 key = "lucio"
 name = "Lúcio"
 role = "support"
+subrole = "tactician"
 aliases = [
     "lucio",
     "luc",
@@ -245,6 +270,7 @@ aliases = [
 key = "mauga"
 name = "Mauga"
 role = "tank"
+subrole = "bruiser"
 aliases = [
     "mauga",
     "mau",
@@ -254,12 +280,14 @@ aliases = [
 key = "mei"
 name = "Mei"
 role = "damage"
+subrole = "specialist"
 aliases = ["mei"]
 
 [[hero]]
 key = "mercy"
 name = "Mercy"
 role = "support"
+subrole = "medic"
 aliases = [
     "mercy",
     "mer",
@@ -269,6 +297,7 @@ aliases = [
 key = "mizuki"
 name = "Mizuki"
 role = "support"
+subrole = "survivor"
 aliases = [
     "miz",
     "mizuki",
@@ -278,6 +307,7 @@ aliases = [
 key = "moira"
 name = "Moira"
 role = "support"
+subrole = "medic"
 aliases = [
     "moira",
     "moi",
@@ -287,6 +317,7 @@ aliases = [
 key = "orisa"
 name = "Orisa"
 role = "tank"
+subrole = "bruiser"
 aliases = [
     "orisa",
     "ori",
@@ -296,6 +327,7 @@ aliases = [
 key = "pharah"
 name = "Pharah"
 role = "damage"
+subrole = "recon"
 aliases = [
     "pharah",
     "pha",
@@ -305,6 +337,7 @@ aliases = [
 key = "ramattra"
 name = "Ramattra"
 role = "tank"
+subrole = "stalwart"
 aliases = [
     "ram",
     "ramattra",
@@ -314,6 +347,7 @@ aliases = [
 key = "reaper"
 name = "Reaper"
 role = "damage"
+subrole = "flanker"
 aliases = [
     "reap",
     "reaper",
@@ -324,6 +358,7 @@ aliases = [
 key = "reinhardt"
 name = "Reinhardt"
 role = "tank"
+subrole = "stalwart"
 aliases = [
     "rein",
     "rh",
@@ -335,6 +370,7 @@ aliases = [
 key = "roadhog"
 name = "Roadhog"
 role = "tank"
+subrole = "bruiser"
 aliases = [
     "hog",
     "road",
@@ -346,6 +382,7 @@ aliases = [
 key = "shion"
 name = "Shion"
 role = "damage"
+subrole = "flanker"
 aliases = [
     "shion",
     "shi",
@@ -355,6 +392,7 @@ aliases = [
 key = "sierra"
 name = "Sierra"
 role = "damage"
+subrole = "recon"
 aliases = [
     "sierra",
     "sie",
@@ -364,6 +402,7 @@ aliases = [
 key = "sigma"
 name = "Sigma"
 role = "tank"
+subrole = "stalwart"
 aliases = [
     "sig",
     "sigma",
@@ -373,6 +412,7 @@ aliases = [
 key = "sojourn"
 name = "Sojourn"
 role = "damage"
+subrole = "sharpshooter"
 aliases = [
     "soj",
     "sojourn",
@@ -382,6 +422,7 @@ aliases = [
 key = "soldier-76"
 name = "Soldier: 76"
 role = "damage"
+subrole = "specialist"
 aliases = [
     "76",
     "s76",
@@ -395,6 +436,7 @@ aliases = [
 key = "sombra"
 name = "Sombra"
 role = "damage"
+subrole = "recon"
 aliases = [
     "somb",
     "sombra",
@@ -405,6 +447,7 @@ aliases = [
 key = "symmetra"
 name = "Symmetra"
 role = "damage"
+subrole = "specialist"
 aliases = [
     "sym",
     "symmetra",
@@ -414,6 +457,7 @@ aliases = [
 key = "torbjorn"
 name = "Torbjörn"
 role = "damage"
+subrole = "specialist"
 aliases = [
     "torb",
     "torbjorn",
@@ -424,6 +468,7 @@ aliases = [
 key = "tracer"
 name = "Tracer"
 role = "damage"
+subrole = "flanker"
 aliases = [
     "tracer",
     "tra",
@@ -433,6 +478,7 @@ aliases = [
 key = "vendetta"
 name = "Vendetta"
 role = "damage"
+subrole = "flanker"
 aliases = [
     "vendetta",
     "ven",
@@ -442,6 +488,7 @@ aliases = [
 key = "venture"
 name = "Venture"
 role = "damage"
+subrole = "flanker"
 aliases = [
     "vent",
     "venture",
@@ -452,6 +499,7 @@ aliases = [
 key = "widowmaker"
 name = "Widowmaker"
 role = "damage"
+subrole = "sharpshooter"
 aliases = [
     "widow",
     "widowmaker",
@@ -462,6 +510,7 @@ aliases = [
 key = "winston"
 name = "Winston"
 role = "tank"
+subrole = "initiator"
 aliases = [
     "winston",
     "monkey",
@@ -472,6 +521,7 @@ aliases = [
 key = "wrecking-ball"
 name = "Wrecking Ball"
 role = "tank"
+subrole = "initiator"
 aliases = [
     "ball",
     "hammond",
@@ -484,6 +534,7 @@ aliases = [
 key = "wuyang"
 name = "Wuyang"
 role = "support"
+subrole = "survivor"
 aliases = [
     "wu",
     "wuyang",
@@ -494,6 +545,7 @@ aliases = [
 key = "zarya"
 name = "Zarya"
 role = "tank"
+subrole = "bruiser"
 aliases = [
     "zar",
     "zarya",
@@ -503,6 +555,7 @@ aliases = [
 key = "zenyatta"
 name = "Zenyatta"
 role = "support"
+subrole = "tactician"
 aliases = [
     "zen",
     "zenyatta",

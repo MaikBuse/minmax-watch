@@ -152,7 +152,38 @@ impl Default for Weights {
         Self {
             base: 0.15,
             counter: 1.0,
-            synergy: 0.30,
+            // Lowered from 0.30 when the term stopped being hypothetical:
+            // `synergy.toml` shipped empty for a long time, so 0.30 was a number
+            // multiplying nothing and was never measured against real data.
+            //
+            // What 0.20 buys, against random enemy teams on the committed data:
+            // the term changes the top recommendation for 11% of drafts with one
+            // ally entered, rising to 18% with four, and moves any single score
+            // by at most 0.20. That puts it alongside the shape term (11%, 0.18)
+            // and well under `EnemyRoleWeights` (31%), which is where a
+            // supporting argument belongs.
+            //
+            // It is held below `map` for the reason `map` is held low: the
+            // source publishes only a short top-N of partners per hero, so like
+            // map affinity the signal is positive-only. A pair can be a reason
+            // to pick a hero and never a reason not to, and a term that can only
+            // ever add deserves less room than one that can argue both ways.
+            synergy: 0.20,
+            // Higher than it looks, because the signal it multiplies is sparse
+            // enough to bound itself. Only 8.1% of the hero/map grid is
+            // populated — the source publishes each hero's three best maps and
+            // nothing else — so the term is silent for most candidates, and the
+            // best cell it can read is 60, capping any single score at 0.15.
+            //
+            // Measured against random enemy teams on a random map: the term
+            // changes the top recommendation for 8.3% of drafts, which is less
+            // than the shape term's 11% despite the larger weight. Lowering it
+            // would buy nothing except a quieter term on the maps where the
+            // sources actually have something to say.
+            //
+            // The asymmetry to keep in mind is that a zero here means "nothing
+            // known", not "average", so this term can argue for a hero and never
+            // against one.
             map: 0.25,
             // Comfort is weighted heavily on purpose: a hero you play well but
             // is countered usually beats the "correct" pick you cannot play.
@@ -523,17 +554,23 @@ fn score_hero(
             let share = enemy_weight(ds, ctx, *enemy) / total_weight;
             counter_total += share * term;
 
-            let contribution = w.counter * share * term;
-            let kind = if *term >= 0.0 {
-                ReasonKind::BeatsEnemy(*enemy)
-            } else {
-                ReasonKind::LosesToEnemy(*enemy)
-            };
-            reasons.push(Reason {
-                kind,
-                contribution,
-                text: ds.reason(hero, *enemy).unwrap_or_default().to_owned(),
-            });
+            // A rated dead even is a real reading, but "strong into X" is not
+            // what it says — and neither is the `Some(0.0)` a mirror match
+            // returns. Both stay in the mean and out of the panel, which is the
+            // same rule every term below follows.
+            if *term != 0.0 {
+                let contribution = w.counter * share * term;
+                let kind = if *term > 0.0 {
+                    ReasonKind::BeatsEnemy(*enemy)
+                } else {
+                    ReasonKind::LosesToEnemy(*enemy)
+                };
+                reasons.push(Reason {
+                    kind,
+                    contribution,
+                    text: ds.reason(hero, *enemy).unwrap_or_default().to_owned(),
+                });
+            }
         }
     }
 
@@ -543,20 +580,35 @@ fn score_hero(
     // renders as "pairs well with", "performs well on" or "suits attack" — a
     // positive claim built out of an empty cell. Most of these files are mostly
     // empty, so this is the common case rather than the edge one.
+    //
+    // Allies this candidate has no synergy reading against are left out of the
+    // mean entirely, for the same reason the counter mean above leaves out
+    // unrated enemies: dividing by every ally would average in the absence of
+    // evidence and drag a well-paired hero toward zero purely because the file
+    // is sparse. `rating` rather than `get`, because here "nothing known" and
+    // "even" are emphatically not the same answer.
     let mut synergy_total = 0.0;
-    if !draft.allies.is_empty() {
-        for ally in &draft.allies {
-            let term = f32::from(ds.synergy().get(hero, *ally)) / 100.0;
+    let rated_allies: Vec<(HeroId, f32)> = draft
+        .allies
+        .iter()
+        .filter_map(|ally| {
+            ds.synergy()
+                .rating(hero, *ally)
+                .map(|value| (*ally, f32::from(value) / 100.0))
+        })
+        .collect();
+    if !rated_allies.is_empty() {
+        for (ally, term) in &rated_allies {
             synergy_total += term;
-            if term != 0.0 {
+            if *term != 0.0 {
                 reasons.push(Reason {
                     kind: ReasonKind::PairsWithAlly(*ally),
-                    contribution: w.synergy * term / draft.allies.len() as f32,
+                    contribution: w.synergy * term / rated_allies.len() as f32,
                     text: String::new(),
                 });
             }
         }
-        synergy_total /= draft.allies.len() as f32;
+        synergy_total /= rated_allies.len() as f32;
     }
 
     let map_term = match draft.map {

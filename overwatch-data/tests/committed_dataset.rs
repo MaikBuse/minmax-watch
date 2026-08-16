@@ -7,7 +7,7 @@
 
 use overwatch_core::{
     ban_recommendations, recommend, threats, Archetype, BanSubject, Defended, DefendedTeam, Draft,
-    HeroId, Knowledge, MapId, Role, UserContext,
+    HeroId, Knowledge, MapId, ReasonKind, Role, Subrole, UserContext,
 };
 use overwatch_data::load;
 use overwatch_data::schema::MatchupsFile;
@@ -189,6 +189,42 @@ fn a_real_draft_produces_a_sane_tank_recommendation() {
     );
 }
 
+/// The end-to-end proof that the synergy term does something.
+///
+/// It was dead for the whole life of the file it reads: `synergy.toml` shipped
+/// with no entries, so `PairsWithAlly` was a variant the UI could render and
+/// never did. This asserts against the real data that an ally the sources have
+/// paired somebody with now produces a reason on somebody's row.
+#[test]
+fn an_ally_produces_a_pairs_well_with_reason_on_real_data() {
+    let ds = load().expect("committed data must load");
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+    let hero = |key: &str| {
+        ds.hero_by_key(key)
+            .unwrap_or_else(|_| panic!("{key} missing"))
+    };
+
+    let mut draft = Draft::new();
+    draft.add_ally(hero("lucio"));
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    let cited: Vec<&str> = recs
+        .iter()
+        .filter(|rec| {
+            rec.reasons
+                .iter()
+                .any(|r| r.kind == ReasonKind::PairsWithAlly(hero("lucio")))
+        })
+        .filter_map(|rec| ds.hero(rec.hero).ok())
+        .map(|h| h.key.as_str())
+        .collect();
+
+    assert!(
+        !cited.is_empty(),
+        "no tank cites Lúcio as a partner - the synergy term is inert again"
+    );
+}
+
 #[test]
 fn the_threat_board_identifies_the_real_problem() {
     let ds = load().expect("committed data must load");
@@ -280,6 +316,49 @@ fn the_damage_roster_has_matchup_data_to_rank_on() {
 /// The guard against `side.toml` going the way of `synergy.toml`, which is
 /// committed empty and therefore contributes nothing to any score. A curated
 /// file only earns its weight in the scorer while it actually has values in it.
+/// `synergy.toml` shipped empty for long enough that the scorer carried a
+/// weighted term multiplying nothing, and every test passed the whole time
+/// because an empty matrix is a *valid* matrix. This is the guard that would
+/// have caught it: the file has a scraped source now, and a scrape that starts
+/// returning nothing looks exactly like the state this is here to prevent.
+#[test]
+fn the_pair_synergies_are_populated() {
+    let ds = load().expect("committed data must load");
+    let file: overwatch_data::schema::SynergyFile =
+        toml::from_str(overwatch_data::SYNERGY_TOML).expect("committed synergy must parse");
+
+    assert!(
+        file.entries.len() >= 200,
+        "only {} synergy pairs - synergy.toml is going stale",
+        file.entries.len()
+    );
+
+    // Coverage counted from entries rather than non-zero cells, for the same
+    // reason the matchup guard does it: the two are not the same question.
+    let rated = (0..ds.hero_count())
+        .map(|i| HeroId(i as u16))
+        .filter(|hero| {
+            (0..ds.hero_count()).any(|j| ds.synergy().rating(*hero, HeroId(j as u16)).is_some())
+        })
+        .count();
+    assert!(
+        rated * 2 >= ds.hero_count(),
+        "only {rated} of {} heroes have any duo partner at all",
+        ds.hero_count()
+    );
+
+    // The source publishes a top-N per hero, so it is a shortlist of good
+    // pairings rather than a full ranking. A file that had gone negative on
+    // balance would mean it is being read as something it is not.
+    let curated = file.entries.iter().filter(|e| e.curated.is_some()).count();
+    let positive = file.entries.iter().filter(|e| e.resolved() > 0).count();
+    assert!(
+        positive * 2 >= file.entries.len(),
+        "only {positive} of {} synergy pairs are positive ({curated} curated) - is the scale inverted?",
+        file.entries.len()
+    );
+}
+
 #[test]
 fn the_attack_defend_leans_are_populated() {
     let ds = load().expect("committed data must load");
@@ -344,6 +423,105 @@ fn the_playstyle_axes_are_populated() {
     assert_eq!(leads("winston"), Archetype::Dive);
     assert_eq!(leads("widowmaker"), Archetype::Poke);
     assert_eq!(leads("reinhardt"), Archetype::Brawl);
+}
+
+/// The one external check available on `archetype.toml`.
+///
+/// Everything in that file is a judgement call with no source behind it, which
+/// makes it the easiest file in `data/` to get quietly wrong. Sub-roles are the
+/// one published classification that overlaps it: the roster API says what each
+/// hero *is*, and for four of the ten sub-roles that answer implies a shape,
+/// because the passive is about how the hero fights rather than how it sustains.
+///
+/// The other six are deliberately not asserted, and the numbers are why. Against
+/// the committed roster, the leading axis agrees with the sub-role for only 4/7
+/// specialists, 4/6 stalwarts, 3/5 recons, 3/5 tacticians, 2/5 survivors and 2/4
+/// medics. Stalwart is the clearest case: it grants knockback and slow
+/// resistance, which Reinhardt wants for a brawl and Sigma wants to hold a poke
+/// angle. Asserting those would be asserting a coincidence.
+///
+/// This is a drift alarm, not a rule. If it fails, the honest fix may well be to
+/// add an exemption below rather than to change the file.
+#[test]
+fn the_sub_roles_that_imply_a_shape_agree_with_the_playstyle_axes() {
+    let ds = load().expect("committed data must load");
+
+    // Three disagreements, all defensible, all left in the file rather than
+    // bent to fit. Reaper is a Flanker by how he arrives and a brawler by what
+    // he does once there — Shadow Step is transport, not an engage. Hazard is
+    // an Initiator with Violent Leap, but Spike Guard and the wall want the
+    // fight to stay where he landed. Cassidy is not a disagreement at all: his
+    // poke and brawl are deliberately equal, so he has no leading axis to check
+    // and the tie-break below would invent one.
+    const EXEMPT: [&str; 3] = ["reaper", "hazard", "cassidy"];
+
+    let expected = |subrole: Subrole| match subrole {
+        Subrole::Initiator | Subrole::Flanker => Some(Archetype::Dive),
+        Subrole::Bruiser => Some(Archetype::Brawl),
+        Subrole::Sharpshooter => Some(Archetype::Poke),
+        _ => None,
+    };
+
+    let mut checked = 0;
+    for i in 0..ds.hero_count() {
+        let id = HeroId(i as u16);
+        let hero = ds.hero(id).expect("the roster indexes itself");
+        let Some(subrole) = hero.subrole else {
+            continue;
+        };
+        let Some(want) = expected(subrole) else {
+            continue;
+        };
+        if EXEMPT.contains(&hero.key.as_str()) {
+            continue;
+        }
+
+        let axes = ds.shape(id);
+        if axes == [0; 3] {
+            continue; // nobody has read this kit yet; the count guard above covers that
+        }
+        let leads = Archetype::ALL
+            .into_iter()
+            .max_by_key(|axis| axes[axis.index()])
+            .expect("there are three axes");
+        assert_eq!(
+            leads,
+            want,
+            "{} is a {} but archetype.toml leads {}",
+            hero.key,
+            subrole.as_str(),
+            leads.as_str(),
+        );
+        checked += 1;
+    }
+
+    // Cheap insurance against the guard passing because it checked nothing —
+    // a roster that lost its sub-role column would otherwise look healthy.
+    assert!(
+        checked >= 15,
+        "only {checked} heroes carried a shape-bearing sub-role; is heroes.toml missing the column?"
+    );
+}
+
+/// A sub-role belongs to exactly one role, so one appearing under another means
+/// the upstream taxonomy has been reshaped rather than merely extended.
+#[test]
+fn every_sub_role_sits_under_the_role_it_belongs_to() {
+    let ds = load().expect("committed data must load");
+
+    for hero in ds.heroes() {
+        if let Some(subrole) = hero.subrole {
+            assert_eq!(
+                subrole.role(),
+                hero.role,
+                "{} is {} but carries the {} sub-role {}",
+                hero.key,
+                hero.role.as_str(),
+                subrole.role().as_str(),
+                subrole.as_str(),
+            );
+        }
+    }
 }
 
 /// The ban list against real data, in the state it is actually used in: nobody

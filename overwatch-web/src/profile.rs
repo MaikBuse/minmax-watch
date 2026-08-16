@@ -409,6 +409,7 @@ mod tests {
             key: "ana".to_owned(),
             name: "Ana".to_owned(),
             role: Role::Support,
+            subrole: None,
             aliases: vec!["ana".to_owned()],
         }];
         let n = heroes.len();
