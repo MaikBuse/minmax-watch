@@ -304,6 +304,23 @@ pub struct BoardRow {
     pub tiles: Vec<HeroTile>,
 }
 
+/// What kind of fight a team is built for, already resolved into a word.
+///
+/// The archetype maths lives in `overwatch_core::archetype`; this is only what
+/// the header says about it, so the component stays comparable and knows
+/// nothing about the dataset.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ShapeChip {
+    /// `dive`, `poke`, `brawl`, `mixed`, or an em-dash when nothing is picked.
+    pub label: String,
+    /// Whether enough of the team is known for the read to be stated plainly.
+    /// A tentative chip is drawn muted — the word is still the signal, so the
+    /// colour is never carrying the meaning on its own.
+    pub confident: bool,
+    /// The long form, for the title a header has no room to spell out.
+    pub hint: String,
+}
+
 /// Every map, always on screen.
 ///
 /// A match is played on one map, so this is a single-choice board: clicking the
@@ -423,6 +440,11 @@ pub fn HeroBoard(
     /// spent rather than after.
     #[props(default = false)]
     claiming: bool,
+    /// What kind of fight this team is built for, if it is a team at all. The
+    /// pool board passes nothing: a pool is a list of heroes you play, not a
+    /// comp, and it has no shape to state.
+    #[props(default)]
+    shape: Option<ShapeChip>,
     on_toggle: EventHandler<HeroId>,
     on_reset: EventHandler<()>,
 ) -> Element {
@@ -436,6 +458,17 @@ pub fn HeroBoard(
         section { class: "{board_class}",
             div { class: "board-head",
                 h3 { class: "board-title {side}", "{title}" }
+                // Drawn even when there is nothing yet to say — an em-dash
+                // rather than an absence — so the header does not reflow on the
+                // first pick of a draft.
+                if let Some(shape) = &shape {
+                    span {
+                        class: if shape.confident { "shape" } else { "shape tentative" },
+                        title: "{shape.hint}",
+                        aria_label: "{shape.hint}",
+                        "{shape.label}"
+                    }
+                }
                 ResetButton { confirm: reset_confirm, on_reset }
             }
             for row in rows.iter() {
@@ -850,6 +883,14 @@ impl RecRow {
                         }
                         ReasonKind::SideFit(side) => {
                             format!("suits {}", side.as_str())
+                        }
+                        // Their shape, not this hero's: the portrait beside the
+                        // line already says what the candidate is.
+                        ReasonKind::CountersShape(theirs) => {
+                            format!("answers their {}", theirs.label())
+                        }
+                        ReasonKind::LosesToShape(theirs) => {
+                            format!("walks into their {}", theirs.label())
                         }
                         ReasonKind::BaseStrength => "strong in the current patch".to_owned(),
                         ReasonKind::Comfort => "one of your comfort picks".to_owned(),

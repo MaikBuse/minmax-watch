@@ -6,8 +6,8 @@
 //! here rather than in the middle of a hero select.
 
 use overwatch_core::{
-    ban_recommendations, recommend, threats, BanSubject, Defended, DefendedTeam, Draft, HeroId,
-    Knowledge, MapId, Role, UserContext,
+    ban_recommendations, recommend, threats, Archetype, BanSubject, Defended, DefendedTeam, Draft,
+    HeroId, Knowledge, MapId, Role, UserContext,
 };
 use overwatch_data::load;
 use overwatch_data::schema::MatchupsFile;
@@ -306,6 +306,44 @@ fn the_attack_defend_leans_are_populated() {
         ds.side_lean(hero("winston")) > 0,
         "Winston is an attack pick"
     );
+}
+
+/// Same guard for `archetype.toml`, which the ingest also never writes.
+///
+/// Coverage matters more here than for the side leans: an unrated hero is left
+/// out of its team's shape entirely, so a file that quietly emptied would not
+/// make the boards wrong, it would make them silent — which reads as "this team
+/// has no shape" rather than as missing data.
+#[test]
+fn the_playstyle_axes_are_populated() {
+    let ds = load().expect("committed data must load");
+
+    let read = (0..ds.hero_count())
+        .map(|i| HeroId(i as u16))
+        .filter(|hero| ds.shape(*hero) != [0; 3])
+        .count();
+    assert!(
+        read * 2 >= ds.hero_count(),
+        "only {read} of {} heroes have playstyle axes - archetype.toml is going stale",
+        ds.hero_count()
+    );
+
+    let hero = |key: &str| {
+        ds.hero_by_key(key)
+            .unwrap_or_else(|_| panic!("{key} missing"))
+    };
+    // Which axis leads, not how much: a file whose three columns were
+    // transposed would still pass a count, and would still pass a bounds check.
+    let leads = |key: &str| {
+        let axes = ds.shape(hero(key));
+        Archetype::ALL
+            .into_iter()
+            .max_by_key(|axis| axes[axis.index()])
+            .expect("there are three axes")
+    };
+    assert_eq!(leads("winston"), Archetype::Dive);
+    assert_eq!(leads("widowmaker"), Archetype::Poke);
+    assert_eq!(leads("reinhardt"), Archetype::Brawl);
 }
 
 /// The ban list against real data, in the state it is actually used in: nobody

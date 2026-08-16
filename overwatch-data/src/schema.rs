@@ -174,6 +174,40 @@ pub struct SideEntry {
     pub note: String,
 }
 
+/// Hand-curated playstyle axes. Like `synergy.toml` and `side.toml` this is
+/// written by hand and the ingest never touches it — the scraped sources are
+/// pairwise duels, and a duel says nothing about the shape of the team it
+/// happens inside.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct ArchetypeFile {
+    #[serde(default)]
+    pub generated: String,
+    #[serde(default, rename = "archetype")]
+    pub entries: Vec<ArchetypeEntry>,
+}
+
+/// How much one hero wants each kind of fight, on 0..=100 per axis.
+///
+/// The three do not sum to anything. Most kits are genuinely strong on two —
+/// Zarya brawls but travels with a dive — and normalising them would make every
+/// hero a specialist by arithmetic rather than by kit. An absent axis is zero,
+/// which is the honest reading for a hero the axis simply does not describe.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ArchetypeEntry {
+    pub hero: String,
+    #[serde(default)]
+    pub dive: i8,
+    #[serde(default)]
+    pub poke: i8,
+    #[serde(default)]
+    pub brawl: i8,
+    /// Why this hero reads the way it does. Curated numbers with no source
+    /// behind them are worth a sentence, or the next person cannot tell a
+    /// considered value from a typo.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub note: String,
+}
+
 fn default_true() -> bool {
     true
 }

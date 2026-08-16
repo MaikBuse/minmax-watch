@@ -15,7 +15,8 @@ use overwatch_core::{Dataset, DatasetParts, GameMap, GameMode, Hero, HeroId, Map
 use thiserror::Error;
 
 use crate::schema::{
-    HeroesFile, MapAffinityFile, MapsFile, MatchupsFile, SideFile, StrengthFile, SynergyFile,
+    ArchetypeFile, HeroesFile, MapAffinityFile, MapsFile, MatchupsFile, SideFile, StrengthFile,
+    SynergyFile,
 };
 
 pub const HEROES_TOML: &str = include_str!("../../data/heroes.toml");
@@ -25,6 +26,7 @@ pub const MAP_AFFINITY_TOML: &str = include_str!("../../data/map_affinity.toml")
 pub const SYNERGY_TOML: &str = include_str!("../../data/synergy.toml");
 pub const STRENGTH_TOML: &str = include_str!("../../data/strength.toml");
 pub const SIDE_TOML: &str = include_str!("../../data/side.toml");
+pub const ARCHETYPE_TOML: &str = include_str!("../../data/archetype.toml");
 
 #[derive(Debug, Error)]
 pub enum DataError {
@@ -65,10 +67,11 @@ pub fn load() -> Result<Dataset, DataError> {
         synergy: SYNERGY_TOML,
         strength: STRENGTH_TOML,
         side: SIDE_TOML,
+        archetype: ARCHETYPE_TOML,
     })
 }
 
-/// The seven TOML documents that make up a dataset, as raw text.
+/// The eight TOML documents that make up a dataset, as raw text.
 #[derive(Debug, Clone, Copy)]
 pub struct Sources<'a> {
     pub heroes: &'a str,
@@ -78,6 +81,7 @@ pub struct Sources<'a> {
     pub synergy: &'a str,
     pub strength: &'a str,
     pub side: &'a str,
+    pub archetype: &'a str,
 }
 
 pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
@@ -88,6 +92,7 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     let synergy_file: SynergyFile = parse("synergy.toml", sources.synergy)?;
     let strength_file: StrengthFile = parse("strength.toml", sources.strength)?;
     let side_file: SideFile = parse("side.toml", sources.side)?;
+    let archetype_file: ArchetypeFile = parse("archetype.toml", sources.archetype)?;
 
     // --- roster -----------------------------------------------------------
     let mut hero_index: HashMap<String, HeroId> = HashMap::new();
@@ -203,6 +208,18 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
         }
     }
 
+    // --- playstyle axes ---------------------------------------------------
+    // All-zero for a hero the file does not mention, which reads downstream as
+    // "nobody has curated this kit" rather than as a hero that wants none of
+    // the three fights — see `overwatch_core::archetype::shape_of`.
+    let mut shape = vec![[0i8; 3]; n];
+    for entry in &archetype_file.entries {
+        let hero = hero_id("archetype.toml", &entry.hero)?;
+        if let Some(slot) = shape.get_mut(hero.index()) {
+            *slot = [entry.dive, entry.poke, entry.brawl];
+        }
+    }
+
     Ok(Dataset::new(DatasetParts {
         heroes,
         maps,
@@ -212,6 +229,7 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
         base_strength,
         win_rate,
         side_lean,
+        shape,
         reasons,
         generated: matchups_file.generated.clone(),
         patch: matchups_file.patch.clone(),
@@ -253,6 +271,7 @@ mod tests {
             synergy: "",
             strength: "",
             side: "",
+            archetype: "",
         };
 
         let err = load_from(sources).expect_err("dangling reference must fail");
@@ -284,6 +303,7 @@ mod tests {
             synergy: "",
             strength: "",
             side: "",
+            archetype: "",
         };
 
         assert!(matches!(
@@ -316,6 +336,7 @@ mod tests {
             "#,
             strength: "",
             side: "",
+            archetype: "",
         };
 
         let ds = load_from(sources).expect("loads");

@@ -829,6 +829,44 @@ body {
     flex: 0 0 auto;
 }
 
+/* What kind of fight this team is built for: dive, poke, brawl, or mixed.
+   Shaped like `.tag` rather than like the board title beside it, because it is
+   a fact *about* the board and not a second name for it.
+
+   Deliberately not tinted with the board's own `--ally` / `--enemy` hue. Those
+   say which team you are looking at, which the title already said; spending
+   them again here would make the chip read as more of the same label instead of
+   as a different claim. */
+.board-head .shape {
+    flex: 0 0 auto;
+    font-size: var(--fs-micro);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: var(--sp-1) 6px;
+    border-radius: var(--r-sm);
+    background: var(--line);
+    color: var(--text);
+    /* The word changes width between "dive" and "brawl"; the reset is pushed
+       right by `margin-left: auto` and would otherwise step sideways as picks
+       land. */
+    min-width: 3.4rem;
+    text-align: center;
+}
+
+/* Fewer than three picks in, so the read is a guess about what is coming.
+   Muted rather than hidden — nothing appears or disappears mid-draft — and the
+   word itself is still the signal, so the colour is not carrying it alone.
+   `--text-faint` is the darkest grey that still clears AA at this size. */
+.board-head .shape.tentative {
+    color: var(--text-faint);
+    background: transparent;
+    border: 1px solid var(--line);
+    /* Matching the solid chip's box, so committing to a shape changes the
+       colour and not the layout. */
+    padding: calc(var(--sp-1) - 1px) 5px;
+}
+
 .map-search {
     flex: 1 1 auto;
     min-width: 0;

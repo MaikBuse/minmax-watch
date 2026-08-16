@@ -422,6 +422,7 @@ mod tests {
             base_strength: vec![0; n],
             win_rate: vec![None; n],
             side_lean: vec![0; n],
+            shape: vec![[0; 3]; n],
             reasons: vec![String::new(); n * n],
             generated: String::new(),
             patch: String::new(),

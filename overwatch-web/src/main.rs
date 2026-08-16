@@ -32,14 +32,16 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 use overwatch_core::{
-    ban_recommendations, recommend, search_maps, BanBoard, BanSubject, Board, Capacity, Dataset,
-    Draft, Format, HeroId, MapId, Recommendation, Role, Seat, SessionState, Side, UserContext,
+    ban_recommendations, recommend, search_maps, shape_of, Archetype, BanBoard, BanSubject, Board,
+    Capacity, Dataset, Draft, Format, HeroId, MapId, Recommendation, Role, Seat, SessionState,
+    Side, UserContext,
 };
 
 use crate::profile::Profile;
 use crate::session::Membership;
 use crate::ui::{
-    BanRow, BoardRow, HeroChip, HeroTile, MapChip, MapTile, ModeChip, RosterRow, TileState,
+    BanRow, BoardRow, HeroChip, HeroTile, MapChip, MapTile, ModeChip, RosterRow, ShapeChip,
+    TileState,
 };
 
 static CSS: Asset = asset!("/assets/style.css");
@@ -102,6 +104,40 @@ fn hero_chip(dataset: &Dataset, hero: HeroId) -> HeroChip {
             name: "?".to_owned(),
             icon: String::new(),
         },
+    }
+}
+
+/// Resolves a team's picks into the word its board header shows.
+///
+/// The hint is the half a two-syllable chip cannot carry: what the word means,
+/// and — while the team is still filling — that the read is provisional. Both
+/// belong in a title rather than on screen, because the header is already
+/// carrying a name and a reset.
+fn shape_chip(dataset: &Dataset, picks: &[HeroId]) -> ShapeChip {
+    let shape = shape_of(dataset, picks);
+    let confident = shape.confident();
+
+    let hint = match shape.leading() {
+        Some(axis) => {
+            let what = match axis {
+                Archetype::Dive => "close the distance and isolate a target",
+                Archetype::Poke => "hold an angle and chip from range",
+                Archetype::Brawl => "hold ground and win the close fight",
+            };
+            if confident {
+                format!("{}: {what}", axis.label())
+            } else {
+                format!("{}: {what} — still filling", axis.label())
+            }
+        }
+        None if shape.is_rated() => "no one shape yet — the picks pull both ways".to_owned(),
+        None => "nothing picked yet".to_owned(),
+    };
+
+    ShapeChip {
+        label: shape.label().to_owned(),
+        confident,
+        hint,
     }
 }
 
@@ -429,6 +465,19 @@ fn App() -> Element {
             bans,
         }
     };
+
+    // What each team is building, for the chip on each board header.
+    //
+    // Your own locked hero is not in `draft.allies` — that list is everyone
+    // else — so it is unioned back in here. A read of "your team" that leaves
+    // out the hero you are playing is wrong in exactly the case you are looking
+    // at it for.
+    let ally_shape = {
+        let mut mine = draft.allies.clone();
+        mine.extend(draft.locked);
+        shape_chip(&ds, &mine)
+    };
+    let enemy_shape = shape_chip(&ds, &draft.enemies);
 
     // --- actions ----------------------------------------------------------
 
@@ -949,6 +998,7 @@ fn App() -> Element {
                     side: "ally".to_owned(),
                     rows: ally_board,
                     claiming: my_lock.is_none(),
+                    shape: ally_shape,
                     // Dispatches on the same ladder the tiles were drawn from,
                     // so what a click does is what the tile said it would. A
                     // teammate's pick never reaches here — the component drops
@@ -982,6 +1032,7 @@ fn App() -> Element {
                     title: "enemy".to_owned(),
                     side: "enemy".to_owned(),
                     rows: enemy_board,
+                    shape: enemy_shape,
                     on_toggle: {
                         let ds = dataset.clone();
                         move |hero: HeroId| {

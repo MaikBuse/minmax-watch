@@ -9,9 +9,9 @@
 //! conversion that gets the midpoint wrong.
 
 use overwatch_core::{
-    ban_recommendations, difficulty_to_value, recommend, threats, BanBoard, BanSubject, Dataset,
-    DatasetParts, Defended, DefendedTeam, Draft, EnemyRoleWeights, GameMap, GameMode, Hero, HeroId,
-    Knowledge, MapId, Matrix, ReasonKind, Role, Side, UserContext,
+    ban_recommendations, difficulty_to_value, recommend, threats, Archetype, BanBoard, BanSubject,
+    Dataset, DatasetParts, Defended, DefendedTeam, Draft, EnemyRoleWeights, GameMap, GameMode,
+    Hero, HeroId, Knowledge, MapId, Matrix, ReasonKind, Role, Side, UserContext,
 };
 
 const REINHARDT: HeroId = HeroId(0);
@@ -91,6 +91,7 @@ fn fixture() -> Dataset {
         base_strength: vec![0; n],
         win_rate: vec![None; n],
         side_lean: vec![0; n],
+        shape: vec![[0; 3]; n],
         reasons,
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
@@ -392,6 +393,7 @@ fn symmetric_fixture() -> Dataset {
         base_strength: vec![0; n],
         win_rate: vec![None; n],
         side_lean: vec![0; n],
+        shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
@@ -567,6 +569,7 @@ fn sparse_fixture() -> Dataset {
         base_strength: vec![0; n],
         win_rate: vec![None; n],
         side_lean: vec![0; n],
+        shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
@@ -715,6 +718,7 @@ fn side_fixture() -> Dataset {
         base_strength: vec![0; n],
         win_rate: vec![None; n],
         side_lean,
+        shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
@@ -837,6 +841,7 @@ fn patch_fixture() -> Dataset {
         base_strength: vec![-20, 40, -60, 80],
         win_rate: vec![Some(48.5), Some(52.0), Some(46.0), Some(54.0)],
         side_lean: vec![0; n],
+        shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
@@ -1344,4 +1349,200 @@ fn a_second_tank_on_the_team_raises_what_an_enemy_tank_is_worth() {
         after > before,
         "a second tank slot reads the enemy tank through the tank row twice: {before} then {after}"
     );
+}
+
+// --- team shape ------------------------------------------------------------
+
+const T_WINSTON: HeroId = HeroId(0);
+const T_REINHARDT: HeroId = HeroId(1);
+const T_SIGMA: HeroId = HeroId(2);
+const T_WIDOWMAKER: HeroId = HeroId(3);
+const T_TRACER: HeroId = HeroId(4);
+const T_UNREAD: HeroId = HeroId(5);
+
+/// Three tanks, one per axis, and a damage roster to build enemy comps out of.
+///
+/// Every matchup is unrated and every other term zero, so the only thing that
+/// can move a score here is the shape term. That is the point: the claim under
+/// test is that team shape ranks candidates *on its own*, and a fixture with
+/// live matchup data could pass it for the wrong reason.
+fn shape_fixture() -> Dataset {
+    let heroes = vec![
+        hero("winston", "Winston", Role::Tank),
+        hero("reinhardt", "Reinhardt", Role::Tank),
+        hero("sigma", "Sigma", Role::Tank),
+        hero("widowmaker", "Widowmaker", Role::Damage),
+        hero("tracer", "Tracer", Role::Damage),
+        hero("unread", "Unread", Role::Damage),
+    ];
+    let n = heroes.len();
+
+    Dataset::new(DatasetParts {
+        heroes,
+        maps: Vec::new(),
+        matchups: Matrix::unrated(n),
+        synergy: Matrix::unrated(n),
+        map_affinity: Vec::new(),
+        base_strength: vec![0; n],
+        win_rate: vec![None; n],
+        side_lean: vec![0; n],
+        shape: vec![
+            [95, 0, 0], // winston: dive
+            [0, 0, 95], // reinhardt: brawl
+            [0, 95, 0], // sigma: poke
+            [0, 95, 0], // widowmaker: poke
+            [95, 0, 0], // tracer: dive
+            [0, 0, 0],  // unread: nobody has curated this one
+        ],
+        reasons: vec![String::new(); n * n],
+        generated: "fixture".to_owned(),
+        patch: "fixture".to_owned(),
+    })
+    .expect("fixture is internally consistent")
+}
+
+/// The whole argument for the term, on a full poke enemy team: the dive answer
+/// ranks above the mirror, and the brawl one ranks below it.
+#[test]
+fn a_tank_that_answers_the_enemy_shape_outranks_one_that_walks_into_it() {
+    let ds = shape_fixture();
+    let mut draft = Draft::new();
+    draft.add_enemy(T_SIGMA);
+    draft.add_enemy(T_WIDOWMAKER);
+
+    let winston = tank_score(&ds, &draft, T_WINSTON);
+    let sigma = tank_score(&ds, &draft, T_SIGMA);
+    let reinhardt = tank_score(&ds, &draft, T_REINHARDT);
+
+    assert!(winston > 0.0, "dive answers poke, got {winston}");
+    assert!(reinhardt < 0.0, "brawl walks into poke, got {reinhardt}");
+    assert!(
+        sigma.abs() < 1e-6,
+        "the mirror is a rated dead even, got {sigma}"
+    );
+    assert!(winston > sigma && sigma > reinhardt);
+}
+
+/// The triangle, asserted end to end through the scorer rather than on the
+/// table it is built from. Each enemy comp must promote exactly one of the
+/// three tanks and demote exactly one.
+#[test]
+fn each_enemy_shape_promotes_the_answer_to_it() {
+    let ds = shape_fixture();
+
+    // Two picks a side rather than one, so each case is a comp rather than a
+    // lone hero: the mean has to survive being taken over more than one body.
+    //
+    // (enemy comp, the tank that beats it, the tank that loses to it)
+    for (enemies, answer, victim) in [
+        // poke: dive beats it, brawl walks into it
+        ([T_SIGMA, T_WIDOWMAKER], T_WINSTON, T_REINHARDT),
+        // dive: brawl beats it, poke walks into it
+        ([T_WINSTON, T_TRACER], T_REINHARDT, T_SIGMA),
+        // brawl: poke beats it, dive walks into it
+        ([T_REINHARDT, T_REINHARDT], T_SIGMA, T_WINSTON),
+    ] {
+        let mut draft = Draft::new();
+        for enemy in enemies {
+            draft.add_enemy(enemy);
+        }
+
+        let good = tank_score(&ds, &draft, answer);
+        let bad = tank_score(&ds, &draft, victim);
+        assert!(
+            good > 0.0 && bad < 0.0,
+            "against {enemies:?} the answer scored {good} and the victim {bad}"
+        );
+    }
+}
+
+/// A roster nobody has curated must score exactly as it did before this term
+/// existed. Silence has to cost nothing, or the term is a tax on every hero the
+/// file has not reached yet.
+#[test]
+fn an_unread_enemy_team_leaves_every_score_untouched() {
+    let ds = shape_fixture();
+    let mut draft = Draft::new();
+    draft.add_enemy(T_UNREAD);
+
+    for tank in [T_WINSTON, T_REINHARDT, T_SIGMA] {
+        let score = tank_score(&ds, &draft, tank);
+        assert!(score.abs() < 1e-6, "{tank:?} moved to {score}");
+    }
+}
+
+/// And an enemy team with no committed shape is the same silence: the two picks
+/// cancel, so there is nothing for a candidate to lean into either way.
+#[test]
+fn a_mixed_enemy_team_ranks_every_shape_the_same() {
+    let ds = shape_fixture();
+    let mut draft = Draft::new();
+    draft.add_enemy(T_WINSTON); // dive
+    draft.add_enemy(T_REINHARDT); // brawl
+    draft.add_enemy(T_SIGMA); // poke
+
+    for tank in [T_WINSTON, T_REINHARDT, T_SIGMA] {
+        let score = tank_score(&ds, &draft, tank);
+        assert!(score.abs() < 1e-6, "{tank:?} moved to {score}");
+    }
+}
+
+/// The term explains itself, and names the enemy's shape rather than the
+/// candidate's — the portrait beside the line already says what the candidate
+/// is. A zero-valued term must stay silent, the way every other term does.
+#[test]
+fn the_shape_shows_up_in_the_reasoning_only_when_it_says_something() {
+    let ds = shape_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let mut draft = Draft::new();
+    draft.add_enemy(T_SIGMA);
+    draft.add_enemy(T_WIDOWMAKER);
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    let reasons_for = |hero: HeroId| {
+        recs.iter()
+            .find(|r| r.hero == hero)
+            .expect("ranked")
+            .reasons
+            .clone()
+    };
+
+    assert!(reasons_for(T_WINSTON)
+        .iter()
+        .any(|r| r.kind == ReasonKind::CountersShape(Archetype::Poke)));
+    assert!(reasons_for(T_REINHARDT)
+        .iter()
+        .any(|r| r.kind == ReasonKind::LosesToShape(Archetype::Poke)));
+
+    // The mirror computes to exactly zero, and a zero is never dressed up as a
+    // claim about anything.
+    assert!(!reasons_for(T_SIGMA).iter().any(|r| matches!(
+        r.kind,
+        ReasonKind::CountersShape(_) | ReasonKind::LosesToShape(_)
+    )));
+}
+
+/// The weight is the lever, and it has to be able to switch the term off
+/// entirely — which is also what an old stored profile is asserting when it
+/// carries a weight this field did not exist for.
+#[test]
+fn zeroing_the_shape_weight_removes_the_term() {
+    let ds = shape_fixture();
+    let mut ctx = UserContext::new(Role::Tank, ds.hero_count());
+    ctx.weights.shape = 0.0;
+
+    let mut draft = Draft::new();
+    draft.add_enemy(T_SIGMA);
+    draft.add_enemy(T_WIDOWMAKER);
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    for rec in &recs {
+        assert!(
+            rec.score.abs() < 1e-6,
+            "{:?} scored {}",
+            rec.hero,
+            rec.score
+        );
+    }
 }

@@ -1,0 +1,379 @@
+# How each hero wants the fight to happen, on three axes, 0..=100 each.
+#
+#   dive   — close the distance, isolate one target, kill it, leave
+#   poke   — hold an angle, chip from range, refuse the close fight
+#   brawl  — hold ground at short range and win the sustained fight
+#
+# Hand-curated, like synergy.toml and side.toml. No source publishes this: the
+# scraped matchup data is pairwise duels, and a duel says nothing about the
+# shape of the team the duel happens inside. The ingest never writes this file.
+#
+# The three numbers do not sum to anything. Most kits are genuinely strong on
+# two axes — Zarya brawls but travels with a dive, Echo pokes from the air and
+# dives out of it — and forcing them to a hundred would make every hero a
+# specialist by arithmetic rather than by kit.
+#
+# The bar for a non-zero value is that the *kit* says so: an engage tool, a
+# falloff range, a barrier, a cooldown that only pays off at one distance. Win
+# rates and tier lists are not evidence here — they say a hero is strong, not
+# how the hero wants to fight. Anything less clear-cut is left low rather than
+# guessed at, and a hero absent from this file contributes nothing to its
+# team's shape at all, which is the honest answer for a kit nobody has read yet.
+#
+# These are judgement calls. The notes are not decoration: a curated number with
+# no source behind it is indistinguishable from a typo unless it says why.
+
+generated = "hand-curated"
+
+# --- tanks ------------------------------------------------------------------
+
+[[archetype]]
+hero = "dmon"
+dive = 35
+poke = 20
+brawl = 90
+note = "A 4m plasma saber behind a barrier she walks with at reduced speed, and Surging Strike only exists while that barrier is up. A marching shield, not a held one."
+
+[[archetype]]
+hero = "domina"
+poke = 92
+brawl = 30
+note = "No dash, no vertical, no disengage, and Crystal Charge reaches far past the weapon. The kit is a placed barrier and a sightline; the brawl figure is only that 400 shields make her hard to finish once dived."
+
+[[archetype]]
+hero = "doomfist"
+dive = 90
+brawl = 55
+note = "Every cooldown is a way in. Power Block into Rocket Punch rewards staying in the fight, which is why brawl is not zero."
+
+[[archetype]]
+hero = "dva"
+dive = 90
+poke = 15
+brawl = 40
+note = "Boosters are the engage and the exit. Matrix is why she can also stand in a brawl she chose to take."
+
+[[archetype]]
+hero = "hazard"
+dive = 60
+brawl = 80
+note = "Violent Leap gets him on top of someone, but Spike Guard and the wall want the fight to stay there."
+
+[[archetype]]
+hero = "junker-queen"
+dive = 30
+brawl = 90
+note = "Wounds only pay out over a sustained fight, and Commanding Shout is a reason for the whole team to be standing next to her."
+
+[[archetype]]
+hero = "mauga"
+dive = 20
+poke = 15
+brawl = 90
+note = "Overrun is an engage with no exit attached, and the guns only heal him while they are landing on a target that is already burning."
+
+[[archetype]]
+hero = "orisa"
+poke = 55
+brawl = 70
+note = "Javelin Spin and Fortify are tools for refusing to move. The spear reaches, so she anchors a poke line as readily as a brawl one."
+
+[[archetype]]
+hero = "ramattra"
+poke = 40
+brawl = 85
+note = "Nemesis form is melee with a cooldown on it, so the fight has to already be close. Void Barrier and the pierce give the omnic form real reach."
+
+[[archetype]]
+hero = "reinhardt"
+brawl = 95
+note = "The shield only protects what is behind it, and everything he can do to you happens within a hammer's length."
+
+[[archetype]]
+hero = "roadhog"
+dive = 15
+poke = 20
+brawl = 80
+note = "Take a Breather rewards standing in damage. The hook has range but it is a way of making the fight close, not of avoiding it."
+
+[[archetype]]
+hero = "sigma"
+poke = 85
+brawl = 40
+note = "Accretion and the orbs are aimed across a room, and Kinetic Grasp turns the other team's poke into his own shields."
+
+[[archetype]]
+hero = "winston"
+dive = 95
+brawl = 30
+note = "Jump Pack and Barrier Projector are a kit for landing on one target and surviving the trip back."
+
+[[archetype]]
+hero = "wrecking-ball"
+dive = 95
+brawl = 35
+note = "The grapple is the whole hero: it is how he arrives, how he does damage, and how he leaves."
+
+[[archetype]]
+hero = "zarya"
+dive = 45
+brawl = 85
+note = "Bubbles charge fastest in a fight nobody can walk out of, and the beam has no range to speak of. The dive figure is that a bubble also carries someone else's engage."
+
+# --- damage -----------------------------------------------------------------
+
+[[archetype]]
+hero = "anran"
+dive = 85
+poke = 15
+brawl = 45
+note = "Fan the Flames needs to be inside 10m to double the burn, and two charges of Inferno Rush are a way in and a way out. Self-heal and the Dancing Blaze window are why she can also win the 1v1 she started."
+
+[[archetype]]
+hero = "ashe"
+dive = 10
+poke = 85
+brawl = 15
+note = "Aim-down-sights damage and Coach Gun as a disengage. Dynamite is area denial across a choke, not a fight-winner up close."
+
+[[archetype]]
+hero = "bastion"
+poke = 70
+brawl = 45
+note = "Assault is a stationary window with a cooldown, and the artillery is fired at a place rather than a person."
+
+[[archetype]]
+hero = "cassidy"
+dive = 15
+poke = 55
+brawl = 55
+note = "Hitscan at range, Magnetic Grenade and the roll up close. Genuinely mid — the one hero here where two axes are equal because the kit is."
+
+[[archetype]]
+hero = "echo"
+dive = 70
+poke = 50
+brawl = 15
+note = "Flight puts her on top of a backline, but sticky bombs and the beam also work from an angle nothing on the ground can reach."
+
+[[archetype]]
+hero = "emre"
+dive = 25
+poke = 70
+brawl = 55
+note = "A burst rifle with Take Aim extending falloff, and no dash, blink or gap-closer outside the ultimate. Siphon Blaster's lifesteal wins the close fight he did not get to choose."
+
+[[archetype]]
+hero = "freja"
+dive = 40
+poke = 70
+brawl = 25
+note = "A charged crossbow held on a sightline, with the glide as a repositioning tool rather than an engage."
+
+[[archetype]]
+hero = "genji"
+dive = 95
+brawl = 25
+note = "Swift Strike resets on a kill, which is a design that only pays out on isolated targets."
+
+[[archetype]]
+hero = "hanzo"
+dive = 15
+poke = 90
+brawl = 15
+note = "One-shot headshots and Sonic Arrow, with Lunge as an escape from the fight he does not want."
+
+[[archetype]]
+hero = "junkrat"
+dive = 15
+poke = 40
+brawl = 70
+note = "Arcing projectiles that need a corridor, plus a trap and a mine — tools for a fight in a space the enemy has to walk into."
+
+[[archetype]]
+hero = "mei"
+dive = 10
+poke = 15
+brawl = 85
+note = "The beam has no range, and the wall exists to make a fight smaller than the enemy wanted it."
+
+[[archetype]]
+hero = "pharah"
+dive = 60
+poke = 60
+brawl = 10
+note = "Genuinely both from the air: she drops on a backline as readily as she chips from an angle. What she cannot do is hold ground."
+
+[[archetype]]
+hero = "reaper"
+dive = 25
+brawl = 90
+note = "Shotguns and lifesteal — the kit is a reason to be standing inside a group. Shadow Step is transport, not an engage."
+
+[[archetype]]
+hero = "shion"
+dive = 92
+poke = 30
+brawl = 40
+note = "Evade is a low-cooldown omnidirectional dash usable while charging Execution, and Joyride is a steerable four-second vehicle. Falloff starts at 20m, so the payoff is always close."
+
+[[archetype]]
+hero = "sierra"
+dive = 30
+poke = 75
+brawl = 20
+note = "Helix Rifle tightens with sustained fire, so repositioning costs damage, and Anchor Drone is a two-step reposition rather than a gap-closer. Tracking Shot rewards holding the angle."
+
+[[archetype]]
+hero = "sojourn"
+dive = 40
+poke = 70
+brawl = 25
+note = "Railgun charge is banked from chip and spent at range. Power Slide is a repositioning tool, not an engage."
+
+[[archetype]]
+hero = "soldier-76"
+dive = 25
+poke = 60
+brawl = 50
+note = "Helix rockets and a hitscan rifle at mid, with the biotic field as a reason to hold a position rather than leave it."
+
+[[archetype]]
+hero = "sombra"
+dive = 90
+brawl = 20
+note = "Translocator and stealth are a kit for arriving alone at somebody who is also alone, and hack is worth most on a target with no help nearby."
+
+[[archetype]]
+hero = "symmetra"
+dive = 10
+poke = 30
+brawl = 60
+note = "The beam ramps on a target that cannot leave, and turrets are placed where a fight is already happening."
+
+[[archetype]]
+hero = "torbjorn"
+poke = 55
+brawl = 50
+note = "The turret needs to be built somewhere the fight will come to it, and Overload is a reason to be standing there when it does."
+
+[[archetype]]
+hero = "tracer"
+dive = 95
+brawl = 20
+note = "Three blinks and a recall are the shortest commitment in the game — the kit is built to leave before anyone can answer."
+
+[[archetype]]
+hero = "vendetta"
+dive = 95
+poke = 10
+brawl = 45
+note = "Melee-only, with Soaring Slice as the vertical entry and Whirlwind Dash as the exit. Warding Stance and the on-hit ramp read as sustain, but the kit runs out of cooldowns before the fight does."
+
+[[archetype]]
+hero = "venture"
+dive = 75
+brawl = 60
+note = "Burrow is an engage that also refills shields, which is a design for arriving in a fight and staying in it."
+
+[[archetype]]
+hero = "widowmaker"
+poke = 95
+note = "The whole kit is one angle held from as far away as the map allows. Nothing in it survives contact."
+
+# --- supports ---------------------------------------------------------------
+
+[[archetype]]
+hero = "ana"
+dive = 15
+poke = 70
+brawl = 40
+note = "A hitscan rifle held on a sightline, with no mobility to follow anyone anywhere. Sleep and Nade are answers to a fight arriving at her."
+
+[[archetype]]
+hero = "baptiste"
+dive = 25
+poke = 75
+brawl = 50
+note = "Immortality Field and the window are tools for a team holding a position, and the rifle trades at range."
+
+[[archetype]]
+hero = "brigitte"
+brawl = 95
+note = "Every point of healing she does comes from hitting somebody with a flail inside melee range."
+
+[[archetype]]
+hero = "illari"
+dive = 15
+poke = 80
+brawl = 25
+note = "A charged hitscan beam and a pylon placed on a sightline — both want the fight to stay at a distance she picked."
+
+[[archetype]]
+hero = "jetpack-cat"
+dive = 80
+poke = 25
+brawl = 55
+note = "Permanent flight as a passive, and Lifeline tows an ally into the fight. Purr is an area heal that rewards grouping, so the healing profile pulls the other way from the mobility — the least settled entry in this file."
+
+[[archetype]]
+hero = "juno"
+dive = 70
+poke = 45
+brawl = 25
+note = "Glide Boost and the speed ring are for a team that is moving, and Pulsar Torpedoes lock on from wherever she ended up."
+
+[[archetype]]
+hero = "kiriko"
+dive = 70
+poke = 20
+brawl = 50
+note = "Swift Step teleports to whoever went in, which is a kit for following a dive rather than starting one."
+
+[[archetype]]
+hero = "lifeweaver"
+dive = 30
+poke = 45
+brawl = 45
+note = "Petal Platform and Life Grip are answers to a fight going wrong at any range. Deliberately flat: no axis is what the kit is for."
+
+[[archetype]]
+hero = "lucio"
+dive = 60
+poke = 0
+brawl = 80
+note = "Both auras are a radius, so his healing and his speed are reasons to be in a group. Wall-riding is why he can also keep up with a dive."
+
+[[archetype]]
+hero = "mercy"
+dive = 65
+poke = 40
+brawl = 15
+note = "Guardian Angel makes her wherever her target is, so the shape is whoever she is beamed to. Nothing in the kit rewards a crowd."
+
+[[archetype]]
+hero = "mizuki"
+dive = 75
+poke = 25
+brawl = 55
+note = "Katashiro Return is a committed leap with a teleport home attached — the diver's pattern. Remedy Aura is a radius, which is why brawl is real here rather than residual."
+
+[[archetype]]
+hero = "moira"
+dive = 20
+brawl = 85
+note = "Both her beams are short and her resource only refills by draining somebody. Fade is an escape, not an engage."
+
+[[archetype]]
+hero = "wuyang"
+dive = 30
+poke = 85
+brawl = 45
+note = "The orb loses its empowered explosion inside 10m, so the weapon itself punishes closing. Rushing Torrent is speed without a teleport, which is not enough to follow a dive."
+
+[[archetype]]
+hero = "zenyatta"
+dive = 20
+poke = 85
+brawl = 20
+note = "Discord and the orbs are applied from across a room, and there is no mobility to recover a position once it is lost."

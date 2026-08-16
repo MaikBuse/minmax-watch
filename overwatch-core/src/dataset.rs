@@ -30,6 +30,14 @@ pub struct Dataset {
     /// Positive leans attack, negative leans defend. Only consulted on the modes
     /// that have sides at all.
     side_lean: Vec<i8>,
+    /// Dive, poke and brawl per hero, in [`crate::archetype::Archetype::ALL`]
+    /// order.
+    ///
+    /// All-zero means "nobody has read this kit yet", which is deliberately the
+    /// same state as a hero absent from the file — see
+    /// [`crate::archetype::shape_of`] for why that silence is left out of a
+    /// team's mean rather than counted as a shape of its own.
+    shape: Vec<[i8; 3]>,
     /// Row-major `n x n`, parallel to `matchups`. Empty string means "no text".
     reasons: Vec<String>,
     /// Free-form provenance shown in the UI so stale data is visible.
@@ -49,6 +57,7 @@ pub struct DatasetParts {
     pub base_strength: Vec<i8>,
     pub win_rate: Vec<Option<f32>>,
     pub side_lean: Vec<i8>,
+    pub shape: Vec<[i8; 3]>,
     pub reasons: Vec<String>,
     pub generated: String,
     pub patch: String,
@@ -95,6 +104,13 @@ impl Dataset {
                 actual: parts.side_lean.len(),
             });
         }
+        if parts.shape.len() != n {
+            return Err(CoreError::RosterLengthMismatch {
+                what: "shape",
+                expected: n,
+                actual: parts.shape.len(),
+            });
+        }
         if parts.reasons.len() != n * n {
             return Err(CoreError::RosterLengthMismatch {
                 what: "reasons",
@@ -120,6 +136,7 @@ impl Dataset {
             base_strength: parts.base_strength,
             win_rate: parts.win_rate,
             side_lean: parts.side_lean,
+            shape: parts.shape,
             reasons: parts.reasons,
             generated: parts.generated,
             patch: parts.patch,
@@ -199,6 +216,15 @@ impl Dataset {
     /// Zero — the value for most of the roster — means it makes no difference.
     pub fn side_lean(&self, hero: HeroId) -> i8 {
         self.side_lean.get(hero.index()).copied().unwrap_or(0)
+    }
+
+    /// How much this hero wants each kind of fight — dive, poke, brawl — on
+    /// 0..=100 each, in [`crate::archetype::Archetype::ALL`] order.
+    ///
+    /// All-zero for a hero nobody has curated, and for one the axes genuinely
+    /// do not describe. The two are the same silence and are treated the same.
+    pub fn shape(&self, hero: HeroId) -> [i8; 3] {
+        self.shape.get(hero.index()).copied().unwrap_or([0; 3])
     }
 
     /// Neutral (0) when the map is unknown or affinity data is missing, so a
