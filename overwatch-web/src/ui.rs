@@ -894,7 +894,9 @@ fn RankPicker(
                 for option in Rank::CHOICES {
                     button {
                         key: "{option.as_str()}",
-                        class: if rank == option { "rank active" } else { "rank" },
+                        // `.rank-option`, not `.rank`: that one is the ordinal
+                        // column in the pick list and is 14px wide.
+                        class: if rank == option { "rank-option active" } else { "rank-option" },
                         r#type: "button",
                         aria_pressed: "{rank == option}",
                         title: "{option.description()}",

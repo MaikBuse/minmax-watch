@@ -1156,10 +1156,26 @@ fn App() -> Element {
                                         .flatten(),
                                     worst_owner: ban.worst_owner.clone(),
                                     // The patch rung ranks on strength rather than
-                                    // on any pair, so it shows the figure it ranked
-                                    // on instead of a rationale there is none of.
+                                    // on any pair, so it shows a figure instead of
+                                    // a rationale there is none of.
+                                    //
+                                    // Qualified once a rank is chosen, because from
+                                    // then on the list is ordered on that rung and
+                                    // this rate is still the whole ladder's — the
+                                    // per-rung win rate is not in the dataset, only
+                                    // the shift the scorer reads. The score column
+                                    // beside it *is* the sorted figure and does move
+                                    // with the rank, so the ordering is accounted
+                                    // for; what this must not do is let a ladder
+                                    // number pass for the bracket's.
                                     text: match dataset.win_rate(ban.hero) {
-                                        Some(rate) if patch_subject => format!("{rate:.1}% win rate"),
+                                        Some(rate) if patch_subject => {
+                                            if profile.read().rank == Rank::All {
+                                                format!("{rate:.1}% win rate")
+                                            } else {
+                                                format!("{rate:.1}% win rate across the ladder")
+                                            }
+                                        }
                                         _ => ban.text.clone(),
                                     },
                                 }

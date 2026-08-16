@@ -384,6 +384,9 @@ body {
     align-items: center;
     gap: var(--sp-4);
     margin-bottom: var(--sp-4);
+    /* The containing block for the rank sheet, which hangs below the whole
+       header rather than off the chip that opens it — see .ranks. */
+    position: relative;
 }
 
 .header .context {
@@ -1294,7 +1297,12 @@ body {
 
    Rank is the first member with more than two options, which is why it is the
    only one whose options live behind a disclosure rather than on the header
-   itself — see .rank-picker below. The pills themselves are the same pills. */
+   itself — see .rank-picker below. The pills themselves are the same pills.
+
+   `.rank-option` and not `.rank`: `.rank` is already the ordinal column in the
+   pick list, and it carries `width: 14px`. A rank pill given that class inherits
+   the width from the earlier rule — same specificity, and this block never sets
+   `width` to override it — and every label clips to two characters. */
 
 .sides,
 .formats,
@@ -1314,8 +1322,14 @@ body {
 .side,
 .format,
 .queue,
-.rank {
+.rank-option {
     padding: 0.2rem 0.6rem;
+    /* Flex items shrink by default, and the rank sheet is the only one of these
+       whose track is narrower than its contents — nine pills capped at 30rem. So
+       without this they squash to a few characters each and the labels clip.
+       They have to wrap onto another line instead. */
+    flex: 0 0 auto;
+    white-space: nowrap;
     font: inherit;
     font-size: var(--fs-xs);
     color: var(--text-muted);
@@ -1328,14 +1342,14 @@ body {
 .side:hover,
 .format:hover,
 .queue:hover,
-.rank:hover {
+.rank-option:hover {
     color: var(--text);
 }
 
 .side.active,
 .format.active,
 .queue.active,
-.rank.active {
+.rank-option.active {
     color: var(--on-color);
     background: var(--accent);
     border-color: var(--accent);
@@ -1345,7 +1359,7 @@ body {
 .side:focus-visible,
 .format:focus-visible,
 .queue:focus-visible,
-.rank:focus-visible {
+.rank-option:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
 }
@@ -1363,7 +1377,6 @@ body {
    It is held open by a click rather than a hover: something that vanishes when
    the pointer leaves cannot be aimed at with a thumb. */
 .rank-picker {
-    position: relative;
     display: inline-flex;
 }
 
@@ -1412,15 +1425,24 @@ body {
     display: none;
     position: absolute;
     z-index: 20;
+    /* Anchored to the header's right edge, not to the chip.
+       `.header` wraps, and the chip lands anywhere from x=1072 at 1440px to x=8
+       at 360px once the row breaks — so a sheet pinned to the chip runs 112px
+       off the right of the viewport at every width from 768 up, and takes the
+       whole page into a horizontal scroll with it. The header spans the page, so
+       hanging the sheet off *that* is the one anchor that fits at every width
+       without a breakpoint or a line of JS.
+       `top: 100%` for the same reason: below the header as a whole, so it never
+       lands on top of the header's own second row once it has wrapped. */
     top: calc(100% + var(--sp-2));
-    left: 0;
+    right: 0;
     flex-wrap: wrap;
     gap: 0.25rem;
     width: max-content;
     /* Two rows of pills at a comfortable width, three at 360px. A breakpoint
        here would be spending a media query on how a nine-item list happens to
        wrap. */
-    max-width: min(30rem, calc(100vw - 2 * var(--sp-4)));
+    max-width: min(30rem, 100%);
     padding: var(--sp-3);
     background: var(--surface);
     border: 1px solid var(--line);
@@ -2144,7 +2166,7 @@ body {
     .format,
     .queue,
     .side,
-    .rank,
+    .rank-option,
     .rank-chip,
     .session-action,
     .session-name,
@@ -2164,7 +2186,7 @@ body {
     .side,
     .format,
     .queue,
-    .rank,
+    .rank-option,
     .rank-chip,
     .session-action,
     .reset {
