@@ -130,7 +130,7 @@ ingest:
 ingest-roster:
     cargo run -p overwatch-ingest -- roster
 
-# Hero portraits and map thumbnails into overwatch-web/assets
+# Hero portraits, map thumbnails and rank badges into overwatch-web/assets
 ingest-art:
     cargo run -p overwatch-ingest -- art
 

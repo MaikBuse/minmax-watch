@@ -186,7 +186,7 @@ enum Command {
     /// the counterwatch stats pages this step already fetches, and the other half
     /// costs nine requests to Blizzard.
     Strength,
-    /// Hero portraits and map thumbnails into the web assets.
+    /// Hero portraits, map thumbnails and rank badges into the web assets.
     Art,
     /// Everything.
     All,
@@ -234,7 +234,7 @@ usage: overwatch-ingest [roster|counters|synergy|strength|art|all|brand] [--refr
   counters    regenerate matchups.toml
   synergy     regenerate the scraped half of synergy.toml, keeping curated rows
   strength    regenerate strength.toml, map_affinity.toml and strength_by_rank.toml
-  art         redownload hero portraits and map thumbnails into overwatch-web/assets
+  art         redownload hero portraits, map thumbnails and rank badges
   all         all four (default)
   brand       rasterise the brand SVGs into favicons, PWA icons and og.png
               (local only - no network, and not included in `all`)
@@ -349,7 +349,7 @@ async fn main() -> Result<()> {
         // Runs before the counter scrape rather than after it: it is derived
         // from the roster we just wrote, and a failure here should surface in
         // seconds instead of behind three minutes of page fetching.
-        eprintln!("art: portraits and map thumbnails");
+        eprintln!("art: portraits, map thumbnails and rank badges");
 
         let hero_keys: HashSet<String> = load_roster(&data_dir)
             .await?
