@@ -53,9 +53,10 @@ cp overwatch-web/assets/fonts/LICENSE-Inter.txt "$web_out/fonts/LICENSE-Inter.tx
 # The artwork, for a third reason: dx re-encodes every image it bundles, and the
 # only WebP its encoder can write is lossless, so routing these through asset!()
 # inflates the 700K of art back to 4M. See overwatch-web/src/icons.rs.
-mkdir -p "$web_out/heroes" "$web_out/maps"
+mkdir -p "$web_out/heroes" "$web_out/maps" "$web_out/ranks"
 cp overwatch-web/assets/heroes/*.webp "$web_out/heroes/"
 cp overwatch-web/assets/maps/*.webp   "$web_out/maps/"
+cp overwatch-web/assets/ranks/*.webp  "$web_out/ranks/"
 
 # `-p`, not `--workspace`: overwatch-ingest is the dev-only scraper and pulls in
 # reqwest, scraper, image and resvg, none of which the deployed server needs.

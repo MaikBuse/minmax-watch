@@ -86,14 +86,15 @@ build-web:
     just _art {{web_out}}
     @echo "bundle: $(du -sh {{web_out}} | cut -f1)"
 
-# Copy the hero and map artwork to the bundle root, unmodified.
+# Copy the hero, map and rank artwork to the bundle root, unmodified.
 #
 # Its own recipe because `dev` needs it too: `dx serve` does not run the copies
 # above, so without this the draft screen comes up with no portraits on it.
 _art out:
-    mkdir -p {{out}}/heroes {{out}}/maps
+    mkdir -p {{out}}/heroes {{out}}/maps {{out}}/ranks
     cp overwatch-web/assets/heroes/*.webp {{out}}/heroes/
     cp overwatch-web/assets/maps/*.webp {{out}}/maps/
+    cp overwatch-web/assets/ranks/*.webp {{out}}/ranks/
 
 # Serve the app and the sync socket on the LAN
 serve: build-web

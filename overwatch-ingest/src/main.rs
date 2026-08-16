@@ -362,8 +362,8 @@ async fn main() -> Result<()> {
 
         let report = art::build(&mut fetcher, &web_assets, &hero_keys, &map_keys).await?;
         eprintln!(
-            "  {} portraits / {} thumbnails; {} written, {} orphan(s) removed",
-            report.heroes, report.maps, report.changed, report.removed
+            "  {} portraits / {} thumbnails / {} rank badges; {} written, {} orphan(s) removed",
+            report.heroes, report.maps, report.ranks, report.changed, report.removed
         );
         if !report.missing.is_empty() {
             // Named rather than counted: the draft screen will show these as

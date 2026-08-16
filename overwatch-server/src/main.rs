@@ -135,6 +135,12 @@ fn router(state: AppState, assets: &std::path::Path) -> Router {
 /// changes about as often as Blizzard redraws one. A week is long enough that a
 /// returning player re-downloads none of the ~2 MB of it, and short enough that
 /// a re-ingest reaches everybody within a patch cycle.
+///
+/// `/ranks/` joins them on the same reasoning even though its *sources* are
+/// content-hashed upstream: what the ingest commits is `bronze.webp`, a stable
+/// name, and stability of the served name is exactly what rules `immutable` out.
+/// If anything the badges are the most static of the three — Blizzard redraws
+/// the ladder art on the order of years — so a week is conservative and cheap.
 fn cache_control_for(path: &str) -> &'static str {
     match path {
         // The two files that decide how the shell updates. A stale `sw.js` is
@@ -146,6 +152,7 @@ fn cache_control_for(path: &str) -> &'static str {
         _ if path.starts_with("/assets/") => "public, max-age=31536000, immutable",
         _ if path.starts_with("/heroes/")
             || path.starts_with("/maps/")
+            || path.starts_with("/ranks/")
             || path.starts_with("/fonts/") =>
         {
             "public, max-age=604800"
@@ -643,6 +650,11 @@ mod e2e {
         )
         .expect("a shell");
         std::fs::write(dir.join("assets").join("style-dxhbeef.css"), "body{}").expect("an asset");
+        for art in ["heroes", "maps", "ranks"] {
+            std::fs::create_dir_all(dir.join(art)).expect("an art directory");
+            std::fs::write(dir.join(art).join("probe.webp"), b"not really a webp")
+                .expect("an art file");
+        }
 
         let state = AppState {
             rooms: Rooms::new(),
@@ -1171,6 +1183,23 @@ mod e2e {
             dotted.contains("cache-control: public, max-age=31536000, immutable"),
             "a dot segment should not cost the asset its cache, got: {dotted}"
         );
+    }
+
+    /// A prefix missing from `cache_control_for` does not error — it falls
+    /// through to the day-long default, and nothing anywhere says so. This is
+    /// the only thing that would notice, which is why every artwork directory is
+    /// named here rather than just the newest one.
+    #[tokio::test]
+    async fn every_artwork_directory_is_cached_for_a_week() {
+        let base = serve_bundle().await;
+
+        for dir in ["heroes", "maps", "ranks"] {
+            let headers = headers_of(&format!("http://{base}/{dir}/probe.webp")).await;
+            assert!(
+                headers.contains("cache-control: public, max-age=604800"),
+                "/{dir}/ should be cached for a week, got: {headers}"
+            );
+        }
     }
 
     /// The SPA fallback hands the shell to every unknown path, so that a deep

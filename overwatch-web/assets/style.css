@@ -131,11 +131,15 @@
    glyph, and the layout never moves because the box is sized either way. In the
    panels the name is always rendered beside the art; on the boards, where the
    tile is bare artwork, the name is carried by aria-label and the hover
-   label — so nothing anywhere depends on recognising a picture. */
+   label — so nothing anywhere depends on recognising a picture.
+
+   `.rank-badge` joins this family for the four properties that do apply to it
+   and then opts out of the two that do not — see its own rule below. */
 
 .portrait,
 .rec-portrait,
-.map-thumb {
+.map-thumb,
+.rank-badge {
     display: inline-block;
     flex-shrink: 0;
     background-color: var(--line);
@@ -160,6 +164,48 @@
     width: 44px;
     height: 25px;
     border-radius: var(--r-sm);
+}
+
+/* The one member of the block above that fits rather than fills, and the only
+   one with no placeholder tint.
+
+   The badges are not one shape: bronze through diamond are 80x80, master is
+   100x80 and grandmaster is 118x80 — the wings are what tells the top two rungs
+   apart, and `cover` on a square box would crop them off exactly the two ranks
+   that have them. So the box is 3:2, the nearest clean ratio above
+   grandmaster's 118:80, and every badge letterboxes into it: one height, one
+   baseline, one left edge for the label beside it, and a hairline of air even
+   on the widest.
+
+   `contain` is also why `background-color` goes back to transparent here. A
+   fill behind a fitted cut-out does not read as a placeholder tile — it reads
+   as grey bars either side of every square badge. Which is in turn why
+   `overwatch-ingest/src/art.rs` fails the run outright on a badge it cannot
+   fetch instead of letting it degrade: there is nothing here to degrade into. */
+.rank-badge {
+    background-color: transparent;
+    background-size: contain;
+}
+
+/* The aggregate. Not a rung, so there is no badge and there never will be — a
+   short rule, not a picture, and not the empty tile the block above degrades to,
+   which here would claim an image had failed about a file that was never
+   supposed to exist.
+
+   `content: ""` on a pseudo-element, so it is a mark on the screen and silence
+   to a screen reader; the button's own label already says "all ranks". Drawn at
+   all, rather than the slot being omitted, so the nine labels share one left
+   edge and the chip does not change width when you pick a rung. */
+.rank-badge.none {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.rank-badge.none::after {
+    content: "";
+    width: 0.625rem;
+    border-top: 1px solid var(--text-faint);
 }
 
 html,
@@ -1297,12 +1343,19 @@ body {
 
    Rank is the first member with more than two options, which is why it is the
    only one whose options live behind a disclosure rather than on the header
-   itself — see .rank-picker below. The pills themselves are the same pills.
+   itself — see .rank-picker below.
 
-   `.rank-option` and not `.rank`: `.rank` is already the ordinal column in the
-   pick list, and it carries `width: 14px`. A rank pill given that class inherits
-   the width from the earlier rule — same specificity, and this block never sets
-   `width` to override it — and every label clips to two characters. */
+   What is inside that disclosure is no longer a pill. Rank is also the only one
+   of the four whose options carry artwork, and a Blizzard rank badge needs a box
+   that fits rather than fills, a row wide enough to seat a label beside it, and
+   an active state that is not a solid accent fill painted behind gold. So those
+   became `.rank-row` and left this block. The chip did not: `.rank-chip` is the
+   statement, and a statement about the match is exactly what `.side` and
+   `.queue` are.
+
+   Nothing here may be called `.rank`. That is already the ordinal column in the
+   pick list and it carries `width: 14px`; anything given that class inherits the
+   width from the earlier rule — same specificity — and clips to two characters. */
 
 .sides,
 .formats,
@@ -1321,13 +1374,13 @@ body {
 
 .side,
 .format,
-.queue,
-.rank-option {
+.queue {
     padding: 0.2rem 0.6rem;
-    /* Flex items shrink by default, and the rank sheet is the only one of these
-       whose track is narrower than its contents — nine pills capped at 30rem. So
-       without this they squash to a few characters each and the labels clip.
-       They have to wrap onto another line instead. */
+    /* Flex items shrink by default, and these sit in a header that wraps. Left
+       to shrink they squash and their labels clip; `0 0 auto` makes the row
+       break instead. (This mattered most for the rank sheet, which had nine of
+       them in a capped track — that is a column of `.rank-row` now, but the
+       shrink rule is still right for the three that remain.) */
     flex: 0 0 auto;
     white-space: nowrap;
     font: inherit;
@@ -1341,15 +1394,13 @@ body {
 
 .side:hover,
 .format:hover,
-.queue:hover,
-.rank-option:hover {
+.queue:hover {
     color: var(--text);
 }
 
 .side.active,
 .format.active,
-.queue.active,
-.rank-option.active {
+.queue.active {
     color: var(--on-color);
     background: var(--accent);
     border-color: var(--accent);
@@ -1358,8 +1409,7 @@ body {
 
 .side:focus-visible,
 .format:focus-visible,
-.queue:focus-visible,
-.rank-option:focus-visible {
+.queue:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
 }
@@ -1421,6 +1471,15 @@ body {
     color: var(--text-faint);
 }
 
+/* 1.5em, not a pixel value: the chip's text is --fs-xs and body sets
+   line-height 1.5, so this is exactly the line box the chip already had and the
+   badge costs the header no height at all, at any root text size. 2.25em is that
+   height at the 3:2 the box is. */
+.rank-chip .rank-badge {
+    height: 1.5em;
+    width: 2.25em;
+}
+
 .ranks {
     display: none;
     position: absolute;
@@ -1436,14 +1495,30 @@ body {
        lands on top of the header's own second row once it has wrapped. */
     top: calc(100% + var(--sp-2));
     right: 0;
-    flex-wrap: wrap;
-    gap: 0.25rem;
-    width: max-content;
-    /* Two rows of pills at a comfortable width, three at 360px. A breakpoint
-       here would be spending a media query on how a nine-item list happens to
-       wrap. */
-    max-width: min(30rem, 100%);
-    padding: var(--sp-3);
+
+    /* A column, not a wrapping row. Nine options carrying artwork have one
+       obvious reading order and it is vertical; wrapped, the badges made a grid
+       whose rows meant nothing.
+
+       A fixed 13rem rather than `max-content`, and that is not a rounding of the
+       rows' width: the rows come to about 9rem, but `.rank-note` below is a
+       sentence, and `max-content` would size the menu to its caveat rather than
+       to its choices. 13rem is the rows plus room, and the note wraps inside it.
+       In rem so it tracks the browser's own text-size setting. */
+    flex-direction: column;
+    gap: 0;
+    width: 13rem;
+    max-width: calc(100vw - 2 * var(--sp-4));
+
+    /* Nine rows at their touch height plus the note runs past the short edge of
+       a phone held sideways. Capped and scrolled rather than allowed to run off
+       the bottom, and `contain` so reaching the end of the menu does not start
+       scrolling the board behind it. */
+    max-height: calc(100vh - 6rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    padding: var(--sp-2);
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--r-lg);
@@ -1454,12 +1529,70 @@ body {
     display: flex;
 }
 
+/* A menu row: badge, then label, full width of the menu and left-aligned. No
+   border — the hover fill is the affordance, the way it is for `.rec`. */
+.rank-row {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    width: 100%;
+    padding: var(--sp-2) 6px;
+    font: inherit;
+    font-size: var(--fs-sm);
+    text-align: left;
+    color: var(--text-muted);
+    background: none;
+    border: 0;
+    /* The active bar's track, transparent until it is wanted, so the badge and
+       the label do not step sideways by three pixels when the selection lands. */
+    border-left: 3px solid transparent;
+    border-radius: var(--r-md);
+    cursor: pointer;
+}
+
+/* Big enough that master's and grandmaster's wings are the first thing you
+   notice, which is the whole reason the artwork is here. In rem rather than em
+   so it does not shrink with the row's --fs-sm. */
+.rank-row .rank-badge {
+    height: 1.5rem;
+    width: 2.25rem;
+}
+
+.rank-row-label {
+    flex: 1;
+    min-width: 0;
+}
+
+.rank-row:hover {
+    color: var(--text);
+    background: var(--surface-raised);
+}
+
+/* Not the solid --accent fill the pills take. A cyan block behind a gold badge
+   fights the artwork it is meant to be selecting, so this borrows the mode
+   switch's answer instead — a bar plus a contrast step, turned ninety degrees.
+   Three carriers and none of them hue alone: the bar is a position, the 600 is a
+   weight, and aria-pressed is on the element. */
+.rank-row.active {
+    color: var(--text);
+    background: var(--surface-raised);
+    border-left-color: var(--accent);
+    font-weight: 600;
+}
+
+.rank-row:focus-visible {
+    outline: 2px solid var(--accent);
+    /* Inset, like `.rec`: an outset ring on a full-width row inside a 13rem
+       menu is clipped by the menu's own padding on both sides. */
+    outline-offset: -2px;
+}
+
 /* The caveat the picker would otherwise imply away: only patch strength is
-   sliced by rank. Full-width so it reads as a note about the whole sheet rather
-   than as a tenth option. */
+   sliced by rank. Padded to the rows' text so it reads as a note about the menu
+   rather than as a tenth option. */
 .rank-note {
-    flex: 1 1 100%;
-    margin: var(--sp-2) 0 0;
+    margin: var(--sp-3) 0 0;
+    padding: 0 6px;
     font-size: var(--fs-micro);
     color: var(--text-faint);
 }
@@ -2166,7 +2299,7 @@ body {
     .format,
     .queue,
     .side,
-    .rank-option,
+    .rank-row,
     .rank-chip,
     .session-action,
     .session-name,
@@ -2186,7 +2319,7 @@ body {
     .side,
     .format,
     .queue,
-    .rank-option,
+    .rank-row,
     .rank-chip,
     .session-action,
     .reset {

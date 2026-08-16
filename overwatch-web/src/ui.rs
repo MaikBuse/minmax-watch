@@ -170,7 +170,8 @@ const BUILD: &str = match option_env!("MINMAX_BUILD") {
 
 /// The one place the app says who it is and whose artwork it is borrowing.
 ///
-/// The portraits and map shots in this bundle are Blizzard's. Serving them
+/// The portraits, map shots and rank badges in this bundle are Blizzard's.
+/// Serving them
 /// across a LAN and serving them to the open internet are different postures,
 /// and the second one should say so out loud rather than leave it to be
 /// inferred from a licence file nobody opens.
@@ -210,7 +211,7 @@ pub fn Footer() -> Element {
             span { class: "sep", "·" }
             span {
                 "not affiliated with or endorsed by Blizzard Entertainment. \
-                 Overwatch, hero and map artwork are Blizzard's."
+                 Overwatch, hero, map and rank artwork are Blizzard's."
             }
         }
     }
@@ -847,13 +848,54 @@ pub fn Header(
     }
 }
 
+/// The badge slot for a rung, as the menu draws it.
+///
+/// [`Rank::All`] keeps its slot and gets a short rule in it, because in a column
+/// of nine the badges are a column too and the labels have to share a left edge.
+/// Deliberately not the `--line` placeholder tile the rest of the artwork
+/// degrades to: that says "this image failed", and it would be saying it about a
+/// file that was never supposed to exist, on the row that is the default.
+fn rank_badge(rank: Rank) -> Element {
+    match crate::icons::rank(rank) {
+        Some(url) => rsx! { span { class: "rank-badge", style: art(&url) } },
+        None => rsx! { span { class: "rank-badge none", aria_hidden: "true" } },
+    }
+}
+
+/// The same badge on the chip, where [`Rank::All`] draws nothing at all.
+///
+/// No empty slot here, unlike the menu. There is no column to line up with, and
+/// the rule that reads as an icon between eight others reads as punctuation
+/// between two words — "rank — all ranks". Nor is there a width to protect: the
+/// chip already resizes on every pick, because "all ranks" and "grandmaster+"
+/// are different lengths and the label is the wider half of the control.
+fn rank_chip_badge(rank: Rank) -> Element {
+    match crate::icons::rank(rank) {
+        Some(url) => rsx! { span { class: "rank-badge", style: art(&url) } },
+        None => rsx! {},
+    }
+}
+
 /// Which rung of the ladder patch strength is read on.
 ///
-/// A chip that states its own answer, plus a sheet of the alternatives behind a
-/// click. Nine options laid out flat measure about 640px at `--fs-xs`, and the
-/// header has been overflowing below 950px since before this existed — see the
-/// note above `.header` in the stylesheet. So the resting cost is one pill, and
-/// only the choices fold away.
+/// A chip that states its own answer, plus a menu of the alternatives behind a
+/// click. The header has been overflowing below 950px since before this existed
+/// — see the note above `.header` in the stylesheet — so the resting cost is one
+/// chip and everything else folds away.
+///
+/// The menu is a column, not a wrapped row of pills. Nine options carrying
+/// artwork have one obvious reading order and it is vertical; wrapped, the
+/// badges made a grid whose rows meant nothing, when Bronze to Grandmaster is
+/// the one control in this app where the order *is* the meaning.
+///
+/// The badges are Blizzard's own, at `/ranks/{as_str}.webp`. They are here
+/// because recognition beats reading in a menu opened under a thirty-second
+/// clock, and they do not stand alone: every row keeps its label, `aria-pressed`
+/// says which is live, and the selected row takes a bar and a weight step as
+/// well as a tint. The aggregate has no badge and never will — it is not a rung
+/// — so its slot is drawn as a rule rather than a picture, and drawn at all
+/// rather than omitted so the nine labels share one left edge and the chip does
+/// not change width when you pick a rung.
 ///
 /// That is not the rule about nothing appearing mid-draft. What that forbids is
 /// something a *draft* can reveal or remove; this opens on an explicit click on
@@ -880,6 +922,7 @@ fn RankPicker(
                 title: "which rung of the ladder patch strength is read on \u{2014} nothing else changes",
                 onclick: move |_| on_open.call(()),
                 span { class: "rank-chip-label", "rank" }
+                {rank_chip_badge(rank)}
                 span { class: "rank-chip-value", "{rank.label()}" }
                 span { class: "rank-caret", aria_hidden: "true", "\u{25be}" }
             }
@@ -894,14 +937,17 @@ fn RankPicker(
                 for option in Rank::CHOICES {
                     button {
                         key: "{option.as_str()}",
-                        // `.rank-option`, not `.rank`: that one is the ordinal
-                        // column in the pick list and is 14px wide.
-                        class: if rank == option { "rank-option active" } else { "rank-option" },
+                        // `.rank-row`, and no longer `.rank-option`: these left
+                        // the .side/.format/.queue pill family when they gained
+                        // artwork and a column. Neither may be `.rank`, which is
+                        // the ordinal column in the pick list and is 14px wide.
+                        class: if rank == option { "rank-row active" } else { "rank-row" },
                         r#type: "button",
                         aria_pressed: "{rank == option}",
                         title: "{option.description()}",
                         onclick: move |_| on_rank.call(option),
-                        "{option.label()}"
+                        {rank_badge(option)}
+                        span { class: "rank-row-label", "{option.label()}" }
                     }
                 }
                 // Said outright rather than left to be inferred. The rank slices
