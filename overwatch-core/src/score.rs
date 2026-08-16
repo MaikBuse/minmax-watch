@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::dataset::Dataset;
 use crate::draft::Draft;
 use crate::error::CoreError;
-use crate::hero::{HeroId, HeroSet, Role};
+use crate::hero::{HeroId, Role};
 use crate::map::{MapId, Side};
 
 /// How much one enemy pick counts towards the counter term, by its role and by
@@ -215,34 +215,147 @@ pub struct Threat {
     pub text: String,
 }
 
+/// How sure the ban list is about what one member of your team will be on.
+///
+/// The ban phase runs before anyone picks, so "who am I defending" is usually
+/// unanswerable in the strict sense. It is not, however, unanswerable in
+/// practice: people mark pools, and a pool is a claim about what they might end
+/// up on. These are the three grades of that claim, worst to best.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Knowledge {
+    /// They have locked in. One hero, and it is a fact rather than a claim.
+    Locked(HeroId),
+    /// They have marked a pool for the role they declared. Any of it could be
+    /// the hero they end up on, so a ban has to defend all of it at once.
+    Pool,
+    /// They have said only what they queued as. Their heroes are the whole
+    /// role, which averages to nearly nothing — this is what
+    /// [`UNKNOWN_CERTAINTY`] discounts.
+    Unknown,
+}
+
+/// One person the ban list is defending, resolved to the heroes they might play.
+///
+/// Built by [`crate::session::SessionState::defended_team`], which is where the
+/// roster arithmetic lives. The scorer takes it as given so that it stays a pure
+/// function of an explicit input — the same reason `draft_for` is in the session
+/// module rather than the UI.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Defended {
+    /// The roster label, so a row can say whose hero takes the worst of it.
+    pub who: String,
+    /// Whether this is the person reading the screen. What lets the panel say
+    /// "hardest on Reinhardt" for you and "hardest on Ana · Mika" for a
+    /// teammate, rather than crediting you to yourself.
+    pub is_me: bool,
+    /// A hero typed onto the ally board rather than a seat, in which case `who`
+    /// is the hero's own name because there is no person behind it.
+    ///
+    /// The other reason not to print a credit. Without it the row reads
+    /// "hardest on Genji · Genji", which is the same word twice pretending to
+    /// be an attribution.
+    pub is_typed: bool,
+    /// The role they hold a slot in: their locked hero's, or the one they
+    /// declared. It picks the [`EnemyRoleWeights`] row this member reads a
+    /// candidate through.
+    pub role: Role,
+    pub knowledge: Knowledge,
+    /// Every hero they might end up on: one when locked, their pool when they
+    /// have one, the whole role when they have said only what they queued as.
+    pub heroes: Vec<HeroId>,
+}
+
+impl Defended {
+    /// How much this member's opinion counts. See [`UNKNOWN_CERTAINTY`].
+    fn certainty(&self) -> f32 {
+        match self.knowledge {
+            Knowledge::Locked(_) | Knowledge::Pool => 1.0,
+            Knowledge::Unknown => UNKNOWN_CERTAINTY,
+        }
+    }
+
+    /// Whether this member has actually said anything. An `Unknown` member is a
+    /// role and nothing else, which is not a claim about any hero.
+    fn is_known(&self) -> bool {
+        !matches!(self.knowledge, Knowledge::Unknown)
+    }
+}
+
+/// Your whole team, and what is known about each of them.
+///
+/// One entry per person, in roster order, including you. Drafting alone is the
+/// one-member case rather than a separate path, which is what keeps the solo
+/// answer identical to what a one-person session produces.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DefendedTeam {
+    pub members: Vec<Defended>,
+}
+
+impl DefendedTeam {
+    /// Whether anybody on the team plays `hero`.
+    ///
+    /// Deliberately blind to `Unknown` members, whose heroes are an entire role:
+    /// counting those would answer "yes" for most of the roster and empty the
+    /// ban list of everything it exists to rank.
+    pub fn plays(&self, hero: HeroId) -> bool {
+        self.members
+            .iter()
+            .filter(|member| member.is_known())
+            .any(|member| member.heroes.contains(&hero))
+    }
+
+    /// Whether anybody has said anything at all. False is the rung where the
+    /// list falls back to the patch.
+    pub fn anyone_known(&self) -> bool {
+        self.members.iter().any(Defended::is_known)
+    }
+}
+
 /// Whose matchups the ban list is reading, and therefore what a ban defends.
 ///
-/// The ban phase runs before anyone picks, so most of the time there is no "you"
-/// yet — only the set of heroes you might end up on. That is what the two
-/// unlocked variants are for, and the UI names whichever one is live so the
-/// number on screen is never ambiguous about who it is about.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The panel names whichever one is live, because the number on every row means
+/// something different in each case and a column that does not say which is a
+/// column that cannot be read.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BanSubject {
-    /// Your locked pick. One hero, so the numbers are simply its own matchups.
-    Locked(HeroId),
-    /// Your pool for the role you are picking, averaged. Any of them could be
-    /// the hero you end up on, so a ban has to defend all of them at once.
-    Pool,
-    /// The whole role, averaged, because no pool is marked yet. An empty pool
-    /// means "I have not said who I play", which is a reason to answer for the
-    /// role rather than a reason to answer nothing.
-    Role(Role),
+    /// Nobody has marked a pool or locked a hero, so there is nothing about
+    /// *this* team to answer with. Ranked by patch strength instead.
+    ///
+    /// The only rung where the score is about the patch rather than about your
+    /// team, and it is deliberately the only one: "strong right now" and "bad
+    /// for us" are two different arguments for a ban, and mixing them in one
+    /// number gives a figure that reads as neither. Here there is no second
+    /// argument to mix it with.
+    Patch,
+    /// Exactly one person has said anything. Named, because "vs your pool" is
+    /// only right when that person is you.
+    One {
+        who: String,
+        is_me: bool,
+        /// Whether that one thing was a lock rather than a pool.
+        locked: bool,
+        /// How many heroes they might end up on.
+        heroes: usize,
+    },
+    /// Two or more people have said something, so the list is a team answer.
+    Team {
+        known: usize,
+        /// How many of the known are locked in, which is how far through the
+        /// draft the answer has got.
+        locked: usize,
+    },
 }
 
 /// One hero worth denying the enemy.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BanCandidate {
     pub hero: HeroId,
-    /// Role-weighted danger. Higher is more worth banning, and this is what the
-    /// list is sorted by.
+    /// Role-weighted danger to the team. Higher is more worth banning, and this
+    /// is what the list is sorted by. On the [`BanSubject::Patch`] rung it is
+    /// patch strength instead, on the same scale.
     pub score: f32,
-    /// The unweighted mean matchup against the subject set, on the same
-    /// -1.0..=1.0 scale as everything else. Positive means it beats you.
+    /// The same certainty-weighted mean without the role weight, on the
+    /// -1.0..=1.0 scale everything else uses. Positive means it beats the team.
     ///
     /// Not what the panel displays. [`threats`] can show its raw severity
     /// because it weights across one enemy team, where the two orderings barely
@@ -250,10 +363,14 @@ pub struct BanCandidate {
     /// a column sorted by `score` while showing `severity` would visibly
     /// disagree with itself.
     pub severity: f32,
-    /// Whichever of your heroes it hurts most. Always set — the sort needs a
-    /// worst case to exist before a candidate can rank at all — and equal to the
-    /// subject itself when you are locked.
-    pub worst: HeroId,
+    /// Whichever of the team's heroes it hurts most.
+    ///
+    /// `None` only on the [`BanSubject::Patch`] rung, where the score comes from
+    /// no pair at all and naming one would invent a claim.
+    pub worst: Option<HeroId>,
+    /// Who plays `worst`, when that is somebody other than you. `None` when the
+    /// hero is one of yours, so the panel does not credit you to yourself.
+    pub worst_owner: Option<String>,
     /// The scraped sentence for the `worst` pair, where one exists.
     pub text: String,
 }
@@ -262,7 +379,8 @@ pub struct BanCandidate {
 #[derive(Debug, Clone, PartialEq)]
 pub struct BanBoard {
     pub subject: BanSubject,
-    /// Best ban first. Only heroes that actually beat you are here.
+    /// Best ban first. Only heroes that actually beat the team are here, and
+    /// never one the team plays.
     pub candidates: Vec<BanCandidate>,
 }
 
@@ -545,110 +663,215 @@ pub fn threats(ds: &Dataset, draft: &Draft, ctx: &UserContext, hero: HeroId) -> 
     out.into_iter().map(|(_, threat)| threat).collect()
 }
 
-/// What a ban is defending, and the heroes that resolves to.
+/// How much a team member who has said only their role counts, against the 1.0
+/// of one who has locked in or marked a pool.
 ///
-/// The pool is intersected with the role you are picking rather than trusted
-/// wholesale. It is stored per role already, so the intersection is normally the
-/// whole set — but a stored profile is user data, and one that has drifted must
-/// not quietly average a tank into a support's answer.
-fn ban_subject(
-    ds: &Dataset,
-    draft: &Draft,
-    ctx: &UserContext,
-    pool: &HeroSet,
-) -> (BanSubject, Vec<HeroId>) {
-    if let Some(hero) = draft.locked {
-        return (BanSubject::Locked(hero), vec![hero]);
-    }
+/// Their heroes are an entire role, so their danger for most candidates averages
+/// close to zero: including them at full weight would let four silent teammates
+/// flatten the one real signal on the board, and excluding them entirely would
+/// throw away the one thing they have said — that somebody is holding a slot in
+/// that role, which is why a candidate that beats the role at all matters more
+/// than one that does not.
+///
+/// A quarter lets the shape of the team register without letting it drown the
+/// people who have actually answered. It is a judgement call, like
+/// [`EnemyRoleWeights`], and unlike those numbers it has no measured spread
+/// behind it — but it only ever scales an already near-zero term, so the room it
+/// has to be wrong in is small.
+const UNKNOWN_CERTAINTY: f32 = 0.25;
 
-    let pooled: Vec<HeroId> = ds
-        .heroes_in_role(ctx.role)
-        .filter(|hero| pool.contains(*hero))
-        .collect();
-    if pooled.is_empty() {
-        (
-            BanSubject::Role(ctx.role),
-            ds.heroes_in_role(ctx.role).collect(),
-        )
-    } else {
-        (BanSubject::Pool, pooled)
+/// Names the question the ban list is answering, from who has said what.
+fn ban_subject(team: &DefendedTeam) -> BanSubject {
+    let known: Vec<&Defended> = team.members.iter().filter(|m| m.is_known()).collect();
+    match known.as_slice() {
+        [] => BanSubject::Patch,
+        [only] => BanSubject::One {
+            who: only.who.clone(),
+            is_me: only.is_me,
+            locked: matches!(only.knowledge, Knowledge::Locked(_)),
+            heroes: only.heroes.len(),
+        },
+        many => BanSubject::Team {
+            known: many.len(),
+            locked: many
+                .iter()
+                .filter(|m| matches!(m.knowledge, Knowledge::Locked(_)))
+                .count(),
+        },
     }
 }
 
-/// Ranks every hero by how much denying them would help you.
+/// Ranks the roster by how strong it is in the current patch.
+///
+/// The rung the list falls back to when nobody has marked a pool and nobody has
+/// picked. There is no team to answer about yet, and the honest thing to say
+/// then is not a role-wide matchup average — which is nearly flat, and reads as
+/// an answer while carrying almost no information — but the one fact that does
+/// exist: these are the heroes winning right now.
+///
+/// This is the *only* rung that consults patch strength. The moment anybody says
+/// anything, the score goes back to pure threat, so no single number ever mixes
+/// "strong right now" with "bad for us" — two different arguments for a ban that
+/// a reader cannot separate again once they are added together.
+fn ban_by_strength(ds: &Dataset, draft: &Draft) -> Vec<BanCandidate> {
+    let mut candidates: Vec<BanCandidate> = (0..ds.hero_count())
+        .map(|index| HeroId(index as u16))
+        .filter(|hero| bannable(draft, *hero))
+        .filter_map(|hero| {
+            // On the same -1.0..=1.0 scale as every other score here, so the
+            // column reads the same way it does on the other rungs.
+            let score = f32::from(ds.base_strength(hero)) / 100.0;
+            // Base strength is symmetric about zero by construction — see
+            // `crate::normalize` — so this keeps the above-average half of the
+            // roster, which is the half a ban has an argument for.
+            if score <= 0.0 {
+                return None;
+            }
+            Some(BanCandidate {
+                hero,
+                score,
+                severity: score,
+                // No pair produced this, and naming one would be a claim
+                // nothing here made.
+                worst: None,
+                worst_owner: None,
+                text: String::new(),
+            })
+        })
+        .collect();
+    candidates.sort_by(|a, b| {
+        b.score
+            .partial_cmp(&a.score)
+            .unwrap_or(core::cmp::Ordering::Equal)
+    });
+    candidates
+}
+
+/// Whether `hero` is still a hero anybody could ban.
+///
+/// One already on the board cannot be banned any more, and one on your own team
+/// is a hero you would be banning from yourself.
+fn bannable(draft: &Draft, hero: HeroId) -> bool {
+    !draft.enemies.contains(&hero) && !draft.allies.contains(&hero) && draft.locked != Some(hero)
+}
+
+/// Ranks every hero by how much denying them would help *the team*.
 ///
 /// This is the ban phase's question, and it is not the pick phase's question
 /// inverted: a ban lands before anyone has picked, so the enemy team is usually
-/// empty and there is nothing to counter *into*. What there is is you — or, more
-/// often, the set of heroes you might end up on, which is why an unpicked draft
-/// averages across your pool rather than declining to answer.
+/// empty and there is nothing to counter *into*. What there is is your team —
+/// or, more often, the sets of heroes each of them might end up on, which is why
+/// an unpicked draft averages across pools rather than declining to answer.
 ///
-/// The score is pure threat: how hard the candidate beats the heroes you are
-/// defending, scaled by [`EnemyRoleWeights`] so an enemy tank counts for a tank
-/// player the way it does everywhere else in the scorer. Patch strength is
-/// deliberately not folded in — "strong right now" and "bad for me" are two
-/// different arguments for a ban, and a single number that mixes them can only
-/// be read as neither.
+/// A ban is spent once for five people, so it is scored for five people. Each
+/// member contributes the mean matchup against the heroes they might play, read
+/// through the [`EnemyRoleWeights`] row for *their* role rather than yours — an
+/// enemy tank is the tank player's problem whoever is looking at the screen.
+/// Members are then averaged by [`Knowledge`], so somebody who has marked a pool
+/// counts fully and somebody who has only queued counts a quarter.
 ///
-/// Heroes you have marked as your own are ranked like any other. The pool
-/// highlights rather than restricts here as everywhere else, and a hero in it
-/// scores a rated dead even against itself, so being yours never inflates your
-/// own danger.
+/// Averaging the role weight across the team is also what makes this format-aware
+/// for free: a 6v6 roster holds two tank slots, so enemy tanks weigh more,
+/// arrived at from the shape of the team rather than from a second hand-written
+/// weight table there is no corpus for.
+///
+/// **Heroes the team plays are not candidates.** A ban takes the hero off the
+/// table for everyone, so recommending one of your own is recommending you lose
+/// a pick to deny it — and one in a teammate's pool is worse, because it costs
+/// somebody else the hero on your say-so. The pool highlights rather than
+/// restricts everywhere else in this app; here it excludes, because here it is
+/// the cost rather than a preference.
 pub fn ban_recommendations(
     ds: &Dataset,
     draft: &Draft,
     ctx: &UserContext,
-    pool: &HeroSet,
+    team: &DefendedTeam,
 ) -> BanBoard {
-    let (subject, defends) = ban_subject(ds, draft, ctx, pool);
+    let subject = ban_subject(team);
+    if !team.anyone_known() {
+        return BanBoard {
+            subject,
+            candidates: ban_by_strength(ds, draft),
+        };
+    }
 
     let mut candidates: Vec<BanCandidate> = (0..ds.hero_count())
         .map(|index| HeroId(index as u16))
-        // A hero already on the board cannot be banned any more, and one on your
-        // own team is a hero you would be banning from yourself.
-        .filter(|hero| {
-            !draft.enemies.contains(hero)
-                && !draft.allies.contains(hero)
-                && draft.locked != Some(*hero)
-        })
+        .filter(|hero| bannable(draft, *hero) && !team.plays(*hero))
         .filter_map(|hero| {
             let role = ds.hero(hero).ok()?.role;
 
-            // Pairs nobody has rated are left out of the mean rather than folded
-            // in as a zero, for the same reason the counter term leaves them out:
-            // averaging in the absence of evidence drags a barely-rated hero
-            // toward the middle and invents a reading for a matchup the sources
-            // have no opinion on. A candidate rated against none of your heroes
-            // drops out entirely — silence is not safety.
-            let rated: Vec<(HeroId, f32)> = defends
-                .iter()
-                .filter_map(|mine| matchup_term(ds, *mine, hero).map(|term| (*mine, -term)))
-                .collect();
-            let (worst, _) =
-                rated.iter().copied().reduce(
-                    |worst, next| {
-                        if next.1 > worst.1 {
-                            next
-                        } else {
-                            worst
-                        }
-                    },
-                )?;
+            let mut weighted = 0.0f32;
+            let mut plain = 0.0f32;
+            let mut total = 0.0f32;
+            let mut worst: Option<(HeroId, &Defended, f32)> = None;
 
-            let severity = rated.iter().map(|(_, term)| term).sum::<f32>() / rated.len() as f32;
-            let score = severity * ctx.weights.enemy_roles.get(ctx.role, role);
+            for member in &team.members {
+                // Pairs nobody has rated are left out of the mean rather than
+                // folded in as a zero, for the same reason the counter term
+                // leaves them out: averaging in the absence of evidence drags a
+                // barely-rated hero toward the middle and invents a reading for
+                // a matchup the sources have no opinion on. A candidate rated
+                // against nobody on the team drops out entirely — silence is
+                // not safety.
+                let rated: Vec<(HeroId, f32)> = member
+                    .heroes
+                    .iter()
+                    .filter_map(|theirs| {
+                        matchup_term(ds, *theirs, hero).map(|term| (*theirs, -term))
+                    })
+                    .collect();
+                if rated.is_empty() {
+                    continue;
+                }
+
+                let danger = rated.iter().map(|(_, term)| term).sum::<f32>() / rated.len() as f32;
+                let certainty = member.certainty();
+                weighted += certainty * ctx.weights.enemy_roles.get(member.role, role) * danger;
+                plain += certainty * danger;
+                total += certainty;
+
+                // Only somebody who has actually said what they play can have a
+                // hero take the worst of it. An `Unknown` member's worst case is
+                // an arbitrary hero of a role nobody claimed.
+                if member.is_known() {
+                    for (theirs, term) in rated {
+                        if worst.is_none_or(|(_, _, best)| term > best) {
+                            worst = Some((theirs, member, term));
+                        }
+                    }
+                }
+            }
+
+            if total <= 0.0 {
+                return None;
+            }
+            let score = weighted / total;
             // A hero your side of the draft already beats is not a ban. Saying
             // so by omission keeps the list to heroes there is an argument for.
             if score <= 0.0 {
                 return None;
             }
+            // Nobody who has said what they play is rated against this hero, so
+            // the only thing behind its score is a role somebody is queued in.
+            // It drops out, and the `?` is the whole rule.
+            //
+            // This is not tidiness about the missing "hardest on" line. `total`
+            // sums the certainty of the members that actually had a rating, so
+            // a candidate rated *only* by an `Unknown` member divides its 0.25
+            // straight back out again and lands at full weight — the discount
+            // evaporates exactly where it was supposed to bite. Ranking a hero
+            // off a role nobody claimed, above one your own pool is measured
+            // against, is the failure that guards against.
+            let (worst_hero, owner, _) = worst?;
 
             Some(BanCandidate {
                 hero,
                 score,
-                severity,
-                worst,
-                text: ds.reason(worst, hero).unwrap_or_default().to_owned(),
+                severity: plain / total,
+                worst: Some(worst_hero),
+                worst_owner: (!owner.is_me && !owner.is_typed).then(|| owner.who.clone()),
+                text: ds.reason(worst_hero, hero).unwrap_or_default().to_owned(),
             })
         })
         .collect();

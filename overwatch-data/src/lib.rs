@@ -177,11 +177,18 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     }
 
     // --- base strength ----------------------------------------------------
+    // The published rate rides along beside the normalised value it was scaled
+    // from. Nothing scores on it — it is what lets a panel arguing from patch
+    // strength show a figure a reader can check against the source.
     let mut base_strength = vec![0i8; n];
+    let mut win_rate = vec![None; n];
     for entry in &strength_file.entries {
         let hero = hero_id("strength.toml", &entry.hero)?;
         if let Some(slot) = base_strength.get_mut(hero.index()) {
             *slot = entry.value;
+        }
+        if let Some(slot) = win_rate.get_mut(hero.index()) {
+            *slot = entry.win_rate;
         }
     }
 
@@ -203,6 +210,7 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
         synergy,
         map_affinity,
         base_strength,
+        win_rate,
         side_lean,
         reasons,
         generated: matchups_file.generated.clone(),

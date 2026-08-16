@@ -69,6 +69,7 @@ pub fn dataset() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: vec![0; n],
         base_strength: vec![0; n],
+        win_rate: vec![None; n],
         side_lean: vec![0; n],
         reasons: vec![String::new(); n * n],
         generated: "test".to_owned(),

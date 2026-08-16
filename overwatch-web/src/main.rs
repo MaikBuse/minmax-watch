@@ -48,6 +48,13 @@ fn main() {
     dioxus::launch(App);
 }
 
+/// How many of somebody's pool the roster draws before it counts the rest.
+///
+/// The roster is a row of pills that wraps, so a strip that grew with the pool
+/// behind it would move everybody else's row. Six is about what fits beside a
+/// name and a role without the pill outgrowing the one holding a locked hero.
+const ROSTER_POOL_SHOWN: usize = 6;
+
 /// Everything the screen needs, recomputed on every pick.
 ///
 /// For a 53-hero roster this is a few thousand `i8` lookups — microseconds — so
@@ -154,6 +161,7 @@ fn App() -> Element {
             name: profile.name.clone(),
             role: profile.role,
             locked: None,
+            pool: profile.pool(profile.role).iter().collect(),
             connected: true,
         }
     });
@@ -359,6 +367,25 @@ fn App() -> Element {
         }
     });
 
+    // Your pool travels with your seat, so the rest of the team can ban for you
+    // rather than only for themselves.
+    //
+    // Mirrored into the seat rather than published from the profile directly,
+    // because a seat is the only thing the socket accepts and it has exactly one
+    // writer. This runs whenever the pool or the role changes — the pool that
+    // matters is the one for the role you are actually queued as — and the seat
+    // effect below does the sending.
+    use_effect(move || {
+        let mine: Vec<HeroId> = {
+            let profile = profile.read();
+            profile.pool(profile.role).iter().collect()
+        };
+        // Peeked, so this effect does not subscribe to the signal it writes.
+        if me.peek().pool != mine {
+            me.write().pool = mine;
+        }
+    });
+
     // The same for this client's own seat. A seat has exactly one writer, so
     // this can never conflict — the shadow exists only to keep the socket quiet
     // when nothing actually changed.
@@ -382,6 +409,10 @@ fn App() -> Element {
     };
     let ds = dataset.clone();
     let draft = state.draft_for(&ds, &my_id);
+    // A ban is spent once for the whole team, so it is scored for the whole
+    // team: everyone's pool and everyone's pick, out of the same pass that
+    // decides who the allies are.
+    let team = state.defended_team(&ds, &my_id);
 
     let frame = {
         let profile = profile.read();
@@ -391,9 +422,7 @@ fn App() -> Element {
         ctx.weights = profile.weights;
 
         let recommendations = recommend(&ds, &draft, &ctx).unwrap_or_default();
-        // The ban list defends whoever you might end up on, which before you
-        // lock in is your whole pool rather than any one hero.
-        let bans = ban_recommendations(&ds, &draft, &ctx, &profile.pool(profile.role));
+        let bans = ban_recommendations(&ds, &draft, &ctx, &team);
 
         Frame {
             recommendations,
@@ -606,6 +635,17 @@ fn App() -> Element {
                     .count()
                     > 1
             });
+            // Only for a seat still choosing: once they lock, the pick is the
+            // answer and the pool is history.
+            let pool_icons: Vec<String> = match seat.locked {
+                Some(_) => Vec::new(),
+                None => seat
+                    .pool
+                    .iter()
+                    .take(ROSTER_POOL_SHOWN)
+                    .map(|hero| hero_chip(&dataset, *hero).icon)
+                    .collect(),
+            };
             RosterRow {
                 name: seat.display_name().to_owned(),
                 role_label: seat.role.label().to_owned(),
@@ -614,6 +654,8 @@ fn App() -> Element {
                 connected: seat.connected,
                 is_me: seat.id == my_id,
                 contested,
+                pool_extra: seat.pool.len().saturating_sub(pool_icons.len()),
+                pool: pool_icons,
             }
         })
         .collect();
@@ -636,13 +678,32 @@ fn App() -> Element {
     }];
 
     // What the ban list is defending, named rather than left to be inferred:
-    // the number on every row means a different thing in each case.
-    let ban_subject = match frame.bans.subject {
-        BanSubject::Locked(_) => "vs your pick".to_owned(),
-        BanSubject::Pool => format!("vs your pool · {} {}", pool.len(), role.label()),
-        BanSubject::Role(role) => format!("vs every {}", role.label()),
+    // the number on every row means a different thing in each case, and on the
+    // patch rung it is not about this team at all.
+    let ban_subject = match &frame.bans.subject {
+        BanSubject::Patch => "strongest right now".to_owned(),
+        BanSubject::One {
+            is_me: true,
+            locked: true,
+            ..
+        } => "vs your pick".to_owned(),
+        BanSubject::One {
+            who, locked: true, ..
+        } => format!("vs {who}'s pick"),
+        BanSubject::One {
+            is_me: true,
+            heroes,
+            ..
+        } => format!("vs your pool · {heroes} {}", role.label()),
+        BanSubject::One { who, heroes, .. } => format!("vs {who}'s pool · {heroes}"),
+        BanSubject::Team { known, locked } if *locked > 0 => {
+            format!("vs your team · {known} known, {locked} in")
+        }
+        BanSubject::Team { known, .. } => format!("vs your team · {known} known"),
     };
-    let locked_subject = matches!(frame.bans.subject, BanSubject::Locked(_));
+    // With one hero to defend, "hardest on" can only name it back at you.
+    let locked_subject = matches!(frame.bans.subject, BanSubject::One { locked: true, .. });
+    let patch_subject = matches!(frame.bans.subject, BanSubject::Patch);
 
     // The link to hand a teammate, and its QR. Both derived from the code, and
     // both `None` when drafting alone. The QR is only built while the panel is
@@ -953,11 +1014,17 @@ fn App() -> Element {
                                 // is losing, exactly as in the pick column,
                                 // whose score is a weighted sum too.
                                 score: format!("{:+.0}", ban.score * -100.0),
-                                // With one hero to defend, "hardest on" can only
-                                // name that hero back at you.
-                                worst: (!locked_subject).then(|| chip_of(ban.worst).name),
-                                text: ban.text.clone(),
-                                in_pool: pool.contains(ban.hero),
+                                worst: (!locked_subject)
+                                    .then(|| ban.worst.map(|hero| chip_of(hero).name))
+                                    .flatten(),
+                                worst_owner: ban.worst_owner.clone(),
+                                // The patch rung ranks on strength rather than
+                                // on any pair, so it shows the figure it ranked
+                                // on instead of a rationale there is none of.
+                                text: match dataset.win_rate(ban.hero) {
+                                    Some(rate) if patch_subject => format!("{rate:.1}% win rate"),
+                                    _ => ban.text.clone(),
+                                },
                             }
                         })
                         .collect::<Vec<_>>(),

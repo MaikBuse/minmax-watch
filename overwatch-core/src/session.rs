@@ -24,6 +24,7 @@ use crate::draft::{capacity_after, fit_to_format, role_of, Draft};
 use crate::format::{Capacity, Format};
 use crate::hero::{HeroId, Role};
 use crate::map::{MapId, Side};
+use crate::score::{Defended, DefendedTeam, Knowledge};
 
 /// The half of the draft that everyone in a session shares.
 ///
@@ -190,6 +191,23 @@ pub struct Seat {
     /// Their hero, once they have locked in.
     #[serde(default)]
     pub locked: Option<HeroId>,
+    /// The heroes they have marked as theirs, for the role they declared.
+    ///
+    /// Shared so the ban list can defend the whole team rather than only the
+    /// person reading it, and so the roster can show what a seat covers before
+    /// it has picked. A pool is the answer to "what might you end up on", which
+    /// is exactly the question a ban lands before anyone can answer any other
+    /// way — see [`SessionState::defended_team`].
+    ///
+    /// By index rather than by key, unlike the stored profile: `locked` is
+    /// already a `HeroId` on this wire, and everyone in a session is running one
+    /// bundle. The profile stays key-based, because it outlives roster updates.
+    ///
+    /// `default` because a seat from a client that predates this field must
+    /// still load — as an empty pool, which reads correctly as "they have not
+    /// said".
+    #[serde(default)]
+    pub pool: Vec<HeroId>,
     /// Whether their socket is currently attached. A seat outlives its
     /// connection so that a reload does not empty a slot mid-draft.
     #[serde(default)]
@@ -362,6 +380,113 @@ impl SessionState {
         self.assemble_allies(dataset, me).1
     }
 
+    /// Who the ban list is defending: one entry per person on my team.
+    ///
+    /// A ban is spent once for the whole team, so this is the team — not the one
+    /// person reading the screen. It is built on top of [`Self::assemble_allies`]
+    /// rather than beside it, so the people a ban defends and the picks that
+    /// reach the scorer are the same people by construction. A second pass with
+    /// its own idea of who is on the team is exactly the drift the ally
+    /// arithmetic was centralised to avoid.
+    ///
+    /// Each person resolves to the heroes they might end up on, best evidence
+    /// first:
+    ///
+    /// 1. **A lock**, which is a fact. The role follows the hero, matching
+    ///    [`Seat::lock`] and the slot the same seat spends above.
+    /// 2. **A pool**, intersected with the role they declared. Stored per role
+    ///    already, so the intersection is normally the whole set — but a pool is
+    ///    user data that has crossed a wire, and one that has drifted must not
+    ///    quietly average a tank into a support's answer.
+    /// 3. **Nothing but a role**, which resolves to every hero in it. Not an
+    ///    answer so much as the absence of one, and [`crate::score::Knowledge`]
+    ///    is what marks it as such so the scorer can discount it.
+    ///
+    /// The hand-typed extras arrive as locked members too. Somebody who is not
+    /// in the session is still on the team, and their pick is as much a fact as
+    /// a seated one — it is only the *name* behind it that is missing, so the
+    /// hero's own name stands in.
+    ///
+    /// An `me` that matches no seat — a spectator, or a client whose seat has
+    /// not come back from the server yet — yields every seat as a teammate and
+    /// no member of their own, exactly as [`Self::draft_for`] does.
+    pub fn defended_team(&self, dataset: &Dataset, me: &str) -> DefendedTeam {
+        let (allies, _) = self.assemble_allies(dataset, me);
+
+        let mut members: Vec<Defended> = self
+            .seats
+            .iter()
+            .map(|seat| self.defended_seat(dataset, seat, me))
+            .collect();
+
+        // Whatever landed as an ally without being somebody's lock is a typed
+        // extra. Derived by subtraction rather than read off `board.extra_allies`
+        // so that the per-role caps `assemble_allies` applied are respected here
+        // too: a typed name it turned away is not on the team, and defending it
+        // would answer for a sixth player.
+        members.extend(
+            allies
+                .iter()
+                .filter(|hero| !self.seats.iter().any(|seat| seat.locked == Some(**hero)))
+                .map(|hero| Defended {
+                    who: dataset
+                        .hero(*hero)
+                        .map(|entry| entry.name.clone())
+                        .unwrap_or_else(|_| "?".to_owned()),
+                    is_me: false,
+                    is_typed: true,
+                    // Falls back to tank only for an id the roster cannot name,
+                    // which is a dataset mismatch rather than a draft state.
+                    role: role_of(dataset, *hero).unwrap_or_default(),
+                    knowledge: Knowledge::Locked(*hero),
+                    heroes: vec![*hero],
+                }),
+        );
+
+        DefendedTeam { members }
+    }
+
+    /// One seat resolved into the heroes it might end up on.
+    fn defended_seat(&self, dataset: &Dataset, seat: &Seat, me: &str) -> Defended {
+        let is_me = seat.id == me;
+        let who = seat.display_name().to_owned();
+
+        if let Some(hero) = seat.locked {
+            return Defended {
+                who,
+                is_me,
+                is_typed: false,
+                role: role_of(dataset, hero).unwrap_or(seat.role),
+                knowledge: Knowledge::Locked(hero),
+                heroes: vec![hero],
+            };
+        }
+
+        let pooled: Vec<HeroId> = dataset
+            .heroes_in_role(seat.role)
+            .filter(|hero| seat.pool.contains(hero))
+            .collect();
+        if pooled.is_empty() {
+            Defended {
+                who,
+                is_me,
+                is_typed: false,
+                role: seat.role,
+                knowledge: Knowledge::Unknown,
+                heroes: dataset.heroes_in_role(seat.role).collect(),
+            }
+        } else {
+            Defended {
+                who,
+                is_me,
+                is_typed: false,
+                role: seat.role,
+                knowledge: Knowledge::Pool,
+                heroes: pooled,
+            }
+        }
+    }
+
     /// My team as it stands, and the room left for one more typed ally.
     ///
     /// The one place the ally arithmetic lives, and the order of it is the rule:
@@ -458,7 +583,17 @@ mod tests {
             name: id.to_owned(),
             role,
             locked,
+            pool: Vec::new(),
             connected: true,
+        }
+    }
+
+    /// A seat that has marked a pool but not picked, which is the state a ban
+    /// actually lands in.
+    fn with_pool(id: &str, role: Role, pool: &[HeroId]) -> Seat {
+        Seat {
+            pool: pool.to_vec(),
+            ..seated(id, role, None)
         }
     }
 
@@ -1241,6 +1376,237 @@ mod tests {
         assert_eq!(state.board.enemies, vec![SIGMA, TRACER]);
         assert_eq!(state.seats.len(), 1);
         assert_eq!(state.seats[0].locked, Some(SIGMA));
+        assert!(
+            state.seats[0].pool.is_empty(),
+            "a seat that names no pool has not said, which is not an error"
+        );
+    }
+
+    /// The other direction for the seat: a client that predates shared pools
+    /// sends a seat without one, and it has to load as "they have not said"
+    /// rather than stopping the roster from parsing at all.
+    #[test]
+    fn a_seat_from_a_client_that_had_no_pools_still_loads() {
+        let older = r#"{"id": "a", "name": "era", "role": "support", "locked": null,
+                        "connected": true}"#;
+
+        let seat: Seat = serde_json::from_str(older).expect("the pool is optional");
+        assert_eq!(seat.pool, Vec::<HeroId>::new());
+        assert_eq!(seat.role, Role::Support);
+    }
+
+    /// And a pool that is set has to survive the round trip, since it is what
+    /// the rest of the team bans on.
+    #[test]
+    fn a_pool_rides_along_with_the_seat() {
+        let seat = with_pool("era", Role::Tank, &[REINHARDT, WINSTON]);
+
+        let raw = serde_json::to_string(&seat).expect("serialises");
+        let back: Seat = serde_json::from_str(&raw).expect("deserialises");
+        assert_eq!(back.pool, vec![REINHARDT, WINSTON]);
+    }
+
+    // --- who a ban defends ---------------------------------------------------
+
+    /// The heroes one named member resolves to, for asserting without caring
+    /// where they sit in the roster.
+    fn defended(team: &DefendedTeam, who: &str) -> Defended {
+        team.members
+            .iter()
+            .find(|member| member.who == who)
+            .cloned()
+            .unwrap_or_else(|| panic!("{who} is on the team"))
+    }
+
+    #[test]
+    fn a_ban_defends_every_seat_at_the_best_evidence_it_has() {
+        let ds = fixture::dataset();
+        let state = session(vec![
+            seated("me", Role::Tank, Some(SIGMA)),
+            with_pool("mika", Role::Support, &[ANA, LUCIO]),
+            seated("sam", Role::Damage, None),
+        ]);
+
+        let team = state.defended_team(&ds, "me");
+
+        // A lock is a fact, and the role follows the hero.
+        let mine = defended(&team, "me");
+        assert_eq!(mine.knowledge, Knowledge::Locked(SIGMA));
+        assert_eq!(mine.heroes, vec![SIGMA]);
+        assert_eq!(mine.role, Role::Tank);
+        assert!(mine.is_me);
+
+        // A pool is a claim about what they might end up on.
+        let mika = defended(&team, "mika");
+        assert_eq!(mika.knowledge, Knowledge::Pool);
+        assert_eq!(mika.heroes, vec![ANA, LUCIO]);
+        assert!(!mika.is_me);
+
+        // A role and nothing else is the absence of an answer, marked as such
+        // so the scorer can discount it rather than read it as one.
+        let sam = defended(&team, "sam");
+        assert_eq!(sam.knowledge, Knowledge::Unknown);
+        assert_eq!(
+            sam.heroes,
+            ds.heroes_in_role(Role::Damage).collect::<Vec<_>>()
+        );
+    }
+
+    /// A pool is user data that has crossed a wire. One that disagrees with the
+    /// role its seat declared must not quietly put a tank into a support's
+    /// answer — the same rule the local pool has always been read under.
+    #[test]
+    fn a_pool_is_intersected_with_the_role_its_seat_declared() {
+        let ds = fixture::dataset();
+        let state = session(vec![with_pool(
+            "mika",
+            Role::Support,
+            &[ANA, REINHARDT, KIRIKO],
+        )]);
+
+        let team = state.defended_team(&ds, "me");
+
+        let mika = defended(&team, "mika");
+        assert_eq!(mika.knowledge, Knowledge::Pool);
+        assert_eq!(mika.heroes, vec![ANA, KIRIKO], "the tank is not a support");
+    }
+
+    /// A pool with nothing left in it after that is no pool at all, and has to
+    /// read as "they have not said" rather than as an empty claim that would
+    /// defend nobody.
+    #[test]
+    fn a_pool_entirely_outside_its_role_reads_as_having_said_nothing() {
+        let ds = fixture::dataset();
+        let state = session(vec![with_pool("mika", Role::Support, &[REINHARDT])]);
+
+        let team = state.defended_team(&ds, "me");
+
+        assert_eq!(defended(&team, "mika").knowledge, Knowledge::Unknown);
+    }
+
+    /// Somebody who is not in the session is still on the team, and their pick
+    /// is as much a fact as a seated one. Only the name behind it is missing.
+    #[test]
+    fn a_typed_ally_is_defended_like_any_other_pick() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Tank, Some(SIGMA))]);
+        state.board.extra_allies = vec![ANA];
+
+        let team = state.defended_team(&ds, "me");
+
+        assert_eq!(team.members.len(), 2);
+        let typed = defended(&team, "ana");
+        assert_eq!(typed.knowledge, Knowledge::Locked(ANA));
+        assert_eq!(typed.role, Role::Support);
+        assert!(!typed.is_me, "a typed name is never you");
+        assert!(
+            typed.is_typed,
+            "there is no person behind it, so the panel must not credit the \
+             hero to itself — 'hardest on Ana · Ana' is one word twice"
+        );
+        assert!(
+            !defended(&team, "me").is_typed,
+            "and a seat is a person, who does get credited"
+        );
+    }
+
+    /// A seat's own lock reaches the team through its seat, so it must not also
+    /// arrive as a typed extra and be defended twice.
+    #[test]
+    fn a_seated_lock_is_not_counted_a_second_time() {
+        let ds = fixture::dataset();
+        let state = session(vec![
+            seated("me", Role::Tank, Some(SIGMA)),
+            seated("mika", Role::Support, Some(ANA)),
+        ]);
+
+        let team = state.defended_team(&ds, "me");
+
+        assert_eq!(team.members.len(), 2);
+        assert_eq!(
+            team.members
+                .iter()
+                .filter(|m| m.knowledge == Knowledge::Locked(ANA))
+                .count(),
+            1
+        );
+    }
+
+    /// The caps are what stop a typed name answering for a sixth player. They
+    /// come out of `assemble_allies`, which this is built on for exactly that
+    /// reason: a name that never reached the draft must not reach the ban list
+    /// either, or the two disagree about who is on the team.
+    #[test]
+    fn a_typed_ally_the_format_has_no_room_for_is_not_defended() {
+        let ds = fixture::dataset();
+        let mut state = session(vec![seated("me", Role::Support, None)]);
+        // 5v5 role queue holds one tank, so the second typed one is refused.
+        state.board.extra_allies = vec![REINHARDT, WINSTON];
+
+        let team = state.defended_team(&ds, "me");
+
+        assert_eq!(team.members.len(), 2, "my seat and the tank that landed");
+        assert!(team.members.iter().any(|m| m.who == "reinhardt"));
+        assert!(
+            !team.members.iter().any(|m| m.who == "winston"),
+            "the cap turned him away before the draft, so there is nobody to defend"
+        );
+    }
+
+    /// A spectator has no seat of their own, which is not an error — it is a
+    /// client whose seat has not come back from the server yet, and the ban
+    /// list still has a team to answer about.
+    #[test]
+    fn a_spectator_defends_the_team_and_nobody_of_their_own() {
+        let ds = fixture::dataset();
+        let state = session(vec![
+            seated("mika", Role::Support, Some(ANA)),
+            with_pool("sam", Role::Damage, &[TRACER]),
+        ]);
+
+        let team = state.defended_team(&ds, "nobody");
+
+        assert_eq!(team.members.len(), 2);
+        assert!(team.members.iter().all(|m| !m.is_me));
+    }
+
+    /// What the ban panel's bottom rung turns on: nobody has said anything, so
+    /// there is no team to answer about and the list falls back to the patch.
+    #[test]
+    fn a_roster_that_has_only_queued_is_known_by_nobody() {
+        let ds = fixture::dataset();
+        let quiet = session(vec![
+            seated("me", Role::Tank, None),
+            seated("mika", Role::Support, None),
+        ]);
+        assert!(!quiet.defended_team(&ds, "me").anyone_known());
+
+        let mut spoken = quiet.clone();
+        spoken.seats[1] = with_pool("mika", Role::Support, &[ANA]);
+        assert!(spoken.defended_team(&ds, "me").anyone_known());
+    }
+
+    /// The exclusion the panel rests on: a hero somebody plays is never a ban,
+    /// and a role nobody has claimed is not somebody playing it.
+    #[test]
+    fn the_team_plays_what_it_has_marked_and_nothing_more() {
+        let ds = fixture::dataset();
+        let state = session(vec![
+            seated("me", Role::Tank, Some(SIGMA)),
+            with_pool("mika", Role::Support, &[ANA]),
+            seated("sam", Role::Damage, None),
+        ]);
+
+        let team = state.defended_team(&ds, "me");
+
+        assert!(team.plays(SIGMA), "my lock");
+        assert!(team.plays(ANA), "Mika's pool");
+        assert!(!team.plays(LUCIO), "a support nobody marked");
+        assert!(
+            !team.plays(TRACER),
+            "Sam has claimed no hero, only a role — counting the role would \
+             empty the ban list of every damage hero at once"
+        );
     }
 
     /// The other direction: a board written by a client that predates the

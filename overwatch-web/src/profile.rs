@@ -420,6 +420,7 @@ mod tests {
             synergy: Matrix::unrated(n),
             map_affinity: Vec::new(),
             base_strength: vec![0; n],
+            win_rate: vec![None; n],
             side_lean: vec![0; n],
             reasons: vec![String::new(); n * n],
             generated: String::new(),

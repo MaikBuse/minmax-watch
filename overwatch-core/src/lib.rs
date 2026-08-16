@@ -31,8 +31,9 @@ pub use hero::{Hero, HeroId, HeroSet, Role};
 pub use map::{GameMap, GameMode, MapId, Side};
 pub use matrix::Matrix;
 pub use score::{
-    ban_recommendations, recommend, threats, BanBoard, BanCandidate, BanSubject, EnemyRoleWeights,
-    Reason, ReasonKind, Recommendation, Threat, UserContext, Weights,
+    ban_recommendations, recommend, threats, BanBoard, BanCandidate, BanSubject, Defended,
+    DefendedTeam, EnemyRoleWeights, Knowledge, Reason, ReasonKind, Recommendation, Threat,
+    UserContext, Weights,
 };
 pub use search::{resolve, resolve_map, search, search_maps, MapMatch, Match, MatchKind, Scope};
 pub use session::{Board, Seat, SessionState};
