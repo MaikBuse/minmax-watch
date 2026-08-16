@@ -45,6 +45,32 @@ const CHANNEL_CAPACITY: usize = 32;
 /// blip, and is short enough that codes do not accumulate all evening.
 const GRACE: Duration = Duration::from_secs(10 * 60);
 
+/// How long a session nobody ever joined is kept.
+///
+/// [`GRACE`] is long because it protects a draft in progress: the reload, the
+/// laptop lid, the router blip. A code nobody ever opened has nothing to
+/// protect. It only has to outlive the gap between asking for a code and
+/// clicking the link, which is seconds — two minutes is already generous.
+///
+/// The split is what makes [`MAX_ROOMS`] safe to have. Creating is
+/// unauthenticated, so without it the cheapest way to deny the server is to
+/// hold every slot with reservations nobody will ever spend.
+const UNCLAIMED_GRACE: Duration = Duration::from_secs(2 * 60);
+
+/// How many sessions may exist at once.
+///
+/// `POST /api/session` needs no credentials, so the room map is only as bounded
+/// as this constant makes it. A room is a [`SessionState`] plus a
+/// [`CHANNEL_CAPACITY`]-slot ring — low kilobytes — so a thousand of them is a
+/// few megabytes, and a thousand simultaneous drafts is orders of magnitude
+/// past anything this has ever served.
+///
+/// Reaching it is not by itself a refusal. [`Rooms::create`] first drops the
+/// oldest reservation nobody spent, so a real team's session always wins over a
+/// squatted one; only a map full of sessions people are genuinely in turns a
+/// create away.
+pub const MAX_ROOMS: usize = 1024;
+
 /// What travels over the socket.
 ///
 /// The board is sent whole rather than as deltas: it is a handful of small
@@ -98,7 +124,21 @@ struct Room {
     members: usize,
     /// When the last member left, or `None` while anyone is still here.
     /// Drives the lazy sweep in [`Rooms::join`].
+    ///
+    /// While `claimed` is false this is still the moment the room was created,
+    /// which is what [`Rooms::create`] evicts by.
     empty_since: Option<Instant>,
+    /// Whether anybody has ever joined.
+    ///
+    /// Separates a draft between members from a code that was minted and never
+    /// opened. The first is worth ten minutes of protection and must never be
+    /// evicted; the second is worth [`UNCLAIMED_GRACE`] and is the first thing
+    /// dropped when the map is full.
+    ///
+    /// Not `members > 0`, and not `empty_since.is_none()`: both of those go
+    /// back to false the moment everyone disconnects, which is exactly the
+    /// mid-draft reload the grace period exists to survive.
+    claimed: bool,
 }
 
 impl Room {
@@ -111,12 +151,14 @@ impl Room {
             // /api/session` has to survive long enough for the person who
             // asked for it to actually open the link.
             empty_since: Some(Instant::now()),
+            claimed: false,
         }
     }
 
     fn expired(&self, now: Instant) -> bool {
+        let grace = if self.claimed { GRACE } else { UNCLAIMED_GRACE };
         self.empty_since
-            .is_some_and(|since| now.duration_since(since) >= GRACE)
+            .is_some_and(|since| now.duration_since(since) >= grace)
     }
 }
 
@@ -160,21 +202,37 @@ impl Rooms {
     /// small enough to read aloud, which means it is small enough to collide.
     /// After enough failures it gives up and disambiguates by hand, because
     /// looping forever on a full map would hang the request instead.
-    pub fn create(&self) -> String {
+    ///
+    /// `None` means the server is at [`MAX_ROOMS`] and every one of them is a
+    /// session somebody is in. That is the only refusal: expired rooms are
+    /// swept and unspent reservations are evicted before it can be reached, so
+    /// no amount of squatting on codes can produce it.
+    pub fn create(&self) -> Option<String> {
         let mut rooms = self.lock();
-        sweep(&mut rooms, Instant::now());
+        let now = Instant::now();
+        sweep(&mut rooms, now);
+
+        // Only after the sweep. A map that is full of rooms whose time is up
+        // has capacity; refusing there would deny a session over bookkeeping
+        // nobody has got round to yet.
+        if rooms.len() >= MAX_ROOMS {
+            evict_unclaimed(&mut rooms);
+        }
+        if rooms.len() >= MAX_ROOMS {
+            return None;
+        }
 
         for _ in 0..16 {
             let code = crate::code::mint();
             if !rooms.contains_key(&code) {
                 rooms.insert(code.clone(), Room::new());
-                return code;
+                return Some(code);
             }
         }
 
         let code = format!("{}-{}", crate::code::mint(), rooms.len());
         rooms.insert(code.clone(), Room::new());
-        code
+        Some(code)
     }
 
     #[cfg(test)]
@@ -197,6 +255,10 @@ impl Rooms {
         let room = rooms.get_mut(code)?;
         room.members += 1;
         room.empty_since = None;
+        // Somebody spent the reservation. From here the room is a draft rather
+        // than a code, and both the long grace and the no-eviction rule apply
+        // to it for the rest of its life — including after everyone drops.
+        room.claimed = true;
 
         // A returning seat keeps its pick. Someone who reloads mid-draft should
         // come back to the hero they had locked, not an empty slot their team
@@ -411,6 +473,30 @@ fn sweep(rooms: &mut HashMap<String, Room>, now: Instant) {
     rooms.retain(|_, room| !room.expired(now));
 }
 
+/// Drops the oldest session nobody ever joined, if there is one.
+///
+/// The tie-break that keeps [`MAX_ROOMS`] from becoming a way to deny the
+/// server. Creating costs a request and nothing else, so the slots are only
+/// worth capping if an unspent reservation loses to a real team asking for one
+/// — and *oldest* rather than any, because the reservation most likely to still
+/// be on its way to being opened is the one just made.
+///
+/// A room anybody has joined is never a candidate, however long it has been
+/// empty. That is the whole point of [`Room::claimed`]: a team mid-draft whose
+/// connection dropped is inside its grace period, and evicting it would take
+/// the enemy comp off five screens to make room for a sixth.
+fn evict_unclaimed(rooms: &mut HashMap<String, Room>) {
+    let oldest = rooms
+        .iter()
+        .filter(|(_, room)| !room.claimed)
+        .min_by_key(|(_, room)| room.empty_since)
+        .map(|(code, _)| code.clone());
+
+    if let Some(code) = oldest {
+        rooms.remove(&code);
+    }
+}
+
 impl Drop for Membership {
     fn drop(&mut self) {
         self.rooms.leave(&self.code, &self.id);
@@ -425,9 +511,15 @@ mod tests {
     /// Creating and joining in one step, which is what every test that is not
     /// about the create/join split actually wants.
     fn open(rooms: &Rooms, id: &str) -> (String, Membership) {
-        let code = rooms.create();
+        let code = rooms.create().expect("room to spare");
         let membership = rooms.join(&code, id, id).expect("the session just created");
         (code, membership)
+    }
+
+    /// Reserves a code and never opens it — the shape `POST /api/session`
+    /// leaves behind, and the thing the cap is defended against.
+    fn reserve(rooms: &Rooms) -> String {
+        rooms.create().expect("room to spare")
     }
 
     #[test]
@@ -474,7 +566,7 @@ mod tests {
     #[test]
     fn a_created_session_can_be_joined_by_its_code() {
         let rooms = Rooms::new();
-        let code = rooms.create();
+        let code = reserve(&rooms);
 
         assert!(rooms.exists(&code));
         assert!(rooms.join(&code, "era", "era").is_some());
@@ -483,8 +575,8 @@ mod tests {
     #[test]
     fn each_created_session_gets_its_own_code() {
         let rooms = Rooms::new();
-        let first = rooms.create();
-        let second = rooms.create();
+        let first = reserve(&rooms);
+        let second = reserve(&rooms);
 
         assert_ne!(first, second);
         assert_eq!(rooms.room_count(), 2);
@@ -692,6 +784,87 @@ mod tests {
             0,
             "but must not linger all evening once nobody comes back"
         );
+    }
+
+    /// The two graces, side by side, because the difference between them is
+    /// the only thing keeping `MAX_ROOMS` from being a way to deny the server.
+    #[test]
+    fn a_session_nobody_opened_is_forgotten_sooner_than_one_that_was_used() {
+        let rooms = Rooms::new();
+        reserve(&rooms);
+        let (_code, used) = open(&rooms, "era");
+        drop(used);
+
+        rooms.sweep_at(Instant::now() + UNCLAIMED_GRACE + Duration::from_secs(1));
+        assert_eq!(
+            rooms.room_count(),
+            1,
+            "a code nobody opened is worth minutes, not the full grace period"
+        );
+
+        rooms.sweep_at(Instant::now() + GRACE + Duration::from_secs(1));
+        assert_eq!(
+            rooms.room_count(),
+            0,
+            "and a draft that emptied still gets every second of it"
+        );
+    }
+
+    #[test]
+    fn creating_past_the_cap_reclaims_the_reservation_nobody_spent() {
+        let rooms = Rooms::new();
+        for _ in 0..MAX_ROOMS {
+            reserve(&rooms);
+        }
+
+        let code = rooms
+            .create()
+            .expect("a squatted map must not stop a real team getting a session");
+
+        assert!(rooms.exists(&code));
+        assert_eq!(
+            rooms.room_count(),
+            MAX_ROOMS,
+            "and the ceiling has to hold while it does that"
+        );
+    }
+
+    /// The rule that makes the eviction above safe to have. A team whose
+    /// connection dropped is inside its grace period, and taking its session
+    /// away to seat somebody else loses the enemy comp off five screens.
+    #[test]
+    fn a_session_in_use_is_never_evicted_to_make_room() {
+        let rooms = Rooms::new();
+        let (mine, held) = open(&rooms, "era");
+        drop(held);
+        while rooms.room_count() < MAX_ROOMS {
+            reserve(&rooms);
+        }
+
+        for _ in 0..8 {
+            rooms.create().expect("an unspent reservation to evict");
+        }
+
+        assert!(
+            rooms.exists(&mine),
+            "a draft mid-reload must outlive every reservation around it"
+        );
+    }
+
+    #[test]
+    fn creating_is_refused_when_every_session_is_in_use() {
+        let rooms = Rooms::new();
+        // Held for the length of the test: dropping a `Membership` starts the
+        // grace clock, and these have to stay occupied to be refusal-worthy.
+        let _held: Vec<Membership> = (0..MAX_ROOMS)
+            .map(|i| open(&rooms, &format!("era-{i}")).1)
+            .collect();
+
+        assert!(
+            rooms.create().is_none(),
+            "with nothing left to evict, the honest answer is no"
+        );
+        assert_eq!(rooms.room_count(), MAX_ROOMS);
     }
 
     #[test]

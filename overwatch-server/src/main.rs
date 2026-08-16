@@ -353,6 +353,10 @@ async fn health(State(state): State<AppState>) -> impl IntoResponse {
     Json(serde_json::json!({
         "status": "ok",
         "rooms": state.rooms.room_count(),
+        // Reported beside the count so that "are we near the ceiling" is the
+        // same one `curl` as "did the rollout land", rather than a number you
+        // have to go and read the source for.
+        "capacity": room::MAX_ROOMS,
         "build": BUILD,
     }))
 }
@@ -363,8 +367,20 @@ async fn health(State(state): State<AppState>) -> impl IntoResponse {
 /// loudly. If the socket created on demand, a typo would put you alone in a
 /// session of one that looks exactly like a working one — the failure would not
 /// surface until the rest of the team wondered where you were.
+///
+/// A refusal is `503` rather than `429`: the limit is on how many sessions
+/// exist at once, not on how fast one client may ask, and the caller has done
+/// nothing wrong. It is also very hard to reach — see [`room::MAX_ROOMS`],
+/// which evicts unspent reservations before it turns anybody away.
 async fn post_session(State(state): State<AppState>) -> impl IntoResponse {
-    Json(serde_json::json!({ "code": state.rooms.create() }))
+    match state.rooms.create() {
+        Some(code) => Json(serde_json::json!({ "code": code })).into_response(),
+        None => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({ "error": "every session is in use" })),
+        )
+            .into_response(),
+    }
 }
 
 async fn post_match(
@@ -566,10 +582,14 @@ mod e2e {
     }
 
     async fn serve_with(matches: Option<MatchLog>) -> String {
-        let state = AppState {
-            rooms: Rooms::new(),
-            matches,
-        };
+        serve_rooms(Rooms::new(), matches).await
+    }
+
+    /// The same, over sessions the caller has already arranged — the only way
+    /// to reach a state like "every slot is occupied" without opening that
+    /// many real sockets.
+    async fn serve_rooms(rooms: Rooms, matches: Option<MatchLog>) -> String {
+        let state = AppState { rooms, matches };
         launch(router(state, std::path::Path::new("/nonexistent"))).await
     }
 
@@ -642,6 +662,14 @@ mod e2e {
     /// A one-shot POST, hand-rolled: pulling in an HTTP client as a dev
     /// dependency to send eleven bytes would be a poor trade.
     async fn reqwest_post(url: &str) -> String {
+        raw_post(url)
+            .await
+            .split_once("\r\n\r\n")
+            .map(|(_, body)| body.to_owned())
+            .expect("a body")
+    }
+
+    async fn raw_post(url: &str) -> String {
         use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
         let rest = url.trim_start_matches("http://");
@@ -659,9 +687,7 @@ mod e2e {
 
         let mut raw = String::new();
         stream.read_to_string(&mut raw).await.expect("reads");
-        raw.split_once("\r\n\r\n")
-            .map(|(_, body)| body.to_owned())
-            .expect("a body")
+        raw
     }
 
     type Socket = tokio_tungstenite::WebSocketStream<
@@ -905,11 +931,41 @@ mod e2e {
         let value: serde_json::Value = serde_json::from_str(&body).expect("json");
         assert_eq!(value["status"], "ok");
         assert_eq!(value["rooms"], 1);
+        assert_eq!(value["capacity"], room::MAX_ROOMS);
         // Present and non-empty, not equal to any particular value: under `cargo
         // test` nothing sets MINMAX_BUILD so this is "dev", but asserting that
         // would fail for anyone who happens to have it exported. What the deploy
         // needs from this field is that it is always there and never blank.
         assert!(!value["build"].as_str().expect("build").is_empty());
+    }
+
+    /// Creating is unauthenticated, so the room map is only as bounded as
+    /// `room::MAX_ROOMS` makes it. `room.rs` proves the eviction and the
+    /// refusal themselves; what only shows up out here is the status the
+    /// refusal wears. A 200 carrying a body with no `code` in it would leave
+    /// the client parsing for a field that is not there, where a 503 lands on
+    /// the path it already has for a server that cannot mint one.
+    #[tokio::test]
+    async fn a_server_with_no_free_session_refuses_to_mint_another() {
+        let rooms = Rooms::new();
+        // Joined, not merely created: an unspent reservation is evictable by
+        // design, so a map full of those is a map with room in it.
+        let _held: Vec<_> = (0..room::MAX_ROOMS)
+            .map(|i| {
+                let code = rooms.create().expect("room to spare");
+                let id = format!("era-{i}");
+                rooms
+                    .join(&code, &id, &id)
+                    .expect("the session just created")
+            })
+            .collect();
+
+        let base = serve_rooms(rooms, None).await;
+        assert_eq!(
+            post_status_of(&format!("http://{base}/api/session")).await,
+            503,
+            "a full server has to say so rather than answer with no code"
+        );
     }
 
     /// Departing on purpose is a different event from a socket dropping, and
@@ -1007,7 +1063,14 @@ mod e2e {
     /// The status code of a bare GET, for the cases where the code is the
     /// whole point and the body is not.
     async fn status_of(url: &str) -> u16 {
-        let raw = raw_get(url).await;
+        status_in(&raw_get(url).await)
+    }
+
+    async fn post_status_of(url: &str) -> u16 {
+        status_in(&raw_post(url).await)
+    }
+
+    fn status_in(raw: &str) -> u16 {
         let status = raw
             .lines()
             .next()
