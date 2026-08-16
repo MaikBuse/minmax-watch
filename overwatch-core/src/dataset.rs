@@ -2,6 +2,7 @@ use crate::error::CoreError;
 use crate::hero::{Hero, HeroId, Role};
 use crate::map::{GameMap, MapId};
 use crate::matrix::Matrix;
+use crate::rank::Rank;
 
 /// Everything the scorer needs, resolved into dense index space.
 ///
@@ -17,6 +18,18 @@ pub struct Dataset {
     /// Row-major `maps.len() x heroes.len()`.
     map_affinity: Vec<i8>,
     base_strength: Vec<i8>,
+    /// How far each hero's strength moves from the ladder average on each rung
+    /// of it, one row per hero in [`Rank::DIVISIONS`] order.
+    ///
+    /// A shift rather than a strength of its own, because the scorer weights it
+    /// separately from `base_strength` — the two decompose rather than
+    /// double-count. Zero is the common and correct reading: no rank effect
+    /// measured, so choosing a rung moves nothing for that hero.
+    ///
+    /// **Only strength is sliced this way.** No source publishes per-rung
+    /// matchups or duos, so `matchups` and `synergy` gain no third axis and
+    /// nothing on screen may suggest they did. See [`Rank`].
+    rank_shift: Vec<[i8; Rank::DIVISIONS.len()]>,
     /// The raw published win rate behind `base_strength`, as a percentage.
     ///
     /// Carried alongside rather than derived back out of it, because
@@ -55,6 +68,7 @@ pub struct DatasetParts {
     pub synergy: Matrix,
     pub map_affinity: Vec<i8>,
     pub base_strength: Vec<i8>,
+    pub rank_shift: Vec<[i8; Rank::DIVISIONS.len()]>,
     pub win_rate: Vec<Option<f32>>,
     pub side_lean: Vec<i8>,
     pub shape: Vec<[i8; 3]>,
@@ -88,6 +102,13 @@ impl Dataset {
                 what: "base_strength",
                 expected: n,
                 actual: parts.base_strength.len(),
+            });
+        }
+        if parts.rank_shift.len() != n {
+            return Err(CoreError::RosterLengthMismatch {
+                what: "rank_shift",
+                expected: n,
+                actual: parts.rank_shift.len(),
             });
         }
         if parts.win_rate.len() != n {
@@ -134,6 +155,7 @@ impl Dataset {
             synergy: parts.synergy,
             map_affinity: parts.map_affinity,
             base_strength: parts.base_strength,
+            rank_shift: parts.rank_shift,
             win_rate: parts.win_rate,
             side_lean: parts.side_lean,
             shape: parts.shape,
@@ -201,6 +223,36 @@ impl Dataset {
 
     pub fn base_strength(&self, hero: HeroId) -> i8 {
         self.base_strength.get(hero.index()).copied().unwrap_or(0)
+    }
+
+    /// How far this hero's strength moves from the ladder average on one rung of
+    /// it, on the same -100..=100 scale as [`Self::base_strength`].
+    ///
+    /// Zero for [`Rank::All`] by construction — the aggregate is what every rung
+    /// is measured against — and zero for a hero no source rated at that rung.
+    /// Both mean the same thing here and both are the honest answer: no rank
+    /// effect to apply.
+    pub fn rank_shift(&self, rank: Rank, hero: HeroId) -> i8 {
+        let Some(column) = rank.column() else {
+            return 0;
+        };
+        self.rank_shift
+            .get(hero.index())
+            .and_then(|row| row.get(column))
+            .copied()
+            .unwrap_or(0)
+    }
+
+    /// Patch strength as read on one rung of the ladder.
+    ///
+    /// [`Self::base_strength`] plus [`Self::rank_shift`], clamped back onto the
+    /// canonical scale. For the one place a *single* number has to stand for
+    /// "strong right now" — the ban list's patch rung, which sorts on it. The
+    /// scorer itself does not use this: it weights the two halves separately so
+    /// they can be argued about separately.
+    pub fn base_strength_at(&self, rank: Rank, hero: HeroId) -> i8 {
+        let combined = i16::from(self.base_strength(hero)) + i16::from(self.rank_shift(rank, hero));
+        combined.clamp(-100, 100) as i8
     }
 
     /// The published win rate as a percentage, where the source gave one.

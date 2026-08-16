@@ -10,6 +10,7 @@
 mod aliases;
 mod art;
 mod blend;
+mod blizzard;
 mod brand;
 mod cache;
 mod counterpickgg;
@@ -23,7 +24,10 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use overwatch_data::schema::{HeroesFile, MapsFile, MatchupsFile, SynergyEntry, SynergyFile};
+use overwatch_core::Rank;
+use overwatch_data::schema::{
+    HeroesFile, MapsFile, MatchupsFile, StrengthByRankFile, SynergyEntry, SynergyFile,
+};
 use time::format_description::well_known::Iso8601;
 use time::OffsetDateTime;
 
@@ -169,12 +173,18 @@ enum Command {
     Counters,
     /// Duo synergies from counterwatch, merged over the curated overrides.
     Synergy,
-    /// Hero win rates and map affinity, without re-scraping the whole matrix.
+    /// Hero win rates, map affinity and the rank slices, without re-scraping the
+    /// whole matrix.
     ///
     /// Split out from `Counters` because the two go stale at different rates: a
     /// balance patch moves every win rate the same week and barely touches the
     /// matchup opinions, and re-reading 53 win rates should not mean re-fetching
     /// 160 pages and reviewing a diff of the entire matrix to find them.
+    ///
+    /// The rank slices belong here by that same test rather than in a step of
+    /// their own: they *are* win rates, on the same clock. Half of them come off
+    /// the counterwatch stats pages this step already fetches, and the other half
+    /// costs nine requests to Blizzard.
     Strength,
     /// Hero portraits and map thumbnails into the web assets.
     Art,
@@ -221,9 +231,9 @@ const USAGE: &str = "\
 usage: overwatch-ingest [roster|counters|synergy|strength|art|all|brand] [--refresh]
 
   roster      regenerate heroes.toml and maps.toml from the OverFast API
-  counters    regenerate matchups.toml, strength.toml and map_affinity.toml
+  counters    regenerate matchups.toml
   synergy     regenerate the scraped half of synergy.toml, keeping curated rows
-  strength    regenerate strength.toml and map_affinity.toml only
+  strength    regenerate strength.toml, map_affinity.toml and strength_by_rank.toml
   art         redownload hero portraits and map thumbnails into overwatch-web/assets
   all         all four (default)
   brand       rasterise the brand SVGs into favicons, PWA icons and og.png
@@ -233,6 +243,56 @@ usage: overwatch-ingest [roster|counters|synergy|strength|art|all|brand] [--refr
 
 fn print_usage() {
     println!("{USAGE}");
+}
+
+/// Says enough about the rank slices to decide whether to trust the diff.
+///
+/// The coverage count and the biggest movers, because the failure this file is
+/// most exposed to is a plausible one: every way of getting it wrong — a cache
+/// key without its tier, a smoothing bug that flattens everything — produces a
+/// file that parses and loads. A run that reports 424 cells and no movers is
+/// telling you it fetched the same page nine times.
+fn report_rank_slices(by_rank: &StrengthByRankFile) {
+    let cells = by_rank.entries.len() * Rank::DIVISIONS.len();
+    let present: usize = by_rank
+        .entries
+        .iter()
+        .map(|e| {
+            Rank::DIVISIONS
+                .iter()
+                .filter(|rank| e.value_for(**rank).is_some())
+                .count()
+        })
+        .sum();
+
+    let mut movers: Vec<(i16, &str)> = by_rank
+        .entries
+        .iter()
+        .filter_map(|e| {
+            let low = e.value_for(Rank::Bronze)?;
+            let high = e.value_for(Rank::Grandmaster)?;
+            Some((i16::from(high) - i16::from(low), e.hero.as_str()))
+        })
+        .collect();
+    movers.sort_by_key(|(span, _)| -span.abs());
+
+    let biggest: Vec<String> = movers
+        .iter()
+        .take(3)
+        .map(|(span, hero)| format!("{hero} {span:+}"))
+        .collect();
+
+    eprintln!(
+        "  rank slices: {} heroes x {} rungs ({present}/{cells} cells) | \
+         biggest bronze->gm movers: {}",
+        by_rank.entries.len(),
+        Rank::DIVISIONS.len(),
+        if biggest.is_empty() {
+            "none".to_owned()
+        } else {
+            biggest.join(", ")
+        },
+    );
 }
 
 #[tokio::main]
@@ -403,8 +463,21 @@ async fn main() -> Result<()> {
                         HashMap::new()
                     });
 
-                let (strength, affinity) =
-                    stats::build(&generated, &stats, &cwatch_rates, &known_maps);
+                // The only rank-sliced source with a URL behind it. Degrades the
+                // same way counterwatch does above: the rank columns are worth
+                // having, but not at the price of the two files that already
+                // worked.
+                eprintln!("  source: blizzard rates (9 pages: all ranks + 8 rungs)");
+                let blizzard = blizzard::scrape(&mut fetcher).await.unwrap_or_else(|err| {
+                    eprintln!("  warn: blizzard rates unusable: {err:#}");
+                    blizzard::BlizzardRates::default()
+                });
+                if !blizzard.is_empty() {
+                    blizzard::report_key_drift(&blizzard, &hero_keys);
+                }
+
+                let (strength, affinity, by_rank) =
+                    stats::build(&generated, &stats, &cwatch_rates, &blizzard, &known_maps);
 
                 let blended = strength
                     .entries
@@ -417,6 +490,7 @@ async fn main() -> Result<()> {
                     strength.entries.len(),
                     affinity.entries.len()
                 );
+                report_rank_slices(&by_rank);
 
                 let strength_toml =
                     toml::to_string_pretty(&strength).context("serialising strength.toml")?;
@@ -428,6 +502,27 @@ async fn main() -> Result<()> {
                     toml::to_string_pretty(&affinity).context("serialising map_affinity.toml")?;
                 if write_if_changed(&data_dir.join("map_affinity.toml"), &affinity_toml).await? {
                     changed.push("map_affinity.toml");
+                }
+
+                // Leaving the committed file alone is the right failure here.
+                // Half of it is reachable only through Blizzard, so a run that
+                // could not reach it has nothing better to offer than what is
+                // already on disk — and unlike the synergy step this is only
+                // half of a step, so aborting would throw away the two writes
+                // above that succeeded.
+                if by_rank.entries.is_empty() {
+                    eprintln!(
+                        "  warn: no rank-sliced win rates from either source; \
+                         leaving data/strength_by_rank.toml alone"
+                    );
+                } else {
+                    let by_rank_toml = toml::to_string_pretty(&by_rank)
+                        .context("serialising strength_by_rank.toml")?;
+                    if write_if_changed(&data_dir.join("strength_by_rank.toml"), &by_rank_toml)
+                        .await?
+                    {
+                        changed.push("strength_by_rank.toml");
+                    }
                 }
             }
             Err(err) => eprintln!("  warn: counterpickgg index unusable: {err:#}"),

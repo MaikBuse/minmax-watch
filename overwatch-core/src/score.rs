@@ -6,6 +6,7 @@ use crate::draft::Draft;
 use crate::error::CoreError;
 use crate::hero::{HeroId, Role};
 use crate::map::{MapId, Side};
+use crate::rank::Rank;
 
 /// How much one enemy pick counts towards the counter term, by its role and by
 /// the role you are playing. Indexed `[your role][their role]` via
@@ -122,6 +123,42 @@ pub struct Weights {
     /// the two or three picks you are actually guessing from often do not.
     #[serde(default = "default_shape")]
     pub shape: f32,
+    /// How much the rung of the ladder you selected counts, on top of the
+    /// all-ranks patch strength above.
+    ///
+    /// This weights the *shift* away from the ladder average — [`Dataset::rank_shift`]
+    /// — rather than the strength itself, so the two decompose instead of
+    /// double-counting: no single number ever mixes "strong on the ladder" with
+    /// "strong where you play", which is the same rule
+    /// [`ban_by_strength`] follows for a different pair of arguments.
+    ///
+    /// 0.15 because that is [`Weights::base`]. At equal weights the two terms sum
+    /// to exactly the rank-sliced strength, so the default behaviour is "read the
+    /// column for the rung you picked" and the knob exists without a number
+    /// nobody measured behind it. Raising it is a claim that where you play
+    /// matters more than the ladder average does, and wants a corpus first.
+    ///
+    /// What 0.15 actually buys, measured against random enemy teams on the
+    /// committed data: selecting a rung changes the top recommendation for
+    /// **21% of drafts at Bronze, 19% at Diamond, 24% at Master and 28% at
+    /// Grandmaster+**, and moves any single score by at most 0.13. Gold is 8%,
+    /// which is the sanity check rather than a disappointment — Gold sits near
+    /// the ladder average, so there is little there to move.
+    ///
+    /// Worth comparing against the rest of the scorer: [`EnemyRoleWeights`], the
+    /// largest lever here, moves the top pick for 31%; [`Weights::shape`] 11%;
+    /// [`Weights::map`] 8.3%. So this lands between the two, which is where a
+    /// term backed by measured win rates but reaching only one signal belongs.
+    ///
+    /// Per hero it is the tails that carry it: Reinhardt moves 0.10 of score
+    /// between Bronze and Grandmaster, Sierra 0.17 and D.Mon 0.20, against a
+    /// typical counter contribution around 0.25 and a
+    /// [`Weights::swap_threshold`] of 0.15.
+    ///
+    /// Nothing else in the scorer is rank-aware, and nothing else can be: no
+    /// source publishes per-rung matchups or duos. See [`crate::Rank`].
+    #[serde(default = "default_rank")]
+    pub rank: f32,
     /// Minimum advantage before swap mode suggests leaving a working hero.
     /// Without this the list churns every time the enemy team twitches.
     pub swap_threshold: f32,
@@ -147,10 +184,21 @@ fn default_shape() -> f32 {
     0.25
 }
 
+/// Same trap again, and the same reason it matters: this term is new, so a bare
+/// `#[serde(default)]` would resolve to 0.0 and ship the rank picker connected to
+/// nothing for everybody who already has a stored profile.
+///
+/// The value is [`Weights::base`] rather than a number of its own, deliberately —
+/// see [`Weights::rank`].
+fn default_rank() -> f32 {
+    0.15
+}
+
 impl Default for Weights {
     fn default() -> Self {
         Self {
             base: 0.15,
+            rank: default_rank(),
             counter: 1.0,
             // Lowered from 0.30 when the term stopped being hypothetical:
             // `synergy.toml` shipped empty for a long time, so 0.30 was a number
@@ -206,6 +254,17 @@ pub struct UserContext {
     /// answer on the draft where you needed it — it marks what is yours now and
     /// leaves the ranking to say the rest.
     pub role: Role,
+    /// Which rung of the ladder the patch-strength numbers are read on.
+    ///
+    /// [`Rank::All`] rather than an `Option`, because the whole-ladder aggregate
+    /// is a real bucket both sources publish and the one this app has always
+    /// scored on — "unset" and "all ranks" are the same reading of the same
+    /// number. That is not the situation [`crate::Matrix::rating`] is in, where
+    /// "nothing known" and "dead even" are genuinely different claims.
+    ///
+    /// It reaches exactly one term. Nothing else in here is rank-aware and
+    /// nothing else can be — see [`Rank`].
+    pub rank: Rank,
     /// Personal nudges on the -100..=100 scale, indexed by hero. Never written
     /// by the ingest.
     pub overrides: Vec<i8>,
@@ -216,6 +275,7 @@ impl UserContext {
     pub fn new(role: Role, hero_count: usize) -> Self {
         Self {
             role,
+            rank: Rank::All,
             overrides: vec![0; hero_count],
             weights: Weights::default(),
         }
@@ -243,6 +303,18 @@ pub enum ReasonKind {
     /// The enemy's shape is the answer to this candidate.
     LosesToShape(Archetype),
     BaseStrength,
+    /// This candidate is stronger, or weaker, at the rung of the ladder you
+    /// selected than it is across the ladder as a whole.
+    ///
+    /// Its own kind rather than a payload on [`Self::BaseStrength`], because the
+    /// two are separate terms in the score and the panel should be able to say so
+    /// separately. Never produced at [`Rank::All`]: the shift there is zero by
+    /// construction, and a zero term is never explained.
+    ///
+    /// The only kind that names a rung. The counter, synergy, map, side and shape
+    /// terms read the same numbers at every rung, so a second line implying
+    /// otherwise would be a claim no source behind this supports.
+    RankFit(Rank),
     Comfort,
 }
 
@@ -525,6 +597,12 @@ fn score_hero(
     let base = f32::from(ds.base_strength(hero)) / 100.0;
     let base_contribution = w.base * base;
 
+    // How far this hero moves from that on the rung the user picked. Zero at
+    // `Rank::All` and zero for a hero no source rated there, so an unset rank
+    // reproduces the ranking this app has always produced, term for term.
+    let rank_shift = f32::from(ds.rank_shift(ctx.rank, hero)) / 100.0;
+    let rank_contribution = w.rank * rank_shift;
+
     // A weighted mean rather than a plain one, so the enemy tank is not outvoted
     // by the damage pair just because a team fields two of them. Normalising over
     // the enemies actually entered means a lone first pick weighs `w/w == 1`:
@@ -679,8 +757,16 @@ fn score_hero(
             text: String::new(),
         });
     }
+    if rank_contribution.abs() > f32::EPSILON {
+        reasons.push(Reason {
+            kind: ReasonKind::RankFit(ctx.rank),
+            contribution: rank_contribution,
+            text: String::new(),
+        });
+    }
 
     let score = base_contribution
+        + rank_contribution
         + w.counter * counter_total
         + w.synergy * synergy_total
         + w.map * map_term
@@ -838,14 +924,20 @@ fn ban_subject(team: &DefendedTeam) -> BanSubject {
 /// anything, the score goes back to pure threat, so no single number ever mixes
 /// "strong right now" with "bad for us" — two different arguments for a ban that
 /// a reader cannot separate again once they are added together.
-fn ban_by_strength(ds: &Dataset, draft: &Draft) -> Vec<BanCandidate> {
+fn ban_by_strength(ds: &Dataset, draft: &Draft, ctx: &UserContext) -> Vec<BanCandidate> {
     let mut candidates: Vec<BanCandidate> = (0..ds.hero_count())
         .map(|index| HeroId(index as u16))
         .filter(|hero| bannable(draft, *hero))
         .filter_map(|hero| {
             // On the same -1.0..=1.0 scale as every other score here, so the
             // column reads the same way it does on the other rungs.
-            let score = f32::from(ds.base_strength(hero)) / 100.0;
+            //
+            // Read at the rung the user picked, because the claim this rung makes
+            // is "these are the heroes winning right now" — and once you have
+            // said which ladder you are on, "right now" means there. Whatever
+            // this sorts by is also what the column displays; the two cannot
+            // disagree.
+            let score = f32::from(ds.base_strength_at(ctx.rank, hero)) / 100.0;
             // Base strength is symmetric about zero by construction — see
             // `crate::normalize` — so this keeps the above-average half of the
             // roster, which is the half a ban has an argument for.
@@ -916,7 +1008,7 @@ pub fn ban_recommendations(
     if !team.anyone_known() {
         return BanBoard {
             subject,
-            candidates: ban_by_strength(ds, draft),
+            candidates: ban_by_strength(ds, draft, ctx),
         };
     }
 

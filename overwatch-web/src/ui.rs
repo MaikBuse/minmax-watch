@@ -6,7 +6,8 @@
 
 use dioxus::prelude::*;
 use overwatch_core::{
-    Dataset, Format, HeroId, MapId, Queue, ReasonKind, Recommendation, Role, Side, TeamSize, Threat,
+    Dataset, Format, HeroId, MapId, Queue, Rank, ReasonKind, Recommendation, Role, Side, TeamSize,
+    Threat,
 };
 
 /// A reset that asks first, for the ones that throw away configuration rather
@@ -761,8 +762,12 @@ pub fn Header(
     /// visible confirmation. It sits beside the sync light because both are
     /// transient status about what just happened rather than part of the draft.
     logged: Option<bool>,
+    rank: Rank,
+    rank_open: bool,
     on_role: EventHandler<Role>,
     on_format: EventHandler<Format>,
+    on_rank: EventHandler<Rank>,
+    on_rank_open: EventHandler<()>,
     on_reset_all: EventHandler<()>,
 ) -> Element {
     let sync_class = format!("sync sync-{}", sync_status.replace(' ', "-"));
@@ -811,6 +816,11 @@ pub fn Header(
                         None => rsx! { span { class: "map unset", "no map" } },
                     }
                 }
+                // After the map rather than before it: the map is a fact about
+                // the match in front of you and this is a standing fact about
+                // you, so the cluster stays ordered widest-scope-first and the
+                // thing that changes every game keeps its place in the line.
+                RankPicker { rank, open: rank_open, on_rank, on_open: on_rank_open }
                 // The pool count used to sit here, adrift between the map and
                 // the sync light. It lives on the mode segment it describes now,
                 // where it is also legible for the modes you are not in.
@@ -832,6 +842,72 @@ pub fn Header(
                 // Everything, map and side included — the "new match" reset, as
                 // opposed to Esc, which keeps the map for the next round.
                 ResetButton { confirm: true, on_reset: on_reset_all }
+            }
+        }
+    }
+}
+
+/// Which rung of the ladder patch strength is read on.
+///
+/// A chip that states its own answer, plus a sheet of the alternatives behind a
+/// click. Nine options laid out flat measure about 640px at `--fs-xs`, and the
+/// header has been overflowing below 950px since before this existed — see the
+/// note above `.header` in the stylesheet. So the resting cost is one pill, and
+/// only the choices fold away.
+///
+/// That is not the rule about nothing appearing mid-draft. What that forbids is
+/// something a *draft* can reveal or remove; this opens on an explicit click on
+/// a control that is always there, the same shape as the QR panel and the key
+/// help. The current value is never hidden — it is printed on the button.
+///
+/// No keyboard chord, on the argument at [`FormatSwitch`]: every chord that
+/// exists is for something done repeatedly inside a draft, and this is changed
+/// when you change bracket.
+#[component]
+fn RankPicker(
+    rank: Rank,
+    open: bool,
+    on_rank: EventHandler<Rank>,
+    on_open: EventHandler<()>,
+) -> Element {
+    rsx! {
+        div { class: "rank-picker",
+            button {
+                class: if open { "rank-chip open" } else { "rank-chip" },
+                r#type: "button",
+                aria_expanded: "{open}",
+                aria_controls: "rank-sheet",
+                title: "which rung of the ladder patch strength is read on \u{2014} nothing else changes",
+                onclick: move |_| on_open.call(()),
+                span { class: "rank-chip-label", "rank" }
+                span { class: "rank-chip-value", "{rank.label()}" }
+                span { class: "rank-caret", aria_hidden: "true", "\u{25be}" }
+            }
+            // Rendered whether or not it is open, so `aria-controls` always
+            // resolves to a real element and the sheet is a class away from
+            // visible rather than a mount away.
+            div {
+                id: "rank-sheet",
+                class: if open { "ranks open" } else { "ranks" },
+                role: "group",
+                aria_label: "which rung of the ladder to read patch strength on",
+                for option in Rank::CHOICES {
+                    button {
+                        key: "{option.as_str()}",
+                        class: if rank == option { "rank active" } else { "rank" },
+                        r#type: "button",
+                        aria_pressed: "{rank == option}",
+                        title: "{option.description()}",
+                        onclick: move |_| on_rank.call(option),
+                        "{option.label()}"
+                    }
+                }
+                // Said outright rather than left to be inferred. The rank slices
+                // only exist for win rate: no source publishes matchups or duos
+                // per rung, and a picker with no caveat implies otherwise.
+                p { class: "rank-note",
+                    "only patch strength is sliced by rank \u{2014} matchups read the same at every rung"
+                }
             }
         }
     }
@@ -1133,6 +1209,24 @@ impl RecRow {
                             format!("walks into their {}", theirs.label())
                         }
                         ReasonKind::BaseStrength => "strong in the current patch".to_owned(),
+                        // The only line on the whole screen that names a rung.
+                        // Never produced at `Rank::All`, where the term is zero
+                        // and a zero term is never explained — so an unset rank
+                        // leaves the panel exactly as it has always read.
+                        //
+                        // Phrased like `SideFit` above, and for the same reason:
+                        // the leading sign has to carry it. This term goes
+                        // negative as often as positive — half the roster is
+                        // worse at any given rung than across the ladder — and a
+                        // comparative like "stronger at master" reads as a
+                        // contradiction the moment it is prefixed with a minus.
+                        //
+                        // "right now" is what keeps it about the patch. Without
+                        // it the line reads as a claim about matchups at that
+                        // rung, which nothing behind this feature measured.
+                        ReasonKind::RankFit(rank) => {
+                            format!("suits {} right now", rank.label())
+                        }
                         ReasonKind::Comfort => "one of your comfort picks".to_owned(),
                     }
                 } else {
@@ -1326,6 +1420,13 @@ pub struct RosterRow {
     /// the boards show one, with nothing to say why. The game will refuse it in
     /// a moment; the point is that the two of you find out here first.
     pub contested: bool,
+    /// The rung of the ladder they are reading patch strength on.
+    ///
+    /// Shown because a five-stack spanning Gold to Diamond is answering a
+    /// different draft than one that does not, and nobody else can know that
+    /// unless the roster says so. `Rank::All` is drawn as nothing: most rows will
+    /// carry it, and a column of "all ranks" says less than the space it costs.
+    pub rank: Rank,
 }
 
 /// Who is in the session and what they are on.
@@ -1349,6 +1450,13 @@ pub fn Roster(rows: Vec<RosterRow>) -> Element {
                             "{row.name}"
                         }
                         span { class: "roster-role", "{row.role_label}" }
+                        if row.rank != Rank::All {
+                            span {
+                                class: "roster-rank",
+                                title: "reads patch strength at {row.rank.description()}",
+                                "{row.rank.label()}"
+                            }
+                        }
                         match (row.icon, row.hero) {
                             (Some(icon), Some(hero)) => rsx! {
                                 span {
@@ -1550,6 +1658,7 @@ mod tests {
             synergy: Matrix::unrated(n),
             map_affinity: Vec::new(),
             base_strength: vec![0; n],
+            rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
             win_rate: vec![None; n],
             side_lean: vec![0; n],
             shape: vec![[0; 3]; n],

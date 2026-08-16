@@ -13,6 +13,7 @@ use crate::dataset::{Dataset, DatasetParts};
 use crate::hero::{Hero, HeroId, Role};
 use crate::map::{GameMap, GameMode, MapId};
 use crate::matrix::Matrix;
+use crate::rank::Rank;
 
 pub const REINHARDT: HeroId = HeroId(0);
 pub const SIGMA: HeroId = HeroId(1);
@@ -70,6 +71,7 @@ pub fn dataset() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: vec![0; n],
         base_strength: vec![0; n],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
         win_rate: vec![None; n],
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],

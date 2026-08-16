@@ -19,6 +19,16 @@
 //! quarter of each row and is blended in at a low weight, mostly as an
 //! independent check on the two opinion-based sources.
 //!
+//! The stats pages carry one more thing that is server-rendered: a "Performance
+//! by Rank" table with a win rate, a pick rate and a **published match count**
+//! for each of the eight divisions. That is the only per-rung sample size either
+//! source publishes, and [`parse_rank_breakdown`] reads it off the same document
+//! [`parse_win_rate`] already fetches, so it costs nothing. Note that the site's
+//! rank *filter* is not URL-addressable — `?division=`, `?rank=` and `?tier=` all
+//! return the same All-Ranks page — and neither the counters nor the duos pages
+//! carry a per-division breakdown at all, which is why only strength is sliced
+//! by rank anywhere in this project.
+//!
 //! The site's `best-duos` pages are the other half of what it is worth here,
 //! and the only reason `synergy.toml` is not still empty. Those *are* rendered
 //! server-side, but as markup rather than JSON-LD, so [`parse_duos`] reads the
@@ -28,6 +38,7 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::{Context, Result};
+use overwatch_core::Rank;
 use scraper::{Html, Selector};
 use serde_json::Value;
 
@@ -320,16 +331,131 @@ pub fn parse_win_rate(html: &str) -> Option<f32> {
     rest[..end].parse::<f32>().ok()
 }
 
-/// Fetches every hero's stats page for its win rate.
+/// One row of a hero's "Performance by Rank" table.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RankRow {
+    pub rank: Rank,
+    pub win_rate: f32,
+    /// The site's published sample size for this bucket, and the reason the
+    /// table is worth reading at all: it is the only per-rung volume figure
+    /// either source publishes, and the thin buckets are very thin. Median
+    /// across the roster runs 18,536 at Gold against 263 at Emerald and 353 at
+    /// Grandmaster+. [`crate::stats`] weighs the row by it.
+    pub matches: u32,
+}
+
+/// Everything one stats page is worth: the hero's own win rate, and its curve
+/// across the ladder.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct HeroRates {
+    /// The all-ranks figure from the JSON-LD sentence — see [`parse_win_rate`].
+    ///
+    /// The baseline every rung is measured against, and the point of taking it
+    /// from here rather than from anywhere else: it is the same instrument and
+    /// the same shrinkage regime as the rungs themselves, so the difference
+    /// between them is a rank effect and not an instrument disagreement.
+    pub all_ranks: f32,
+    /// Empty for a page that carries the stats sentence but no breakdown table.
+    pub by_rank: Vec<RankRow>,
+}
+
+/// Reads the rank breakdown table off a stats page.
+///
+/// The page ships this twice: as a `<table>` and again inside the Next.js flight
+/// payload at sixteen digits of precision. The table is what gets read. The
+/// flight payload is a framework private that changes shape on any framework
+/// bump and is not what the site promises anyone, while the table is the
+/// accessible fallback shipped on purpose — and it is what a human reviewing the
+/// cached HTML against a committed number can actually check.
+///
+/// The extra precision would be a lie in any case. The baseline these rows are
+/// subtracted from is [`parse_win_rate`]'s figure, which is one decimal, so
+/// pairing it with a sixteen-digit rung would make the *difference* look far
+/// more precise than the thing it is measured against.
+///
+/// The table carries no class or id, so it is found by its caption.
+pub fn parse_rank_breakdown(html: &str) -> Result<Vec<RankRow>> {
+    let table = Selector::parse("table").map_err(|e| anyhow::anyhow!("invalid selector: {e}"))?;
+    let caption =
+        Selector::parse("caption").map_err(|e| anyhow::anyhow!("invalid selector: {e}"))?;
+    let row = Selector::parse("tbody tr").map_err(|e| anyhow::anyhow!("invalid selector: {e}"))?;
+    let cell = Selector::parse("td").map_err(|e| anyhow::anyhow!("invalid selector: {e}"))?;
+    let document = Html::parse_document(html);
+
+    let Some(breakdown) = document.select(&table).find(|t| {
+        // The caption is split into several text nodes by the `<!-- -->` markers
+        // the framework emits, so match on the joined text the way `parse_duos`
+        // does rather than on a single node.
+        t.select(&caption)
+            .any(|c| c.text().collect::<String>().contains("by rank division"))
+    }) else {
+        return Ok(Vec::new());
+    };
+
+    let mut out: Vec<RankRow> = Vec::new();
+    for tr in breakdown.select(&row) {
+        let cells: Vec<String> = tr
+            .select(&cell)
+            .map(|td| td.text().collect::<String>().trim().to_owned())
+            .collect();
+        // division, win rate, pick rate, matches. Pick rate is read past rather
+        // than kept: Blizzard publishes the same thing for the whole roster in
+        // one request.
+        let [division, win_rate, _pick_rate, matches] = cells.as_slice() else {
+            continue;
+        };
+        let Ok(rank) = Rank::parse(division) else {
+            continue;
+        };
+        let Some(win_rate) = trailing_percentage(win_rate) else {
+            continue;
+        };
+        // A count that will not parse drops the row rather than defaulting to
+        // zero. Zero would weigh the row out of the blend by accident rather
+        // than on purpose, and would look like a measurement of nothing instead
+        // of the absence of one.
+        let Ok(matches) = matches.replace(',', "").parse::<u32>() else {
+            continue;
+        };
+        out.push(RankRow {
+            rank,
+            win_rate,
+            matches,
+        });
+    }
+
+    Ok(out)
+}
+
+/// Reads an unsigned percentage like `48.5%`.
+///
+/// Deliberately not [`first_percentage`], which requires a leading `+` or `-`
+/// and so returns `None` on every cell in this table. Wiring that one up here
+/// yields an empty breakdown with no error at all.
+fn trailing_percentage(text: &str) -> Option<f32> {
+    let trimmed = text.trim().strip_suffix('%')?;
+    trimmed.parse::<f32>().ok()
+}
+
+/// Fetches every hero's stats page for its win rate and its rank curve.
+///
+/// Both come off one document in one pass. Reading the breakdown in a second
+/// scrape would either re-fetch all 53 pages on a cold cache or depend on this
+/// one having run first — the hidden ordering dependency the per-step ingest
+/// split exists to prevent — and would re-parse a 330 KB document a second time
+/// for every hero.
 ///
 /// Heroes the site has no page for are simply absent, which the blend reads as
-/// "this source has no opinion" rather than as a zero.
+/// "this source has no opinion" rather than as a zero. A page that has the stats
+/// sentence but no breakdown table is still usable for the win rate; it just
+/// arrives with an empty `by_rank`.
 pub async fn scrape_win_rates(
     fetcher: &mut Fetcher,
     hero_keys: &[String],
-) -> Result<HashMap<String, f32>> {
-    let mut out = HashMap::new();
+) -> Result<HashMap<String, HeroRates>> {
+    let mut out: HashMap<String, HeroRates> = HashMap::new();
     let mut unresolved: Vec<&str> = Vec::new();
+    let mut no_breakdown: Vec<&str> = Vec::new();
 
     for (i, key) in hero_keys.iter().enumerate() {
         let cache_slug = format!("counterwatch-stats-{key}.html");
@@ -339,23 +465,29 @@ pub async fn scrape_win_rates(
             continue;
         }
 
-        let mut rate = None;
+        let mut rates = None;
         for candidate in crate::slugs::counterwatch(key) {
             let url = format!("{BASE}/stats/overwatch/heroes/{candidate}");
 
             let Ok(body) = fetcher.get(&url, &cache_slug).await else {
                 continue;
             };
-            rate = parse_win_rate(&body);
-            if rate.is_some() {
+            if let Some(all_ranks) = parse_win_rate(&body) {
+                rates = Some(HeroRates {
+                    all_ranks,
+                    by_rank: parse_rank_breakdown(&body).unwrap_or_default(),
+                });
                 break;
             }
             fetcher.forget(&cache_slug).await;
         }
 
-        match rate {
-            Some(rate) => {
-                out.insert(key.clone(), rate);
+        match rates {
+            Some(rates) => {
+                if rates.by_rank.is_empty() {
+                    no_breakdown.push(key);
+                }
+                out.insert(key.clone(), rates);
             }
             None => {
                 fetcher.mark_missing(&cache_slug).await;
@@ -372,6 +504,12 @@ pub async fn scrape_win_rates(
         eprintln!(
             "  warn: counterwatch has no win rate for: {}",
             unresolved.join(", ")
+        );
+    }
+    if !no_breakdown.is_empty() {
+        eprintln!(
+            "  warn: counterwatch has no rank breakdown for: {}",
+            no_breakdown.join(", ")
         );
     }
 
@@ -699,6 +837,91 @@ mod tests {
             None,
             "a sentence without a number is not a measurement"
         );
+    }
+
+    /// Trimmed from `data/sources/counterwatch-stats-ana.html`, keeping the
+    /// `<!-- -->` markers the framework splits the caption with — that is what
+    /// makes matching a single text node the wrong thing to do.
+    const RANK_TABLE: &str = r#"<html><body><table><caption>Ana<!-- --> win rate and pick rate by rank division</caption>
+        <thead><tr><th>Division</th><th>Win rate</th><th>Pick rate</th><th>Matches</th></tr></thead>
+        <tbody>
+        <tr><td>Bronze</td><td>48.5%</td><td>30.2%</td><td>8,532</td></tr>
+        <tr><td>Silver</td><td>48.3%</td><td>38.4%</td><td>35,923</td></tr>
+        <tr><td>Gold</td><td>48.2%</td><td>48.5%</td><td>60,524</td></tr>
+        <tr><td>Platinum</td><td>48.2%</td><td>60.2%</td><td>68,971</td></tr>
+        <tr><td>Emerald</td><td>49.3%</td><td>65.3%</td><td>1,158</td></tr>
+        <tr><td>Diamond</td><td>48.8%</td><td>69.9%</td><td>33,198</td></tr>
+        <tr><td>Master</td><td>48.4%</td><td>75.6%</td><td>9,830</td></tr>
+        <tr><td>Grandmaster+</td><td>49.6%</td><td>73.2%</td><td>1,891</td></tr>
+        </tbody></table></body></html>"#;
+
+    #[test]
+    fn the_rank_breakdown_is_read_off_the_table_with_its_sample_sizes() {
+        let rows = parse_rank_breakdown(RANK_TABLE).expect("parses");
+
+        assert_eq!(rows.len(), 8, "one row per rung of the ladder");
+        assert_eq!(
+            rows.iter().map(|r| r.rank).collect::<Vec<_>>(),
+            Rank::DIVISIONS.to_vec(),
+            "and in ladder order"
+        );
+        assert_eq!(
+            rows[0],
+            RankRow {
+                rank: Rank::Bronze,
+                win_rate: 48.5,
+                matches: 8_532,
+            }
+        );
+        // The site's own spelling of the top bucket, which folds Champion in.
+        assert_eq!(rows[7].rank, Rank::Grandmaster);
+        assert_eq!(rows[7].matches, 1_891);
+        // The thin bucket the shrinkage weighting exists for.
+        assert_eq!(rows[4].matches, 1_158, "Emerald is thin and must say so");
+    }
+
+    /// A page that has the stats sentence but no breakdown costs the rank
+    /// columns for that hero, not the run.
+    #[test]
+    fn a_page_without_a_rank_table_yields_no_rows_rather_than_an_error() {
+        assert_eq!(
+            parse_rank_breakdown("<html><body><p>nothing here</p></body></html>").expect("parses"),
+            Vec::new()
+        );
+        // A table that is not this one must not be mistaken for it.
+        let other = "<html><table><caption>Map performance</caption><tbody>\
+                     <tr><td>Busan</td><td>47.6%</td><td>1%</td><td>10</td></tr></tbody></table></html>";
+        assert_eq!(parse_rank_breakdown(other).expect("parses"), Vec::new());
+    }
+
+    /// `first_percentage` requires a leading sign, so wiring it up here would
+    /// return an empty breakdown with no error at all — a whole feature silently
+    /// switched off. This pins the two apart.
+    #[test]
+    fn an_unsigned_percentage_needs_its_own_reader() {
+        assert_eq!(trailing_percentage("48.5%"), Some(48.5));
+        assert_eq!(trailing_percentage(" 49.6% "), Some(49.6));
+        assert_eq!(trailing_percentage("48.5"), None, "the sigil is required");
+        assert_eq!(
+            first_percentage("48.5%"),
+            None,
+            "which is exactly why this one cannot be reused"
+        );
+    }
+
+    /// Zero would weigh the row out of the blend by accident rather than on
+    /// purpose, and would look like a measurement of nothing rather than the
+    /// absence of one.
+    #[test]
+    fn a_row_with_an_unreadable_sample_size_is_dropped_rather_than_counted_as_none() {
+        let broken =
+            "<html><table><caption>x win rate and pick rate by rank division</caption><tbody>\
+                      <tr><td>Bronze</td><td>48.5%</td><td>30.2%</td><td>—</td></tr>\
+                      <tr><td>Silver</td><td>48.3%</td><td>38.4%</td><td>35,923</td></tr>\
+                      </tbody></table></html>";
+        let rows = parse_rank_breakdown(broken).expect("parses");
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0].rank, Rank::Silver);
     }
 
     #[test]

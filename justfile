@@ -141,7 +141,9 @@ ingest-counters:
 ingest-synergy:
     cargo run -p overwatch-ingest -- synergy
 
-# Win rates and map affinity only, without re-scraping the whole matrix
+# Win rates, map affinity and the rank slices, without re-scraping the whole
+# matrix. The rank half costs nine extra requests to Blizzard; the counterwatch
+# half comes off the stats pages this step already fetches.
 ingest-strength:
     cargo run -p overwatch-ingest -- strength
 

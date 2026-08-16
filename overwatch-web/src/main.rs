@@ -34,8 +34,8 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use overwatch_core::{
     ban_recommendations, recommend, search_maps, shape_of, threats, Archetype, BanBoard,
-    BanSubject, Board, Capacity, Dataset, Draft, Format, HeroId, MapId, Recommendation, Role, Seat,
-    SessionState, Side, Threat, UserContext,
+    BanSubject, Board, Capacity, Dataset, Draft, Format, HeroId, MapId, Rank, Recommendation, Role,
+    Seat, SessionState, Side, Threat,
 };
 
 use crate::profile::Profile;
@@ -222,6 +222,7 @@ fn App() -> Element {
             role: profile.role,
             locked: None,
             pool: profile.pool(profile.role).iter().collect(),
+            rank: profile.rank,
             connected: true,
         }
     });
@@ -237,6 +238,9 @@ fn App() -> Element {
     // the socket without a page reload.
     let mut connection = use_signal(|| sync::Connection::idle(my_id.clone()));
     let mut qr_open = use_signal(|| false);
+    // Whether the rank sheet is showing. A disclosure, not draft state: it never
+    // survives a pick and nothing but a click on the chip opens it.
+    let mut rank_open = use_signal(|| false);
     let mut join_entry = use_signal(String::new);
 
     let sinks = sync::Sinks {
@@ -288,6 +292,21 @@ fn App() -> Element {
                 p.role = role;
                 p.save(&ds);
             }
+        })
+    };
+
+    // Written to the profile *and* the seat: it is a sticky personal setting,
+    // and it rides on the seat so the rest of the roster can see what bracket
+    // each person is answering for. Nothing about anybody else's scoring moves —
+    // each client reads its own seat.
+    let set_rank = {
+        let ds = dataset.clone();
+        use_callback(move |next: Rank| {
+            rank_open.set(false);
+            me.write().rank = next;
+            let mut p = profile.write();
+            p.rank = next;
+            p.save(&ds);
         })
     };
 
@@ -477,9 +496,7 @@ fn App() -> Element {
     let frame = {
         let profile = profile.read();
 
-        let mut ctx = UserContext::new(profile.role, ds.hero_count());
-        ctx.overrides = profile.overrides.clone();
-        ctx.weights = profile.weights;
+        let ctx = profile.context(ds.hero_count());
 
         let recommendations = recommend(&ds, &draft, &ctx).unwrap_or_default();
         let bans = ban_recommendations(&ds, &draft, &ctx, &team);
@@ -717,6 +734,7 @@ fn App() -> Element {
                 contested,
                 pool_extra: seat.pool.len().saturating_sub(pool_icons.len()),
                 pool: pool_icons,
+                rank: seat.rank,
             }
         })
         .collect();
@@ -845,7 +863,17 @@ fn App() -> Element {
                 generated: dataset.generated.clone(),
                 sync_status: status.read().label(),
                 logged: *logged.read(),
+                rank: profile.read().rank,
+                rank_open: rank_open(),
                 on_role: move |next: Role| set_role.call(next),
+                on_rank: move |next: Rank| set_rank.call(next),
+                // Picking a rung closes the sheet: it is a one-shot choice, not
+                // something to sit comparing, and leaving it open would cover
+                // the board the change was made to affect.
+                on_rank_open: move |_| {
+                    let next = !rank_open();
+                    rank_open.set(next);
+                },
                 // One handler for both halves of the switch, so there is exactly
                 // one place that moves the room, remembers the choice and drops
                 // what the new format has no room for.
@@ -1250,9 +1278,10 @@ fn plain_tile(picked: bool, blocked: bool) -> (TileState, Option<String>) {
 
 /// The hero the "lock" shortcut should snap to: the current best suggestion.
 fn frame_top(dataset: &Dataset, draft: &Draft, profile: &Profile) -> Option<HeroId> {
-    let mut ctx = UserContext::new(profile.role, dataset.hero_count());
-    ctx.overrides = profile.overrides.clone();
-    ctx.weights = profile.weights;
+    // Deliberately the same assembly the pick column uses, not a second copy of
+    // it: this is the hero the lock shortcut takes, and a context that disagreed
+    // would lock one the visible list never put first.
+    let ctx = profile.context(dataset.hero_count());
 
     recommend(dataset, draft, &ctx)
         .ok()?

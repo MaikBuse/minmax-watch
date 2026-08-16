@@ -20,6 +20,7 @@ pub mod format;
 pub mod hero;
 pub mod map;
 pub mod matrix;
+pub mod rank;
 pub mod score;
 pub mod search;
 pub mod session;
@@ -32,6 +33,7 @@ pub use format::{Capacity, Format, Queue, TeamSize};
 pub use hero::{Hero, HeroId, HeroSet, Role, Subrole};
 pub use map::{GameMap, GameMode, MapId, Side};
 pub use matrix::Matrix;
+pub use rank::Rank;
 pub use score::{
     ban_recommendations, recommend, threats, BanBoard, BanCandidate, BanSubject, Defended,
     DefendedTeam, EnemyRoleWeights, Knowledge, Reason, ReasonKind, Recommendation, Threat,

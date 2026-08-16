@@ -558,7 +558,7 @@ impl Drop for Membership {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use overwatch_core::{HeroId, MapId, Role};
+    use overwatch_core::{HeroId, MapId, Rank, Role};
 
     /// Creating and joining in one step, which is what every test that is not
     /// about the create/join split actually wants.
@@ -700,6 +700,7 @@ mod tests {
             Seat {
                 role: Role::Support,
                 pool: vec![HeroId(2), HeroId(7)],
+                rank: Rank::All,
                 ..Seat::new("era")
             },
             "era",

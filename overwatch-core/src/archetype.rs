@@ -287,6 +287,7 @@ mod tests {
     use crate::dataset::DatasetParts;
     use crate::hero::{Hero, Role};
     use crate::matrix::Matrix;
+    use crate::rank::Rank;
 
     const WINSTON: HeroId = HeroId(0);
     const REINHARDT: HeroId = HeroId(1);
@@ -327,6 +328,7 @@ mod tests {
             synergy: Matrix::unrated(n),
             map_affinity: Vec::new(),
             base_strength: vec![0; n],
+            rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
             win_rate: vec![None; n],
             side_lean: vec![0; n],
             // One pure hero per axis, at equal strength, so a team of all three

@@ -11,7 +11,7 @@
 use overwatch_core::{
     ban_recommendations, difficulty_to_value, recommend, threats, Archetype, BanBoard, BanSubject,
     Dataset, DatasetParts, Defended, DefendedTeam, Draft, EnemyRoleWeights, GameMap, GameMode,
-    Hero, HeroId, Knowledge, MapId, Matrix, ReasonKind, Role, Side, UserContext,
+    Hero, HeroId, Knowledge, MapId, Matrix, Rank, ReasonKind, Role, Side, UserContext,
 };
 
 const REINHARDT: HeroId = HeroId(0);
@@ -90,6 +90,7 @@ fn fixture() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: vec![0; n],
         base_strength: vec![0; n],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
         win_rate: vec![None; n],
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
@@ -392,6 +393,7 @@ fn symmetric_fixture() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: Vec::new(),
         base_strength: vec![0; n],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
         win_rate: vec![None; n],
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
@@ -568,6 +570,7 @@ fn sparse_fixture() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: Vec::new(),
         base_strength: vec![0; n],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
         win_rate: vec![None; n],
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
@@ -735,6 +738,7 @@ fn synergy_fixture() -> Dataset {
         synergy,
         map_affinity: Vec::new(),
         base_strength: vec![0; n],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
         win_rate: vec![None; n],
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
@@ -821,6 +825,7 @@ fn side_fixture() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: vec![0; 2 * n],
         base_strength: vec![0; n],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
         win_rate: vec![None; n],
         side_lean,
         shape: vec![[0; 3]; n],
@@ -944,6 +949,7 @@ fn patch_fixture() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: Vec::new(),
         base_strength: vec![-20, 40, -60, 80],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
         win_rate: vec![Some(48.5), Some(52.0), Some(46.0), Some(54.0)],
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
@@ -1489,6 +1495,7 @@ fn shape_fixture() -> Dataset {
         synergy: Matrix::unrated(n),
         map_affinity: Vec::new(),
         base_strength: vec![0; n],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
         win_rate: vec![None; n],
         side_lean: vec![0; n],
         shape: vec![
@@ -1650,4 +1657,246 @@ fn zeroing_the_shape_weight_removes_the_term() {
             rec.score
         );
     }
+}
+
+// --- rank ------------------------------------------------------------------
+
+const R_ANCHOR: HeroId = HeroId(0);
+const R_CLIMBER: HeroId = HeroId(1);
+const R_SMURF: HeroId = HeroId(2);
+
+/// Three tanks whose patch strength says one thing and whose rank curve says the
+/// opposite, so a test can tell which one the scorer read.
+///
+/// Everything else is zeroed for the same reason `shape_fixture` zeroes it: the
+/// claim under test is that rank ranks candidates on its own, and a fixture with
+/// live matchup data could pass it for the wrong reason.
+///
+/// The curves are deliberately not parallel. `climber` is worst at the bottom of
+/// the ladder and best at the top, `smurf` the reverse, and `anchor` never moves
+/// — which is the case the feature must leave alone.
+fn rank_fixture() -> Dataset {
+    let heroes = vec![
+        hero("anchor", "Anchor", Role::Tank),
+        hero("climber", "Climber", Role::Tank),
+        hero("smurf", "Smurf", Role::Tank),
+    ];
+    let n = heroes.len();
+
+    Dataset::new(DatasetParts {
+        heroes,
+        maps: Vec::new(),
+        matchups: Matrix::unrated(n),
+        synergy: Matrix::unrated(n),
+        map_affinity: Vec::new(),
+        // Across the ladder as a whole, this is the order. The spread is 30
+        // rather than the 60 the real data reaches, so that a shift inside the
+        // -100..=100 scale can actually overturn it — the point of the fixture
+        // is the arithmetic, and a gap no legal shift can close would only test
+        // the clamp.
+        base_strength: vec![30, 0, -30],
+        rank_shift: vec![
+            // anchor: the same everywhere. Picking a rung must not move it.
+            [0; Rank::DIVISIONS.len()],
+            // climber: nothing at Bronze, enough by Grandmaster to lead.
+            [0, 10, 20, 40, 60, 80, 90, 100],
+            // smurf: the mirror.
+            [100, 90, 80, 60, 40, 20, 10, 0],
+        ],
+        win_rate: vec![None; n],
+        side_lean: vec![0; n],
+        shape: vec![[0; 3]; n],
+        reasons: vec![String::new(); n * n],
+        generated: "fixture".to_owned(),
+        patch: "fixture".to_owned(),
+    })
+    .expect("fixture is internally consistent")
+}
+
+fn ranked_context(ds: &Dataset, rank: Rank) -> UserContext {
+    let mut ctx = UserContext::new(Role::Tank, ds.hero_count());
+    ctx.rank = rank;
+    ctx
+}
+
+/// The promise the whole feature rests on: somebody who never opens the picker
+/// gets the app they had. Value for value, not merely in the same order.
+#[test]
+fn an_unset_rank_scores_exactly_as_the_all_ranks_column_does() {
+    let ds = rank_fixture();
+    let draft = Draft::new();
+
+    // A context built the way every caller builds one, against a dataset where
+    // every hero has a large rank shift waiting to be applied.
+    let recs = recommend(&ds, &draft, &UserContext::new(Role::Tank, ds.hero_count()))
+        .expect("scoring succeeds");
+
+    for rec in &recs {
+        let expected = 0.15 * f32::from(ds.base_strength(rec.hero)) / 100.0;
+        assert!(
+            (rec.score - expected).abs() < 1e-6,
+            "{:?} scored {} rather than its all-ranks strength {expected}",
+            rec.hero,
+            rec.score
+        );
+        assert!(
+            !rec.reasons
+                .iter()
+                .any(|reason| matches!(reason.kind, ReasonKind::RankFit(_))),
+            "an unset rank must not put a rung on the panel"
+        );
+    }
+}
+
+/// And the other half: picking a rung has to actually change the answer.
+#[test]
+fn choosing_a_division_reorders_the_list_it_is_about() {
+    let ds = rank_fixture();
+    let draft = Draft::new();
+
+    let ladder = recommend(&ds, &draft, &ranked_context(&ds, Rank::All)).expect("scores");
+    assert_eq!(rank_of(&ladder, R_ANCHOR), 0, "60 leads across the ladder");
+    assert_eq!(rank_of(&ladder, R_SMURF), 2);
+
+    let bronze = recommend(&ds, &draft, &ranked_context(&ds, Rank::Bronze)).expect("scores");
+    assert_eq!(
+        rank_of(&bronze, R_SMURF),
+        0,
+        "a hero that only works low down leads at the bottom of the ladder"
+    );
+
+    let grandmaster =
+        recommend(&ds, &draft, &ranked_context(&ds, Rank::Grandmaster)).expect("scores");
+    assert_eq!(
+        rank_of(&grandmaster, R_CLIMBER),
+        0,
+        "and the one that only works high up leads at the top"
+    );
+}
+
+/// Rank reaches exactly one term. Nothing else in the scorer is rank-aware,
+/// because no source publishes matchups or duos per rung — so if this ever fails,
+/// something has claimed evidence that does not exist.
+#[test]
+fn zeroing_the_rank_weight_removes_the_term() {
+    let ds = rank_fixture();
+    let draft = Draft::new();
+
+    let mut ctx = ranked_context(&ds, Rank::Grandmaster);
+    ctx.weights.rank = 0.0;
+
+    let silenced = recommend(&ds, &draft, &ctx).expect("scores");
+    let unset = recommend(&ds, &draft, &ranked_context(&ds, Rank::All)).expect("scores");
+
+    for (a, b) in silenced.iter().zip(&unset) {
+        assert_eq!(a.hero, b.hero);
+        assert!(
+            (a.score - b.score).abs() < 1e-6,
+            "{:?} scored {} with the term off and {} at all ranks",
+            a.hero,
+            a.score,
+            b.score
+        );
+    }
+}
+
+/// At equal weights the two terms sum to exactly the rank-sliced strength. That
+/// is what lets `Weights::rank` default to `Weights::base` without inventing a
+/// number: the out-of-the-box behaviour is "read the column for the rung you
+/// picked", and the knob is there for anybody who wants to argue with it.
+#[test]
+fn the_two_patch_terms_decompose_the_rank_sliced_strength_rather_than_double_counting() {
+    let ds = rank_fixture();
+    let draft = Draft::new();
+    let ctx = ranked_context(&ds, Rank::Diamond);
+    assert_eq!(
+        ctx.weights.rank, ctx.weights.base,
+        "the default this identity depends on"
+    );
+
+    for rec in recommend(&ds, &draft, &ctx).expect("scores") {
+        let sliced = f32::from(ds.base_strength_at(Rank::Diamond, rec.hero)) / 100.0;
+        assert!(
+            (rec.score - ctx.weights.base * sliced).abs() < 1e-6,
+            "{:?} scored {} rather than the sliced strength {sliced}",
+            rec.hero,
+            rec.score
+        );
+    }
+}
+
+/// The rung has to travel with the reason, because the panel is the only place
+/// on screen that says which ladder the number came from.
+#[test]
+fn the_rank_reason_names_the_division_it_was_read_from() {
+    let ds = rank_fixture();
+    let draft = Draft::new();
+
+    let recs = recommend(&ds, &draft, &ranked_context(&ds, Rank::Master)).expect("scores");
+    let climber = recs
+        .iter()
+        .find(|rec| rec.hero == R_CLIMBER)
+        .expect("in the list");
+
+    assert!(
+        climber
+            .reasons
+            .iter()
+            .any(|reason| reason.kind == ReasonKind::RankFit(Rank::Master)),
+        "got {:?}",
+        climber.reasons
+    );
+}
+
+/// A hero the sources agree is the same everywhere gets no line, the same way a
+/// hero with no map affinity gets no map line. A zero term is a real reading and
+/// "suits master right now" is not what it says.
+#[test]
+fn a_hero_with_no_rank_effect_is_left_out_of_the_panel_rather_than_explained() {
+    let ds = rank_fixture();
+    let draft = Draft::new();
+
+    let recs = recommend(&ds, &draft, &ranked_context(&ds, Rank::Master)).expect("scores");
+    let anchor = recs
+        .iter()
+        .find(|rec| rec.hero == R_ANCHOR)
+        .expect("in the list");
+
+    assert!(
+        !anchor
+            .reasons
+            .iter()
+            .any(|reason| matches!(reason.kind, ReasonKind::RankFit(_))),
+        "got {:?}",
+        anchor.reasons
+    );
+    // But it is still ranked on its all-ranks strength, which is the point of a
+    // zero shift rather than a missing one.
+    assert!(anchor.score > 0.0);
+}
+
+/// The patch rung of the ban list argues "these are the heroes winning right
+/// now", and once you have said which ladder you are on, "right now" means
+/// there. Two panels on one screen must not read patch strength from two
+/// different populations.
+#[test]
+fn the_ban_lists_patch_rung_ranks_on_the_bracket_you_chose() {
+    let ds = rank_fixture();
+    let draft = Draft::new();
+    let team = DefendedTeam::default();
+
+    let ladder = ban_recommendations(&ds, &draft, &ranked_context(&ds, Rank::All), &team);
+    assert_eq!(ladder.subject, BanSubject::Patch);
+    assert_eq!(
+        ban_rank_of(&ladder, R_ANCHOR),
+        Some(0),
+        "across the ladder the strongest hero leads the ban list"
+    );
+
+    let bronze = ban_recommendations(&ds, &draft, &ranked_context(&ds, Rank::Bronze), &team);
+    assert_eq!(
+        ban_rank_of(&bronze, R_SMURF),
+        Some(0),
+        "and at Bronze it is the one that is strongest at Bronze"
+    );
 }

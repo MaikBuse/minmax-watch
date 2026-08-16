@@ -5,6 +5,7 @@
 //! field the loader does not understand, it fails to compile rather than
 //! silently dropping data.
 
+use overwatch_core::Rank;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -196,6 +197,108 @@ pub struct StrengthEntry {
     pub cpgg: Option<f32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cwatch: Option<f32>,
+}
+
+/// How far each hero's strength moves from the ladder average on each rung of
+/// it, on the same -100..=100 scale and against the same win-rate band as
+/// [`StrengthEntry::value`].
+///
+/// A separate file from `strength.toml` rather than eight more columns on it,
+/// for the same reason `map_affinity.toml` is separate: `stats::build` produces
+/// both from one fetch and the split is by what the number means. It also buys
+/// a failure mode — half of this file is reachable only through Blizzard, and a
+/// run that could not reach it leaves the committed file alone instead of
+/// needing merge logic to keep a failed fetch from blanking eight columns.
+///
+/// **Only strength is sliced by rank**, and it is the one signal that can be:
+/// neither source publishes per-rung matchups or duos. See [`overwatch_core::Rank`].
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct StrengthByRankFile {
+    #[serde(default)]
+    pub generated: String,
+    #[serde(default, rename = "strength")]
+    pub entries: Vec<StrengthByRankEntry>,
+}
+
+/// One hero's whole rank curve, as a shift away from its all-ranks strength.
+///
+/// Columns rather than one row per (hero, rung). The diff review is the curation
+/// step, and a spurious Master-only spike is visible in a column of eight numbers
+/// and invisible when those eight are thirty lines apart. It is also a third of
+/// the bytes, which the wasm bundle carries.
+///
+/// A shift rather than an absolute strength because the scorer weights it
+/// separately from the all-ranks value — the two terms decompose rather than
+/// double-count. It also keeps `strength.toml` byte-shaped exactly as it was, so
+/// the diff of this feature is one new file and nothing else moved.
+///
+/// Every column is optional and skipped when absent, and absent is **not** zero
+/// in the file: zero is a real and common reading meaning "no rank effect
+/// measured", while an omitted column means no source covered that rung. Same
+/// distinction [`overwatch_core::Matrix::rating`] draws by returning `Option`.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct StrengthByRankEntry {
+    pub hero: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bronze: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub silver: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gold: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub platinum: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub emerald: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diamond: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub master: Option<i8>,
+    /// Grandmaster and Champion together, which is the finest slice either
+    /// source publishes. Named without the `+` both sites display, because this
+    /// is a TOML key — see [`overwatch_core::Rank::label`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grandmaster: Option<i8>,
+}
+
+impl StrengthByRankEntry {
+    /// The column for one rung, so the loader and the ingest walk
+    /// [`Rank::DIVISIONS`] instead of naming eight fields at every site. Adding a
+    /// rung to the ladder is then a non-exhaustive-match error here rather than a
+    /// column nothing reads.
+    ///
+    /// [`Rank::All`] has no column of its own — it is the value every column is
+    /// measured against — so it reads as no shift.
+    pub fn value_for(&self, rank: Rank) -> Option<i8> {
+        match rank {
+            Rank::All => None,
+            Rank::Bronze => self.bronze,
+            Rank::Silver => self.silver,
+            Rank::Gold => self.gold,
+            Rank::Platinum => self.platinum,
+            Rank::Emerald => self.emerald,
+            Rank::Diamond => self.diamond,
+            Rank::Master => self.master,
+            Rank::Grandmaster => self.grandmaster,
+        }
+    }
+
+    /// The mirror of [`Self::value_for`], so the ingest builds a row by walking
+    /// the same list the loader reads it with.
+    pub fn set(&mut self, rank: Rank, value: Option<i8>) {
+        match rank {
+            // Not an error and not a panic: this crate is on the wasm path and
+            // the ingest walks `Rank::DIVISIONS`, which never yields it.
+            Rank::All => {}
+            Rank::Bronze => self.bronze = value,
+            Rank::Silver => self.silver = value,
+            Rank::Gold => self.gold = value,
+            Rank::Platinum => self.platinum = value,
+            Rank::Emerald => self.emerald = value,
+            Rank::Diamond => self.diamond = value,
+            Rank::Master => self.master = value,
+            Rank::Grandmaster => self.grandmaster = value,
+        }
+    }
 }
 
 /// Hand-curated attack/defend leanings. No source publishes these, so like

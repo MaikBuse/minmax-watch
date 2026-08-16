@@ -7,7 +7,7 @@
 
 use overwatch_core::{
     ban_recommendations, recommend, threats, Archetype, BanSubject, Defended, DefendedTeam, Draft,
-    HeroId, Knowledge, MapId, ReasonKind, Role, Subrole, UserContext,
+    HeroId, Knowledge, MapId, Rank, ReasonKind, Role, Subrole, UserContext,
 };
 use overwatch_data::load;
 use overwatch_data::schema::MatchupsFile;
@@ -627,5 +627,162 @@ fn the_ban_list_answers_for_a_pool_before_anyone_picks() {
     assert!(
         locked.candidates.iter().any(|c| c.hero == hero("pharah")),
         "Reinhardt cannot touch a hero in the air"
+    );
+}
+
+/// The `the_pair_synergies_are_populated` lesson, applied to the newest file.
+///
+/// Every way of getting the rank fetch wrong produces a file that parses, loads
+/// and scores: a cache key without its tier serves one response nine times, a
+/// source that quietly falls back to its aggregate does the same, and a smoothing
+/// bug that averages everything to the mean does it too. All three ship eight
+/// identical columns, and only a test that looks for *variation* catches any of
+/// them. Coverage counts alone would pass every one.
+#[test]
+fn the_rank_shifts_are_populated_and_actually_differ_from_one_another() {
+    let ds = load().expect("committed data must load");
+    let file: overwatch_data::schema::StrengthByRankFile =
+        toml::from_str(overwatch_data::STRENGTH_BY_RANK_TOML)
+            .expect("committed rank slices must parse");
+
+    assert!(
+        file.entries.len() * 10 >= ds.hero_count() * 8,
+        "only {} of {} heroes have a rank row",
+        file.entries.len(),
+        ds.hero_count()
+    );
+
+    let cells = file.entries.len() * Rank::DIVISIONS.len();
+    let present: usize = file
+        .entries
+        .iter()
+        .map(|entry| {
+            Rank::DIVISIONS
+                .iter()
+                .filter(|rank| entry.value_for(**rank).is_some())
+                .count()
+        })
+        .sum();
+    assert!(
+        present * 10 >= cells * 9,
+        "only {present} of {cells} rank cells are filled"
+    );
+
+    // The assertion that matters. A file where every hero reads the same at
+    // every rung is a rank picker wired to nothing.
+    let varying = file
+        .entries
+        .iter()
+        .filter(|entry| {
+            let mut columns = Rank::DIVISIONS.iter().map(|rank| entry.value_for(*rank));
+            let first = columns.next().flatten();
+            columns.any(|value| value != first)
+        })
+        .count();
+    assert!(
+        varying * 2 >= ds.hero_count(),
+        "only {varying} of {} heroes move across the ladder at all - \
+         the rank columns are probably all one tier's numbers",
+        ds.hero_count()
+    );
+}
+
+/// A rank axis stored backwards passes every count and every coverage check, and
+/// would quietly hand every player the advice for the far end of the ladder.
+/// These are the two largest measured swings on the committed data, pinned by
+/// direction and a wide margin rather than by magnitude.
+///
+/// Like the named matchup pins above, these are claims about live heroes and a
+/// balance patch may well come for them. A failure here is a prompt to go and
+/// look, not necessarily a bug.
+#[test]
+fn the_low_rank_heroes_and_the_high_rank_heroes_land_on_the_right_ends_of_the_ladder() {
+    let ds = load().expect("committed data must load");
+
+    // Reinhardt is the archetypal low-rank tank: he shepherds a Bronze lobby and
+    // gets walked around by a coordinated one.
+    let reinhardt = ds.hero_by_key("reinhardt").expect("on the roster");
+    assert!(
+        ds.rank_shift(Rank::Bronze, reinhardt) > ds.rank_shift(Rank::Grandmaster, reinhardt) + 30,
+        "Reinhardt's rank curve has lost its direction: bronze {} vs grandmaster {}",
+        ds.rank_shift(Rank::Bronze, reinhardt),
+        ds.rank_shift(Rank::Grandmaster, reinhardt)
+    );
+
+    // Ashe is the mirror: a hitscan whose value is all in whether the shots land.
+    let ashe = ds.hero_by_key("ashe").expect("on the roster");
+    assert!(
+        ds.rank_shift(Rank::Grandmaster, ashe) > ds.rank_shift(Rank::Bronze, ashe) + 30,
+        "Ashe's rank curve has lost its direction: bronze {} vs grandmaster {}",
+        ds.rank_shift(Rank::Bronze, ashe),
+        ds.rank_shift(Rank::Grandmaster, ashe)
+    );
+}
+
+/// The aggregate is not a rung, and reading it must be exactly what this app did
+/// before the picker existed. If this ever fails, everybody who never opens the
+/// control has silently been given somebody else's answer.
+#[test]
+fn the_whole_ladder_reads_as_the_strength_file_it_has_always_read() {
+    let ds = load().expect("committed data must load");
+
+    for index in 0..ds.hero_count() {
+        let hero = HeroId(index as u16);
+        assert_eq!(ds.rank_shift(Rank::All, hero), 0);
+        assert_eq!(ds.base_strength_at(Rank::All, hero), ds.base_strength(hero));
+    }
+}
+
+/// The guard that stands in for widening the win-rate band.
+///
+/// `WIN_RATE_FLOOR`/`WIN_RATE_CEILING` assert that ±6 points is the whole
+/// meaningful range of a hero win rate, and the rank slices are the first thing
+/// that pushes on it — a hero already at the top of the band cannot be reported
+/// as better still at the rung that suits it. A handful of saturated cells is the
+/// scale honestly saying "as far as it goes"; a lot of them means the band has
+/// stopped describing the data, and the band is then the thing to argue about
+/// rather than this test.
+#[test]
+fn almost_none_of_the_rank_shifts_saturate_the_scale() {
+    let ds = load().expect("committed data must load");
+
+    let saturated = (0..ds.hero_count())
+        .flat_map(|index| Rank::DIVISIONS.map(|rank| ds.rank_shift(rank, HeroId(index as u16))))
+        .filter(|value| value.abs() == 100)
+        .count();
+    let cells = ds.hero_count() * Rank::DIVISIONS.len();
+
+    assert!(
+        saturated * 10 <= cells,
+        "{saturated} of {cells} rank cells are pinned at the rails - \
+         the 44..56 win-rate band no longer describes the data"
+    );
+}
+
+/// The one place the rank picker changes a number a reader can check: the ban
+/// list's patch rung. It has to move, or the picker is decorative there.
+#[test]
+fn the_ban_lists_patch_rung_moves_with_the_rank() {
+    let ds = load().expect("committed data must load");
+    let draft = Draft::new();
+    let team = DefendedTeam::default();
+
+    let at = |rank: Rank| {
+        let mut ctx = UserContext::new(Role::Tank, ds.hero_count());
+        ctx.rank = rank;
+        let board = ban_recommendations(&ds, &draft, &ctx, &team);
+        assert_eq!(board.subject, BanSubject::Patch);
+        board
+            .candidates
+            .iter()
+            .take(5)
+            .map(|c| c.hero)
+            .collect::<Vec<_>>()
+    };
+
+    assert_ne!(
+        at(Rank::Bronze),
+        at(Rank::Grandmaster),
+        "the same five heroes lead the patch rung at both ends of the ladder"
     );
 }

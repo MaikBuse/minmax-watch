@@ -24,6 +24,7 @@ use crate::draft::{capacity_after, fit_to_format, role_of, Draft};
 use crate::format::{Capacity, Format};
 use crate::hero::{HeroId, Role};
 use crate::map::{MapId, Side};
+use crate::rank::Rank;
 use crate::score::{Defended, DefendedTeam, Knowledge};
 
 /// The half of the draft that everyone in a session shares.
@@ -208,6 +209,22 @@ pub struct Seat {
     /// said".
     #[serde(default)]
     pub pool: Vec<HeroId>,
+    /// The rung of the ladder they read patch strength on.
+    ///
+    /// Shared for the same reason `pool` is: it is theirs to set, but it is
+    /// something the rest of the roster benefits from seeing. A five-stack that
+    /// spans Gold to Diamond is answering a different draft than one that does
+    /// not, and the person typing the enemy comp cannot know that unless the
+    /// roster says so.
+    ///
+    /// It changes nothing about anybody else's scoring. Each client reads its
+    /// *own* seat's rank — `SessionState` carries no shared one, because five
+    /// people in one lobby genuinely can be five different rungs.
+    ///
+    /// `default` is `Rank::All`, which is both the honest reading of a seat that
+    /// has not said and what this app scored on before the picker existed.
+    #[serde(default)]
+    pub rank: Rank,
     /// Whether their socket is currently attached. A seat outlives its
     /// connection so that a reload does not empty a slot mid-draft.
     #[serde(default)]
@@ -584,6 +601,7 @@ mod tests {
             role,
             locked,
             pool: Vec::new(),
+            rank: Rank::All,
             connected: true,
         }
     }
@@ -593,6 +611,7 @@ mod tests {
     fn with_pool(id: &str, role: Role, pool: &[HeroId]) -> Seat {
         Seat {
             pool: pool.to_vec(),
+            rank: Rank::All,
             ..seated(id, role, None)
         }
     }

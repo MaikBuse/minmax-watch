@@ -38,6 +38,9 @@ pub enum CoreError {
     #[error("{0:?} is not a role that can be picked in this app")]
     UnknownRole(String),
 
+    #[error("{0:?} is not a rung of the competitive ladder")]
+    UnknownRank(String),
+
     #[error("{0:?} is not a sub-role this app knows")]
     UnknownSubrole(String),
 

@@ -33,7 +33,8 @@ shipped weights, all of them adjustable per user:
 | `shape` | 0.25 | dive / poke / brawl against the enemy comp's shape |
 | `side` | 0.20 | the attack/defend lean, on the maps that have sides |
 | `synergy` | 0.20 | rated duos with the allies already locked |
-| `base` | 0.15 | current patch strength, from win rate |
+| `base` | 0.15 | current patch strength, from win rate across the whole ladder |
+| `rank` | 0.15 | how far that moves at the rung you selected, if you selected one |
 
 Comfort sitting second is deliberate: a hero you play well but is countered
 usually beats the "correct" pick you cannot play.
@@ -73,7 +74,8 @@ request to score anything.
 | --- | --- |
 | [OverFast API](https://overfast-api.tekrop.fr) | the hero roster, the map list, and the portrait/screenshot URLs |
 | [counterpickgg](https://counterpickgg.com) | hero matchups with written rationale, win and pick rates, best maps |
-| [counterwatch](https://www.counterwatch.gg) | hero matchups, win rates, best duos |
+| [counterwatch](https://www.counterwatch.gg) | hero matchups, win rates, best duos, win rate per rank division |
+| [Blizzard hero rates](https://overwatch.blizzard.com/en-us/rates/) | first-party win rate per rank division |
 | [overpicker](https://overpicker.com) | recorded for comparison, **deliberately not used** |
 
 Matchups are a weighted average of **counterpickgg 0.75 and counterwatch 0.25**,
@@ -89,6 +91,27 @@ counterpickgg and −0.07 against counterwatch, in both orientations. Two source
 that independently agree with each other and disagree with a third is evidence
 about the third. Its numbers are still recorded in every row so the judgement
 stays visible and reversible.
+
+**Rank slices only exist for win rate.** [`data/strength_by_rank.toml`](data/strength_by_rank.toml)
+holds, per hero, how far its strength moves from the ladder average on each of
+the eight divisions — a median of 4.7 win-rate points between Bronze and
+Grandmaster, against an all-ranks between-hero band only 10.7 points wide.
+Nothing else is sliced that way, because nothing else is published that way:
+counterwatch's rank filter is not URL-addressable and its counter and duo pages
+carry no per-division breakdown, and Blizzard publishes one row per hero and
+never a pair. So picking a rank changes which patch-strength number is read and
+changes nothing about matchups, synergies, maps or sides.
+
+The two rank sources are combined as a shift measured *within each source* —
+Blizzard against its own all-ranks table, counterwatch against the figure on the
+same page — never as a difference across the two, which would be part rank effect
+and part instrument disagreement. counterwatch's contribution is weighted by
+`n/(n+400)`, its own published shrinkage constant, so the divisions it barely
+measured (a median of 263 tracked matches at Emerald against 18,536 at Gold)
+count for what they measured and not for the prior they were shrunk toward. The
+result is smoothed once across adjacent divisions with a `[1, 2, 1]` kernel,
+which leaves a straight trend exactly where it was and cancels a one-division
+spike outright.
 
 Every entry in [`data/matchups.toml`](data/matchups.toml) carries the per-source
 values it was blended from, so any number can be traced back to the site that

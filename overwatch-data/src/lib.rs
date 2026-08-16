@@ -12,13 +12,13 @@ pub mod schema;
 use std::collections::HashMap;
 
 use overwatch_core::{
-    Dataset, DatasetParts, GameMap, GameMode, Hero, HeroId, MapId, Matrix, Role, Subrole,
+    Dataset, DatasetParts, GameMap, GameMode, Hero, HeroId, MapId, Matrix, Rank, Role, Subrole,
 };
 use thiserror::Error;
 
 use crate::schema::{
-    ArchetypeFile, HeroesFile, MapAffinityFile, MapsFile, MatchupsFile, SideFile, StrengthFile,
-    SynergyFile,
+    ArchetypeFile, HeroesFile, MapAffinityFile, MapsFile, MatchupsFile, SideFile,
+    StrengthByRankFile, StrengthFile, SynergyFile,
 };
 
 pub const HEROES_TOML: &str = include_str!("../../data/heroes.toml");
@@ -27,6 +27,7 @@ pub const MATCHUPS_TOML: &str = include_str!("../../data/matchups.toml");
 pub const MAP_AFFINITY_TOML: &str = include_str!("../../data/map_affinity.toml");
 pub const SYNERGY_TOML: &str = include_str!("../../data/synergy.toml");
 pub const STRENGTH_TOML: &str = include_str!("../../data/strength.toml");
+pub const STRENGTH_BY_RANK_TOML: &str = include_str!("../../data/strength_by_rank.toml");
 pub const SIDE_TOML: &str = include_str!("../../data/side.toml");
 pub const ARCHETYPE_TOML: &str = include_str!("../../data/archetype.toml");
 
@@ -68,12 +69,17 @@ pub fn load() -> Result<Dataset, DataError> {
         map_affinity: MAP_AFFINITY_TOML,
         synergy: SYNERGY_TOML,
         strength: STRENGTH_TOML,
+        strength_by_rank: STRENGTH_BY_RANK_TOML,
         side: SIDE_TOML,
         archetype: ARCHETYPE_TOML,
     })
 }
 
-/// The eight TOML documents that make up a dataset, as raw text.
+/// The nine TOML documents that make up a dataset, as raw text.
+///
+/// Deliberately has no `Default`: adding a document here is meant to break every
+/// construction site so each one is looked at, rather than silently defaulting a
+/// new file to the empty string and shipping a term that multiplies nothing.
 #[derive(Debug, Clone, Copy)]
 pub struct Sources<'a> {
     pub heroes: &'a str,
@@ -82,6 +88,7 @@ pub struct Sources<'a> {
     pub map_affinity: &'a str,
     pub synergy: &'a str,
     pub strength: &'a str,
+    pub strength_by_rank: &'a str,
     pub side: &'a str,
     pub archetype: &'a str,
 }
@@ -93,6 +100,7 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     let affinity_file: MapAffinityFile = parse("map_affinity.toml", sources.map_affinity)?;
     let synergy_file: SynergyFile = parse("synergy.toml", sources.synergy)?;
     let strength_file: StrengthFile = parse("strength.toml", sources.strength)?;
+    let rank_file: StrengthByRankFile = parse("strength_by_rank.toml", sources.strength_by_rank)?;
     let side_file: SideFile = parse("side.toml", sources.side)?;
     let archetype_file: ArchetypeFile = parse("archetype.toml", sources.archetype)?;
 
@@ -202,6 +210,27 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
         }
     }
 
+    // --- rank slices ------------------------------------------------------
+    // Row per hero, one column per rung in `Rank::DIVISIONS` order.
+    //
+    // A rung the file omits reads as zero, unlike the `Option` columns in the
+    // file itself. The two say the same thing once they get here: the file
+    // distinguishes "no source covered this rung" from "measured, and it makes
+    // no difference", but the scorer has one answer for both — apply no shift.
+    // Zero is that answer, not a stand-in for a missing one.
+    let mut rank_shift = vec![[0i8; Rank::DIVISIONS.len()]; n];
+    for entry in &rank_file.entries {
+        let hero = hero_id("strength_by_rank.toml", &entry.hero)?;
+        let Some(row) = rank_shift.get_mut(hero.index()) else {
+            continue;
+        };
+        for (slot, rank) in row.iter_mut().zip(Rank::DIVISIONS) {
+            if let Some(value) = entry.value_for(rank) {
+                *slot = value;
+            }
+        }
+    }
+
     // --- attack/defend lean -----------------------------------------------
     // Absent from the file means zero, which is the honest answer for most of
     // the roster rather than a gap to be filled.
@@ -232,6 +261,7 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
         synergy,
         map_affinity,
         base_strength,
+        rank_shift,
         win_rate,
         side_lean,
         shape,
@@ -275,6 +305,7 @@ mod tests {
             map_affinity: "",
             synergy: "",
             strength: "",
+            strength_by_rank: "",
             side: "",
             archetype: "",
         };
@@ -307,6 +338,7 @@ mod tests {
             map_affinity: "",
             synergy: "",
             strength: "",
+            strength_by_rank: "",
             side: "",
             archetype: "",
         };
@@ -340,6 +372,7 @@ mod tests {
                 value = 40
             "#,
             strength: "",
+            strength_by_rank: "",
             side: "",
             archetype: "",
         };

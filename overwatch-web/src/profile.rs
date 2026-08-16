@@ -5,7 +5,7 @@
 //! sticky. The map is sticky too, but only within a session — it is cleared
 //! deliberately rather than carried into the next match on a different map.
 
-use overwatch_core::{Dataset, Format, HeroSet, Role, Weights};
+use overwatch_core::{Dataset, Format, HeroSet, Rank, Role, UserContext, Weights};
 use serde::{Deserialize, Serialize};
 
 const STORAGE_KEY: &str = "minmax.profile";
@@ -41,6 +41,19 @@ pub struct StoredProfile {
     /// them.
     #[serde(default)]
     pub format: Option<Format>,
+    /// The rung of the ladder you last read patch strength on.
+    ///
+    /// A key rather than the typed value, unlike `format` above, and the reason
+    /// is that the divisions are not a closed set the way `TeamSize` and `Queue`
+    /// are: Blizzard inserted Emerald between Platinum and Diamond and added
+    /// Champion above Grandmaster. An unknown enum variant is a hard serde error
+    /// on the whole struct, and `Profile::load` swallows that into a default —
+    /// so a rung a newer build wrote would cost an older one (a second machine,
+    /// a stale service worker) that person's entire pool, weights and session.
+    /// A string parsed with `Rank::parse` costs them the setting and nothing
+    /// else.
+    #[serde(default)]
+    pub rank: Option<String>,
     /// Comfort adjustments, keyed by hero.
     #[serde(default)]
     pub overrides: Vec<(String, i8)>,
@@ -82,6 +95,9 @@ pub struct Profile {
     /// filtering one hid heroes on exactly the draft that called for them. The
     /// comfort overrides remain the lever for "rank this hero higher".
     pub pools: [HeroSet; Role::ALL.len()],
+    /// Which rung of the ladder to read patch strength on. Sticky like the role
+    /// and the format — you play an evening in one bracket.
+    pub rank: Rank,
     pub overrides: Vec<i8>,
     pub weights: Weights,
     /// What the roster calls you. Empty until you say otherwise, at which point
@@ -98,11 +114,30 @@ impl Profile {
             role: Role::Tank,
             format: Format::default(),
             pools: [HeroSet::empty(); Role::ALL.len()],
+            rank: Rank::All,
             overrides: vec![0; hero_count],
             weights: Weights::default(),
             name: String::new(),
             session: None,
         }
+    }
+
+    /// The scoring context this profile describes.
+    ///
+    /// Assembled here rather than at the call sites because there are two of
+    /// them — the pick column and `frame_top`, the hero the lock-top shortcut
+    /// takes — and a context that differs between them locks a hero the list
+    /// never showed at the top. Every field the scorer reads off a profile is
+    /// gathered in one place so a new one cannot reach only half the screen.
+    ///
+    /// After this existed, `UserContext::new` has no other caller in this crate.
+    /// That is the invariant, not a coincidence.
+    pub fn context(&self, hero_count: usize) -> UserContext {
+        let mut ctx = UserContext::new(self.role, hero_count);
+        ctx.rank = self.rank;
+        ctx.overrides = self.overrides.clone();
+        ctx.weights = self.weights;
+        ctx
     }
 
     pub fn pool(&self, role: Role) -> HeroSet {
@@ -123,6 +158,14 @@ impl Profile {
         // everyone: 5v5 role queue, which is the only shape the app had.
         if let Some(format) = stored.format {
             profile.format = format;
+        }
+        // A profile written before ranks existed, or one naming a division this
+        // build has never heard of, reads as `Rank::All` — the whole ladder,
+        // which is what this app scored on before the picker existed. So it
+        // opens exactly where it left you, and a rung from the future costs the
+        // setting rather than the profile.
+        if let Some(rank) = stored.rank.as_deref().and_then(|r| Rank::parse(r).ok()) {
+            profile.rank = rank;
         }
         // Unknown keys are dropped rather than treated as an error: a hero
         // removed from the roster should cost you that entry, not your profile.
@@ -172,6 +215,7 @@ impl Profile {
         StoredProfile {
             role: Some(self.role.as_str().to_owned()),
             format: Some(self.format),
+            rank: Some(self.rank.as_str().to_owned()),
             tank_pool: keys(&self.pool(Role::Tank)),
             damage_pool: keys(&self.pool(Role::Damage)),
             support_pool: keys(&self.pool(Role::Support)),
@@ -293,6 +337,15 @@ mod tests {
             .expect("the weights survive the dropped field");
         assert_eq!(weights.personal, 0.6);
         assert_eq!(weights.swap_threshold, 0.15);
+        // The other half of the same rule, and the more dangerous half: a weight
+        // this build has *added* has to arrive at its real default rather than
+        // at serde's 0.0 for `f32`. This blob predates the rank term entirely,
+        // and a 0.0 here would ship the rank picker wired to nothing for
+        // everybody who already has a profile — which is everybody who has used
+        // the app. See `default_rank` in core.
+        assert_eq!(weights.rank, Weights::default().rank);
+        assert!(weights.rank > 0.0);
+        assert_eq!(weights.shape, Weights::default().shape);
     }
 
     /// The two-person build called this field `room` and defaulted it to "us",
@@ -369,6 +422,83 @@ mod tests {
         );
     }
 
+    /// Ranks arrived long after people had profiles. One written without the
+    /// field has to open where it left them — the whole ladder, which is what
+    /// this app scored on before the picker existed.
+    #[test]
+    fn a_profile_written_before_ranks_existed_reads_as_all_ranks() {
+        let old = r#"{"role": "support", "support_pool": ["ana"]}"#;
+
+        let stored: StoredProfile = serde_json::from_str(old).expect("the rank is optional");
+        assert_eq!(stored.rank, None);
+
+        let profile = Profile::from_stored(stored, &fixture());
+        assert_eq!(profile.rank, Rank::All);
+        assert_eq!(
+            profile.pool(Role::Support).len(),
+            1,
+            "and the rest of it is untouched"
+        );
+    }
+
+    #[test]
+    fn the_rank_you_chose_is_the_one_you_come_back_to() {
+        let dataset = fixture();
+        let mut profile = Profile::empty(dataset.hero_count());
+        profile.rank = Rank::Master;
+
+        let raw = serde_json::to_string(&profile.to_stored(&dataset)).expect("serialises");
+        assert!(
+            raw.contains(r#""rank":"master""#),
+            "the stable key is what goes on disk, got {raw}"
+        );
+
+        let stored: StoredProfile = serde_json::from_str(&raw).expect("round trips");
+        assert_eq!(Profile::from_stored(stored, &dataset).rank, Rank::Master);
+    }
+
+    /// Why the rank is stored as a key rather than as the typed value the format
+    /// beside it uses. Blizzard has inserted a division before (Emerald) and
+    /// added one above (Champion); an unknown enum variant is a hard serde error
+    /// on the whole struct, and `load` swallows that into a default — so a rung
+    /// written by a newer build would cost an older one this person's pool,
+    /// weights and session rather than just the setting.
+    #[test]
+    fn a_profile_naming_a_division_this_build_does_not_know_keeps_the_rest_of_it() {
+        let future = r#"{"rank": "transcendent", "role": "support", "support_pool": ["ana"]}"#;
+
+        let stored: StoredProfile = serde_json::from_str(future).expect("still parses");
+        let profile = Profile::from_stored(stored, &fixture());
+
+        assert_eq!(profile.rank, Rank::All, "the setting falls back");
+        assert_eq!(profile.role, Role::Support, "and nothing else is lost");
+        assert_eq!(profile.pool(Role::Support).len(), 1);
+    }
+
+    /// The guard against the pick column and the lock-top shortcut drifting
+    /// apart: they build their context from this one function, so every field
+    /// the scorer reads has to arrive through it.
+    #[test]
+    fn the_scoring_context_carries_every_profile_field_the_scorer_reads() {
+        let dataset = fixture();
+        let mut profile = Profile::empty(dataset.hero_count());
+        profile.role = Role::Support;
+        profile.rank = Rank::Diamond;
+        profile.weights.rank = 0.42;
+        profile.overrides[0] = 55;
+
+        let ctx = profile.context(dataset.hero_count());
+        assert_eq!(ctx.role, Role::Support);
+        assert_eq!(ctx.rank, Rank::Diamond);
+        assert_eq!(ctx.weights.rank, 0.42);
+        assert_eq!(ctx.overrides[0], 55);
+        assert_eq!(
+            ctx.overrides.len(),
+            dataset.hero_count(),
+            "recommend() rejects any other length"
+        );
+    }
+
     #[test]
     fn the_format_you_chose_is_the_one_you_come_back_to() {
         let dataset = fixture();
@@ -421,6 +551,7 @@ mod tests {
             synergy: Matrix::unrated(n),
             map_affinity: Vec::new(),
             base_strength: vec![0; n],
+            rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
             win_rate: vec![None; n],
             side_lean: vec![0; n],
             shape: vec![[0; 3]; n],

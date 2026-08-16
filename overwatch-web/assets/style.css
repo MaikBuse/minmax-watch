@@ -1285,12 +1285,16 @@ body {
    the map, so it is asked where the map is picked. Only rendered on the payload
    modes, so its absence on a tile is information too. */
 
-/* Attack/defend, team size and queue are one control language: a small either/or
-   about the match in front of you. They share these rules rather than each
-   growing a look of its own, so that changing how an either/or reads changes all
-   of them. Deliberately not the .modes segmented control above — that one
+/* Attack/defend, team size, queue and rank are one control language: a small
+   statement about the match in front of you. They share these rules rather than
+   each growing a look of its own, so that changing how one of them reads changes
+   all of them. Deliberately not the .modes segmented control above — that one
    belongs to the role you are picking as, and borrowing it here would claim the
-   two are the same kind of choice. */
+   two are the same kind of choice.
+
+   Rank is the first member with more than two options, which is why it is the
+   only one whose options live behind a disclosure rather than on the header
+   itself — see .rank-picker below. The pills themselves are the same pills. */
 
 .sides,
 .formats,
@@ -1309,7 +1313,8 @@ body {
 
 .side,
 .format,
-.queue {
+.queue,
+.rank {
     padding: 0.2rem 0.6rem;
     font: inherit;
     font-size: var(--fs-xs);
@@ -1322,13 +1327,15 @@ body {
 
 .side:hover,
 .format:hover,
-.queue:hover {
+.queue:hover,
+.rank:hover {
     color: var(--text);
 }
 
 .side.active,
 .format.active,
-.queue.active {
+.queue.active,
+.rank.active {
     color: var(--on-color);
     background: var(--accent);
     border-color: var(--accent);
@@ -1337,9 +1344,110 @@ body {
 
 .side:focus-visible,
 .format:focus-visible,
-.queue:focus-visible {
+.queue:focus-visible,
+.rank:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
+}
+
+/* The rank picker: a chip that states its own answer, and a sheet of the
+   alternatives behind a click.
+
+   Nine pills laid out flat measure about 640px, and the header has been
+   overflowing below 950px since before this existed (see the note above
+   .header). So the header pays for one pill and the rest is a disclosure. The
+   sheet is `position: absolute` off .rank-picker rather than in flow, because a
+   sheet that pushed the header taller would move the whole board down the moment
+   it opened — which is the one thing a control changed mid-draft must not do.
+
+   It is held open by a click rather than a hover: something that vanishes when
+   the pointer leaves cannot be aimed at with a thumb. */
+.rank-picker {
+    position: relative;
+    display: inline-flex;
+}
+
+.rank-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0.2rem 0.6rem;
+    font: inherit;
+    font-size: var(--fs-xs);
+    color: var(--text-muted);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    cursor: pointer;
+}
+
+.rank-chip:hover,
+.rank-chip.open {
+    color: var(--text);
+}
+
+.rank-chip:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* The word "rank" is the label and the value is the answer, so the value is the
+   half that carries the weight. Without this the chip reads as two equal words
+   and you have to parse it to find out which is the setting. */
+.rank-chip-label {
+    color: var(--text-faint);
+}
+
+.rank-chip-value {
+    color: var(--text);
+    font-weight: 600;
+}
+
+.rank-caret {
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+}
+
+.ranks {
+    display: none;
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + var(--sp-2));
+    left: 0;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    width: max-content;
+    /* Two rows of pills at a comfortable width, three at 360px. A breakpoint
+       here would be spending a media query on how a nine-item list happens to
+       wrap. */
+    max-width: min(30rem, calc(100vw - 2 * var(--sp-4)));
+    padding: var(--sp-3);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--r-lg);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 45%);
+}
+
+.ranks.open {
+    display: flex;
+}
+
+/* The caveat the picker would otherwise imply away: only patch strength is
+   sliced by rank. Full-width so it reads as a note about the whole sheet rather
+   than as a tenth option. */
+.rank-note {
+    flex: 1 1 100%;
+    margin: var(--sp-2) 0 0;
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+}
+
+/* What rung a teammate is answering for. Muted, and absent entirely at all
+   ranks — most rows will be, and a column of "all ranks" says less than the
+   space it costs. */
+.roster-rank {
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
 }
 
 /* Every tile gets the slot, so the anchor exists before the toggle needs it and
@@ -2036,6 +2144,8 @@ body {
     .format,
     .queue,
     .side,
+    .rank,
+    .rank-chip,
     .session-action,
     .session-name,
     .session-entry,
@@ -2054,6 +2164,8 @@ body {
     .side,
     .format,
     .queue,
+    .rank,
+    .rank-chip,
     .session-action,
     .reset {
         touch-action: manipulation;
