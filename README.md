@@ -60,12 +60,30 @@ The server reads three optional environment variables:
 
 > **On exposing it.** There is no authentication: `POST /api/session` mints rooms
 > and `/ws/{room}` is joinable by code with no rate limiting. A session code is a
-> convenience for finding the right draft, not a secret.
+> convenience for finding the right draft, not a secret. Sessions are capped at
+> 1024, and a code nobody opens is dropped after two minutes and evicted first
+> when the map is full, so minting them cannot push a real team out — but nothing
+> caps concurrent sockets.
 >
 > The match log is the part that is actually personal — `GET /api/matches`
 > returns the whole history and `POST` appends to it — so the public deployment
 > runs with `OVERWATCH_MATCH_LOG=""` and the endpoint closed. Anything else you
 > put behind a public address needs the rest dealt with first.
+
+`GET /health` answers with the running commit and a census of the sessions:
+
+```
+$ curl -s localhost:8080/health
+{"status":"ok","rooms":7,"claimed":3,"active":2,"connected":5,"capacity":1024,"build":"7a03cac"}
+```
+
+`rooms` against `capacity` is the memory picture. The other three separate the
+states a room can be in, and the gaps are the useful part: `rooms` well above
+`claimed` is codes being minted and never opened, `claimed` above `active` is
+drafts riding out their grace period, and `connected` counts people rather than
+sessions. Sweeping is lazy, so an idle server keeps reporting rooms whose time
+is up until the next person creates or joins one — the memory is still held at
+that point, so the count is honest rather than stale.
 
 ## Deployment
 

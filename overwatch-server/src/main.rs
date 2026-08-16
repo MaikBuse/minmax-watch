@@ -349,13 +349,23 @@ const BUILD: &str = match option_env!("MINMAX_BUILD") {
     None => "dev",
 };
 
+/// Liveness, and enough of a census to tell busy from squatted.
+///
+/// `rooms` against `capacity` is the memory question — one is what
+/// [`room::MAX_ROOMS`] bounds, the other is the bound, so nobody has to read
+/// the source to know how much headroom is left. The three narrower counts are
+/// the load question, and they are only worth having as a set: `rooms` far
+/// above `claimed` is somebody minting codes they never open, while `claimed`
+/// far above `active` is ordinary evening drift as drafts end and sit out
+/// their grace period. Either one alone reads as "busy".
 async fn health(State(state): State<AppState>) -> impl IntoResponse {
+    let census = state.rooms.census();
     Json(serde_json::json!({
         "status": "ok",
-        "rooms": state.rooms.room_count(),
-        // Reported beside the count so that "are we near the ceiling" is the
-        // same one `curl` as "did the rollout land", rather than a number you
-        // have to go and read the source for.
+        "rooms": census.rooms,
+        "claimed": census.claimed,
+        "active": census.active,
+        "connected": census.connected,
         "capacity": room::MAX_ROOMS,
         "build": BUILD,
     }))
@@ -932,6 +942,11 @@ mod e2e {
         assert_eq!(value["status"], "ok");
         assert_eq!(value["rooms"], 1);
         assert_eq!(value["capacity"], room::MAX_ROOMS);
+        // The census reaches the wire, which `room.rs` cannot prove: one
+        // session, opened, with a single person sitting in it.
+        assert_eq!(value["claimed"], 1);
+        assert_eq!(value["active"], 1);
+        assert_eq!(value["connected"], 1);
         // Present and non-empty, not equal to any particular value: under `cargo
         // test` nothing sets MINMAX_BUILD so this is "dev", but asserting that
         // would fail for anyone who happens to have it exported. What the deploy

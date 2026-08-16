@@ -168,6 +168,28 @@ pub struct Rooms {
     inner: Arc<Mutex<HashMap<String, Room>>>,
 }
 
+/// What is in the map right now, as reported by [`Rooms::census`].
+///
+/// Four numbers because "how busy is it" has four different honest answers and
+/// the interesting ones are the gaps between them. `rooms` is the only one
+/// [`MAX_ROOMS`] bounds; `connected` is the only one that counts people.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Census {
+    /// Every room in the map, whatever state it is in. What the cap applies to
+    /// and what the memory is proportional to.
+    pub rooms: usize,
+    /// Rooms somebody has joined at some point — real drafts rather than
+    /// unspent reservations, whether or not anyone is connected to them now.
+    /// The difference from `rooms` is what a burst of `POST /api/session`
+    /// shows up as.
+    pub claimed: usize,
+    /// Rooms with at least one member connected this second. The difference
+    /// from `claimed` is drafts riding out their grace period.
+    pub active: usize,
+    /// People, not rooms: every connected member of every session, added up.
+    pub connected: usize,
+}
+
 /// A client's handle on one session.
 pub struct Membership {
     rooms: Rooms,
@@ -422,8 +444,38 @@ impl Rooms {
         sweep(&mut self.lock(), now);
     }
 
+    #[cfg(test)]
     pub fn room_count(&self) -> usize {
         self.lock().len()
+    }
+
+    /// Counts what is in the map, in one pass under one lock.
+    ///
+    /// One call rather than four accessors because the four numbers are read
+    /// together and compared to each other. Taken separately they would each
+    /// be true of a different instant, and the arithmetic between them —
+    /// `rooms - claimed` is the reservations nobody opened, `claimed - active`
+    /// the drafts sitting in their grace period — would come out wrong exactly
+    /// when the server is busy enough for anyone to be looking.
+    ///
+    /// Deliberately does not sweep. Reclamation is lazy by design (see
+    /// [`sweep`]), and making the health endpoint the thing that triggers it
+    /// would quietly put memory reclamation on the liveness probe's schedule.
+    /// The numbers can therefore include rooms whose time is up but which
+    /// nobody has come along to clear yet — which is not a lie, because the
+    /// memory really is still held.
+    pub fn census(&self) -> Census {
+        let rooms = self.lock();
+        let mut census = Census {
+            rooms: rooms.len(),
+            ..Census::default()
+        };
+        for room in rooms.values() {
+            census.claimed += usize::from(room.claimed);
+            census.active += usize::from(room.members > 0);
+            census.connected += room.members;
+        }
+        census
     }
 
     /// Marks a seat disconnected and starts the grace clock if that was the
@@ -827,6 +879,39 @@ mod tests {
             MAX_ROOMS,
             "and the ceiling has to hold while it does that"
         );
+    }
+
+    /// A room is in one of three states and the census has to tell them
+    /// apart, because that is the only reason to report anything richer than
+    /// a count: a map full of codes nobody opened and a map full of teams
+    /// drafting are the same single number.
+    #[test]
+    fn the_census_tells_a_reservation_from_a_draft_from_an_emptied_one() {
+        let rooms = Rooms::new();
+        reserve(&rooms);
+        let (_busy, _held) = open(&rooms, "era");
+        let (_emptied, left) = open(&rooms, "mika");
+        drop(left);
+
+        let census = rooms.census();
+        assert_eq!(census.rooms, 3, "every room, whatever state it is in");
+        assert_eq!(census.claimed, 2, "but a code nobody opened is not a draft");
+        assert_eq!(census.active, 1, "and a draft nobody is in is not active");
+        assert_eq!(census.connected, 1);
+    }
+
+    /// The distinction the field name promises, and the easy one to get wrong:
+    /// four people in one session is four, not one.
+    #[test]
+    fn the_census_counts_people_rather_than_rooms_as_connected() {
+        let rooms = Rooms::new();
+        let (code, _era) = open(&rooms, "era");
+        let _mika = rooms.join(&code, "mika", "mika").expect("the session");
+
+        let census = rooms.census();
+        assert_eq!(census.rooms, 1);
+        assert_eq!(census.active, 1);
+        assert_eq!(census.connected, 2);
     }
 
     /// The rule that makes the eviction above safe to have. A team whose
