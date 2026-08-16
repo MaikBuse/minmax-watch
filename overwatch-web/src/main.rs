@@ -529,11 +529,15 @@ fn App() -> Element {
     let map_tiles: Vec<MapTile> = search_maps(&dataset, &query, dataset.maps().len())
         .into_iter()
         .filter_map(|m| {
+            let entry = dataset.map(m.map).ok()?;
             map_chip(&dataset, m.map).map(|chip| MapTile {
                 map: m.map,
                 name: chip.name,
                 icon: chip.icon,
                 selected: picked_map == Some(m.map),
+                // The tile carries this so the board can draw the side toggle on
+                // the map it belongs to; the components never see the dataset.
+                has_sides: entry.mode.has_sides(),
             })
         })
         .collect();
@@ -704,7 +708,6 @@ fn App() -> Element {
                         p.save(&ds);
                     }
                 },
-                on_side: move |next: Option<Side>| { board.write().side = next; },
                 on_reset_all: move |_| {
                     logged.set(None);
                     map_query.set(String::new());
@@ -817,6 +820,7 @@ fn App() -> Element {
             ui::MapBoard {
                 maps: map_tiles,
                 query: map_query.read().clone(),
+                side: draft.side,
                 on_query: move |next: String| map_query.set(next),
                 on_submit: {
                     let ds = dataset.clone();
@@ -827,11 +831,20 @@ fn App() -> Element {
                             return;
                         };
                         logged.set(None);
-                        board.write().map = Some(id);
+                        let mut b = board.write();
+                        b.map = Some(id);
+                        // Same invariant the click path holds: a side belongs to
+                        // the map it was picked on, and typing your way to a
+                        // symmetric one has to drop it too.
+                        if !ds.map(id).is_ok_and(|m| m.mode.has_sides()) {
+                            b.side = None;
+                        }
+                        drop(b);
                         map_query.set(String::new());
                     }
                 },
                 on_focus: move |focused: bool| search_focused.set(focused),
+                on_side: move |next: Option<Side>| { board.write().side = next; },
                 on_pick: {
                     let ds = dataset.clone();
                     move |id: MapId| {
