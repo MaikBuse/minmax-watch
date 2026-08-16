@@ -11,6 +11,13 @@
 # Anything less clear-cut is left at zero rather than guessed at, which is why
 # most of the roster is absent from this file. It only applies on Escort and
 # Hybrid; every other mode starts both teams in the same posture.
+#
+# One piece of outside corroboration is worth having, since nothing else here
+# has any: the game's own Flanker sub-role is defined as striking a backline
+# rather than holding a line, and every hero this file already rated that is now
+# officially a Flanker leans attack. That is a reason to trust the attack half
+# below, not a rule to apply — Reaper is a Flanker and still only reaches +30,
+# because Shadow Step is transport rather than an entry.
 
 generated = "hand-curated"
 
@@ -45,6 +52,11 @@ note = "Wall denies a choke the attackers must clear, and stalls a point they mu
 hero = "junkrat"
 value = -40
 note = "Trap and mine cover the approach the attackers are obliged to take."
+
+[[side]]
+hero = "domina"
+value = -35
+note = "Barrier Array is a segmented wall the attackers have to break a piece at a time, and Sonic Repulsors shove them back off it. No dash and no vertical, so nothing in the kit opens a choke she is not already standing behind."
 
 [[side]]
 hero = "sigma"
@@ -109,6 +121,21 @@ value = 40
 note = "Takes an air angle over the choke the ground fight is stuck on."
 
 [[side]]
+hero = "anran"
+value = 40
+note = "Mobile enough to get onto a backline, and Vermillion Revival makes the trip survivable a second time. Spending a life on the entry is something only the pushing side can afford."
+
+[[side]]
+hero = "shion"
+value = 35
+note = "Evade and Joyride are two separate ways past a held angle, and the overhealth on the dash is what makes arriving behind one survivable."
+
+[[side]]
+hero = "vendetta"
+value = 35
+note = "Soaring Slice reaches a backline that has committed to its positions. Nothing to reach when you are the side doing the committing."
+
+[[side]]
 hero = "reaper"
 value = 30
 note = "Wraith and Shadow Step get him onto a backline that cannot rotate."
@@ -122,6 +149,11 @@ note = "Boosters commit into the hold and eat the defensive ultimate answering i
 hero = "venture"
 value = 30
 note = "Burrow crosses ground the defence expects to contest."
+
+[[side]]
+hero = "jetpack-cat"
+value = 30
+note = "Lifeline tows a teammate over the choke the ground fight is stuck on. Carrying a body somewhere it could not walk is only ever the pushing side's problem to solve."
 
 [[side]]
 hero = "kiriko"
