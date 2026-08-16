@@ -77,7 +77,9 @@ impl Queue {
     pub const fn description(self) -> &'static str {
         match self {
             Queue::Role => "role queue — each team holds to its role split",
-            Queue::Open => "open queue — no role limits, only the team size",
+            Queue::Open => {
+                "open queue — no damage or support split, but 6v6 still caps tanks at two"
+            }
         }
     }
 }
@@ -109,20 +111,28 @@ impl Format {
 
     /// How many of `role` one team can field.
     ///
-    /// Open queue returns the whole team rather than a special "no limit" value.
-    /// That is what keeps every caller on one code path: a per-role cap equal to
-    /// the team size can never bind before the team size itself does, so open
-    /// queue needs no second rule and no branch anywhere else.
+    /// Open queue mostly returns the whole team rather than a special "no limit"
+    /// value. That is what keeps every caller on one code path: a per-role cap
+    /// equal to the team size can never bind before the team size itself does,
+    /// so those cells need no second rule and no branch anywhere else.
+    ///
+    /// The one exception is 6v6 open queue, which is the only open queue the
+    /// game actually ships as a competitive playlist and which caps tanks at
+    /// two. Without that cell a board would happily accept six enemy tanks and
+    /// score a draft that cannot be queued for.
     pub const fn slots(self, role: Role) -> usize {
-        match self.queue {
-            Queue::Open => self.size.players(),
-            Queue::Role => match (self.size, role) {
-                // The one asymmetry in the game: 5v5 dropped the second tank,
-                // and 6v6 is that tank coming back.
-                (TeamSize::FiveVFive, Role::Tank) => 1,
-                (TeamSize::SixVSix, Role::Tank) => 2,
-                (_, Role::Damage) | (_, Role::Support) => 2,
-            },
+        match (self.queue, self.size, role) {
+            // 6v6 open queue drops the damage and support split but keeps the
+            // tank limit: any number of damage and supports, never more than two
+            // tanks. The 5v5 cell is left uncapped because no source says
+            // otherwise — it is not a live competitive playlist to check against.
+            (Queue::Open, TeamSize::SixVSix, Role::Tank) => 2,
+            (Queue::Open, size, _) => size.players(),
+            // The one asymmetry in the role queue: 5v5 dropped the second tank,
+            // and 6v6 is that tank coming back.
+            (Queue::Role, TeamSize::FiveVFive, Role::Tank) => 1,
+            (Queue::Role, TeamSize::SixVSix, Role::Tank) => 2,
+            (Queue::Role, _, Role::Damage) | (Queue::Role, _, Role::Support) => 2,
         }
     }
 }
@@ -236,16 +246,43 @@ mod tests {
         assert_eq!(six.slots(Role::Support), 2);
     }
 
-    /// The property the single code path rests on: in open queue the role cap is
-    /// the team itself, so it can never be what refuses a pick.
+    /// The property the single code path rests on, everywhere it still holds: in
+    /// open queue the role cap is the team itself, so it can never be what
+    /// refuses a pick. Tanks in 6v6 are the one cell where it does not — see
+    /// below.
     #[test]
     fn open_queue_lets_a_whole_team_play_one_role() {
         for size in TeamSize::BOTH {
             let format = Format::new(size, Queue::Open);
             for role in Role::ALL {
+                if size == TeamSize::SixVSix && role == Role::Tank {
+                    continue;
+                }
                 assert_eq!(format.slots(role), format.team_size());
             }
         }
+    }
+
+    /// 6v6 open queue is the only open queue the game ships as a competitive
+    /// playlist, and it keeps a two-tank limit while dropping the damage and
+    /// support split. Without this the boards would accept a comp nobody can
+    /// queue for.
+    #[test]
+    fn six_v_six_open_queue_drops_every_role_split_except_the_tank_limit() {
+        let format = Format::new(TeamSize::SixVSix, Queue::Open);
+
+        assert_eq!(format.slots(Role::Tank), 2, "two tanks, not six");
+        assert_eq!(format.slots(Role::Damage), 6);
+        assert_eq!(format.slots(Role::Support), 6);
+
+        let mut room = Capacity::of(format);
+        room.take(Some(Role::Tank));
+        room.take(Some(Role::Tank));
+
+        assert!(!room.fits(Some(Role::Tank)), "a third tank cannot land");
+        assert!(room.fits(Some(Role::Damage)), "but the team is not full");
+        assert_eq!(room.free_in(Role::Tank), 0);
+        assert_eq!(room.total_free(), 4);
     }
 
     /// Pinned exactly. These strings are on the wire between clients and in
