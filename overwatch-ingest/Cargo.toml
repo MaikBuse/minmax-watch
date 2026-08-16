@@ -20,3 +20,4 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 time = { workspace = true }
 toml = { workspace = true }
+webp = { workspace = true }

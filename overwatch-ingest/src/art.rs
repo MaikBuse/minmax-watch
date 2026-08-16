@@ -10,16 +10,20 @@
 //! when the draft screen is being used. The raw originals stay in the gitignored
 //! `data/sources/` cache, so re-encoding at a different size later is free.
 //!
+//! Everything written out is lossy WebP. The whole hero board is on screen at
+//! once — there is no scroll to lazy-load behind and no route to defer past — so
+//! all 53 portraits plus a map thumbnail land on the first paint, which for a
+//! long time was 1.9 MB against a 341 kB wasm bundle. The artwork, not the
+//! framework, was the download.
+//!
 //! Nothing here runs at application runtime.
 
 use std::collections::HashSet;
-use std::io::Cursor;
 use std::path::Path;
 
 use anyhow::{Context, Result};
-use image::codecs::jpeg::JpegEncoder;
 use image::imageops::FilterType;
-use image::{DynamicImage, ImageFormat};
+use image::DynamicImage;
 
 use crate::cache::{write_bytes_if_changed, Fetcher};
 use crate::overfast;
@@ -32,9 +36,20 @@ const HERO_PX: u32 = 96;
 const MAP_W: u32 = 320;
 const MAP_H: u32 = 180;
 
-/// Screenshots are photographic, so JPEG at a visually lossless quality beats
-/// PNG by roughly an order of magnitude here.
-const JPEG_QUALITY: u8 = 82;
+/// Portraits, at the quality the whole hero board is downloaded at.
+///
+/// Measured over all 53 committed portraits against the PNGs this replaced:
+/// 1118 kB to 255 kB, and the worst single hero came out at an RMSE of 9.9/255
+/// across the pixels with any opacity at all — invisible at the 22-34 px these
+/// are drawn at. Alpha survives exactly, which is what matters: 52 of the 53
+/// are cut-outs, and a portrait with a grey box behind it is worse than no
+/// portrait. libwebp compresses the alpha plane losslessly by default and
+/// nothing here overrides that.
+const HERO_QUALITY: f32 = 90.0;
+
+/// Screenshots are photographic and sit behind text, so they can take more
+/// compression than the portraits: they are never the thing being read.
+const MAP_QUALITY: f32 = 80.0;
 
 /// Lanczos costs a few milliseconds per image and is the difference between a
 /// portrait that reads at 22 px and one that looks like a thumbnail of a
@@ -84,12 +99,16 @@ pub async fn build(
         };
         let image = decode(&raw, url)?.resize_exact(HERO_PX, HERO_PX, FILTER);
 
-        let mut encoded = Vec::new();
-        image
-            .write_to(&mut Cursor::new(&mut encoded), ImageFormat::Png)
-            .with_context(|| format!("encoding the portrait for {key}"))?;
+        // RGBA, not RGB: the portraits are cut-outs and the board shows the
+        // tile colour through them.
+        let rgba = image.to_rgba8();
+        let encoded = encode_webp(
+            webp::Encoder::from_rgba(rgba.as_raw(), rgba.width(), rgba.height()),
+            HERO_QUALITY,
+        )
+        .with_context(|| format!("encoding the portrait for {key}"))?;
 
-        if write_bytes_if_changed(&hero_dir.join(format!("{key}.png")), &encoded).await? {
+        if write_bytes_if_changed(&hero_dir.join(format!("{key}.webp")), &encoded).await? {
             report.changed += 1;
         }
         report.heroes += 1;
@@ -108,14 +127,16 @@ pub async fn build(
         // squashed.
         let image = decode(&raw, url)?.resize_to_fill(MAP_W, MAP_H, FILTER);
 
-        let mut encoded = Vec::new();
-        JpegEncoder::new_with_quality(&mut Cursor::new(&mut encoded), JPEG_QUALITY)
-            // JPEG has no alpha channel; going through RGB8 makes that explicit
-            // instead of letting the encoder decide.
-            .encode_image(&image.to_rgb8())
-            .with_context(|| format!("encoding the thumbnail for {key}"))?;
+        // A screenshot is opaque, and going through RGB8 says so rather than
+        // paying for an alpha plane that is 255 everywhere.
+        let rgb = image.to_rgb8();
+        let encoded = encode_webp(
+            webp::Encoder::from_rgb(rgb.as_raw(), rgb.width(), rgb.height()),
+            MAP_QUALITY,
+        )
+        .with_context(|| format!("encoding the thumbnail for {key}"))?;
 
-        if write_bytes_if_changed(&map_dir.join(format!("{key}.jpg")), &encoded).await? {
+        if write_bytes_if_changed(&map_dir.join(format!("{key}.webp")), &encoded).await? {
             report.changed += 1;
         }
         report.maps += 1;
@@ -131,7 +152,7 @@ pub async fn build(
     // A hero or map that left the dataset would otherwise leave its art behind
     // forever: the asset directory ships whole, so orphans cost bundle size.
     report.removed =
-        prune(&hero_dir, "png", hero_keys).await? + prune(&map_dir, "jpg", map_keys).await?;
+        prune(&hero_dir, "webp", hero_keys).await? + prune(&map_dir, "webp", map_keys).await?;
 
     report.missing.sort_unstable();
     Ok(report)
@@ -139,6 +160,18 @@ pub async fn build(
 
 fn decode(bytes: &[u8], url: &str) -> Result<DynamicImage> {
     image::load_from_memory(bytes).with_context(|| format!("decoding the image at {url}"))
+}
+
+/// Lossy WebP at `quality`, as owned bytes.
+///
+/// `Encoder::encode` panics on a libwebp failure; `encode_simple` returns the
+/// error instead, and the error type is not `std::error::Error`, so it is
+/// spelled out here rather than at both call sites.
+fn encode_webp(encoder: webp::Encoder<'_>, quality: f32) -> Result<Vec<u8>> {
+    encoder
+        .encode_simple(false, quality)
+        .map(|mem| mem.to_vec())
+        .map_err(|err| anyhow::anyhow!("libwebp rejected the frame: {err:?}"))
 }
 
 /// Dataset keys the artwork index never mentioned.

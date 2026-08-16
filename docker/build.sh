@@ -41,6 +41,13 @@ mkdir -p "$web_out/fonts"
 cp overwatch-web/assets/fonts/inter-latin.woff2 "$web_out/fonts/inter-latin.woff2"
 cp overwatch-web/assets/fonts/LICENSE-Inter.txt "$web_out/fonts/LICENSE-Inter.txt"
 
+# The artwork, for a third reason: dx re-encodes every image it bundles, and the
+# only WebP its encoder can write is lossless, so routing these through asset!()
+# inflates the 700K of art back to 4M. See overwatch-web/src/icons.rs.
+mkdir -p "$web_out/heroes" "$web_out/maps"
+cp overwatch-web/assets/heroes/*.webp "$web_out/heroes/"
+cp overwatch-web/assets/maps/*.webp   "$web_out/maps/"
+
 # `-p`, not `--workspace`: overwatch-ingest is the dev-only scraper and pulls in
 # reqwest, scraper, image and resvg, none of which the deployed server needs.
 cargo build --release --locked -p overwatch-server
@@ -55,10 +62,10 @@ cp -a "$web_out/." /out/public/
 # up the .br and .gz siblings, so this buys -q 11 for a one-off build cost
 # instead of a worse ratio charged to every visitor's CPU time.
 #
-# Only the compressible types. The PNGs, JPEGs and woff2 are already compressed;
-# a sibling for those would add image size to deliver the same bytes. The wasm
-# is the one that matters — around 1.2M raw, on the critical path of every first
-# visit.
+# Only the compressible types. The WebP artwork and the woff2 are already
+# compressed; a sibling for those would add image size to deliver the same bytes.
+# The wasm is the one that matters — around 1.4M raw, on the critical path of
+# every first visit.
 find /out/public -type f \
   \( -name '*.wasm' -o -name '*.js' -o -name '*.css' -o -name '*.html' \
   -o -name '*.json' -o -name '*.svg' -o -name '*.txt' \) \

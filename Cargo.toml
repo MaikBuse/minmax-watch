@@ -27,8 +27,20 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 tokio = { version = "1", features = ["macros", "rt-multi-thread", "time", "fs"] }
 scraper = "0.23"
 serde_json = "1.0"
-# Only the codecs we actually round-trip: portraits are PNG, map shots are JPEG.
+# Decoding only, and only the codecs the sources actually serve: Blizzard's
+# portraits arrive as PNG, OverFast's screenshots as JPEG. Everything we write
+# out is WebP, encoded by the crate below.
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+# libwebp, for the one thing pure Rust cannot do: lossy WebP. `image` 0.25 can
+# only write WebP losslessly, which is 18% off the PNGs; lossy at q90 is 77% off
+# and, measured over all 53 portraits, costs at most an RMSE of 9.9/255 on the
+# pixels you can actually see, with the alpha channel preserved exactly.
+#
+# The cost is a C toolchain to build this crate — the same trade `resvg` above
+# was chosen to avoid. It is accepted here and not there because the win is 860 kB
+# on the first load of a tool people open at the start of a match, and because
+# `overwatch-ingest` is dev-only: nothing in the wasm bundle or the server links it.
+webp = "0.3"
 # Rasterises the brand SVGs. Pure Rust, so `just brand-icons` needs no
 # ImageMagick or librsvg on the machine running it.
 resvg = { version = "0.45", default-features = false }

@@ -1,6 +1,7 @@
 set shell := ["bash", "-uc"]
 
 web_out := "target/dx/overwatch-web/release/web/public"
+web_out_debug := "target/dx/overwatch-web/debug/web/public"
 
 default:
     @just --list
@@ -72,7 +73,20 @@ build-web:
     mkdir -p {{web_out}}/fonts
     cp overwatch-web/assets/fonts/inter-latin.woff2 {{web_out}}/fonts/inter-latin.woff2
     cp overwatch-web/assets/fonts/LICENSE-Inter.txt {{web_out}}/fonts/LICENSE-Inter.txt
+    # The artwork, for a third reason: dx re-encodes every image it bundles, and
+    # the only WebP its encoder can write is lossless — which turns a 13K map
+    # thumbnail back into 93K. See overwatch-web/src/icons.rs.
+    just _art {{web_out}}
     @echo "bundle: $(du -sh {{web_out}} | cut -f1)"
+
+# Copy the hero and map artwork to the bundle root, unmodified.
+#
+# Its own recipe because `dev` needs it too: `dx serve` does not run the copies
+# above, so without this the draft screen comes up with no portraits on it.
+_art out:
+    mkdir -p {{out}}/heroes {{out}}/maps
+    cp overwatch-web/assets/heroes/*.webp {{out}}/heroes/
+    cp overwatch-web/assets/maps/*.webp {{out}}/maps/
 
 # Serve the app and the sync socket on the LAN
 serve: build-web
@@ -80,6 +94,9 @@ serve: build-web
 
 # Client only, with hot reload and no sync
 dev:
+    # dx serve never empties its output directory, so seeding the artwork once
+    # before it starts is enough — a rebuild leaves these in place.
+    just _art {{web_out_debug}}
     cd overwatch-web && dx serve --platform web
 
 # Print the URLs to open
@@ -109,6 +126,14 @@ ingest-art:
 # Counter matrix only, from the community sites
 ingest-counters:
     cargo run -p overwatch-ingest -- counters
+
+# Duo synergies only. Curated rows in synergy.toml survive this.
+ingest-synergy:
+    cargo run -p overwatch-ingest -- synergy
+
+# Win rates and map affinity only, without re-scraping the whole matrix
+ingest-strength:
+    cargo run -p overwatch-ingest -- strength
 
 # Re-fetch every source, ignoring the cache
 ingest-refresh:

@@ -9,13 +9,16 @@
 // Cache-first would be faster by a few milliseconds but would serve a stale
 // build after every `just build-web`, which is a much worse trade.
 
-const CACHE = 'minmax-v1';
+// v2: the artwork moved from /assets/{heroes,maps}/*.{png,jpg} to
+// /{heroes,maps}/*.webp, so every v1 cache is holding ~1.8 MB of entries nothing
+// will ever request again. Bumping the name drops them on activate.
+const CACHE = 'minmax-v2';
 
 self.addEventListener('install', event => {
     // Take over immediately rather than waiting for every tab to close.
     self.skipWaiting();
     // Only the shell is precached. The hero portraits and map thumbnails are
-    // ~2 MB, and pulling all of them here would slow the very first load for
+    // ~700 kB, and pulling all of them here would slow the very first load for
     // artwork the fetch handler below caches anyway the moment it is shown —
     // which, on a screen that lists suggestions as you type, is almost at once.
     event.waitUntil(caches.open(CACHE).then(cache => cache.add('/')));
