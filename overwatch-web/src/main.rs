@@ -672,7 +672,7 @@ fn App() -> Element {
         roster(
             &dataset,
             |role, hero| {
-                board::ally_tile_state(hero, role, my_lock, &seated_allies, &extras, &room)
+                board::ally_tile_state(hero, role, my_lock, my_role, &seated_allies, &extras, &room)
             },
             Some(&room),
             held,
@@ -1028,9 +1028,10 @@ fn App() -> Element {
                 div { class: "boards",
                     ui::HeroBoard {
                         // The board is your whole team, you included, so it says
-                        // which of the two the next click is about.
+                        // which of the two the next click is about — and, since
+                        // only your own row takes a hero for you, which row.
                         title: if my_lock.is_none() {
-                            "ally · click to take yours".to_owned()
+                            format!("ally · click a {} to take yours", my_role.label())
                         } else {
                             "ally".to_owned()
                         },
@@ -1039,24 +1040,34 @@ fn App() -> Element {
                         claiming: my_lock.is_none(),
                         shape: ally_shape,
                         // Dispatches on the same ladder the tiles were drawn from,
-                        // so what a click does is what the tile said it would. A
-                        // teammate's pick never reaches here — the component drops
-                        // those before they leave it.
-                        on_toggle: move |hero: HeroId| {
-                            logged.set(None);
-                            if my_lock == Some(hero) {
-                                unlock.call(());
-                            } else if board.peek().extra_allies.contains(&hero) {
-                                board.write().remove_extra_ally(hero);
-                            } else if my_lock.is_none() {
-                                // Nothing of yours yet, so this is you. Your role
-                                // follows the hero, which is what keeps the slot you
-                                // hold and the hero you are on the same statement.
-                                lock_hero.call(hero);
-                            } else {
-                                // Already picked, so this is a teammate who is not
-                                // in the session and whom somebody has to type in.
-                                board.write().add_extra_ally(hero);
+                        // so what a click does is what the tile said it would —
+                        // which is why the ladder itself is `board::ally_click`,
+                        // beside the one that drew them. A teammate's pick never
+                        // reaches here; the component drops those before they
+                        // leave it.
+                        on_toggle: {
+                            let ds = dataset.clone();
+                            move |hero: HeroId| {
+                                logged.set(None);
+                                let hero_role = ds.hero(hero).ok().map(|entry| entry.role);
+                                // Read out and dropped before the arms run: a
+                                // borrow held across them would meet the
+                                // `board.write()` two of them make.
+                                let typed = board.peek().extra_allies.clone();
+                                match board::ally_click(hero, hero_role, my_lock, my_role, &typed) {
+                                    board::AllyClick::TakeBack => unlock.call(()),
+                                    board::AllyClick::RemoveExtra => {
+                                        board.write().remove_extra_ally(hero);
+                                    }
+                                    // Your own row, and nothing of yours on it
+                                    // yet, so this is you.
+                                    board::AllyClick::Claim => lock_hero.call(hero),
+                                    // A teammate who is not in the session and
+                                    // whom somebody has to type in.
+                                    board::AllyClick::AddExtra => {
+                                        board.write().add_extra_ally(hero);
+                                    }
+                                }
                             }
                         },
                         // Your own pick goes with the typed names. A reset that

@@ -43,17 +43,25 @@ pub struct SeatedPick {
 ///    team it was typed onto, and reading the derived one would draw such a
 ///    pick unlit while it still sat in shared state — visible to nobody, and
 ///    still eating the click that would remove it.
-/// 4. **Anything at all, while I have no pick of my own.** Nothing is blocked
-///    here, because this click is about to *become* my pick, and the caps are
-///    a function of the role I am declaring by making it. Refusing a tile on
-///    the strength of a reservation that the same click would spend is the
-///    board arguing with itself — which is what a 5v5 tank saw: their own held
-///    slot greyed out the entire tank row.
+/// 4. **My own role's row, while I have no pick of my own.** Nothing is blocked
+///    there, because this click is about to *become* my pick and it spends the
+///    reservation my own seat is holding. Refusing a tile on the strength of a
+///    slot that the same click would spend is the board arguing with itself —
+///    which is what a 5v5 tank saw: their own held slot greyed out the entire
+///    tank row.
+///
+///    Only that row, though. Every other row is a teammate being typed in, and
+///    reading a click on one as my pick is how a tank marking the enemy-of-the-
+///    moment's Genji ended up *as* Genji: `Seat::lock` moves the declared role
+///    to follow the hero, so the pick column, the pool board and the roster all
+///    left tank behind on a click that never meant to say anything about me.
+///    The mode is mine to declare, and the mode switch is where it is declared.
 /// 5. Otherwise the ordinary cap, which governs typing a teammate in.
 pub fn ally_tile_state(
     hero: HeroId,
     role: Role,
     my_lock: Option<HeroId>,
+    my_role: Role,
     seated: &[SeatedPick],
     extras: &[HeroId],
     room: &Capacity,
@@ -67,10 +75,61 @@ pub fn ally_tile_state(
     if extras.contains(&hero) {
         return (TileState::Picked, None);
     }
-    if my_lock.is_none() || room.fits(Some(role)) {
+    if (my_lock.is_none() && role == my_role) || room.fits(Some(role)) {
         return (TileState::Free, None);
     }
     (TileState::Blocked, None)
+}
+
+/// What a click on an ally tile means.
+///
+/// The same ladder [`ally_tile_state`] draws, seen from the other side, and the
+/// reason both live here rather than in the view: what a tile *says* it will do
+/// and what a click on it *does* are two statements of one rule, and the only
+/// way to keep them from drifting is to write them next to each other and test
+/// them together. The view's own copy of this ladder is exactly where the role
+/// test went missing.
+///
+/// [`TileState::Theirs`] has no meaning here and never arrives: the component
+/// drops a tile it drew as unclickable before the click leaves it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AllyClick {
+    /// My own pick, handed back.
+    TakeBack,
+    /// A name somebody typed, taken off the board.
+    RemoveExtra,
+    /// The hero I am playing. Only ever one of my own role.
+    Claim,
+    /// A teammate who is not in the session, typed in for the scorer.
+    AddExtra,
+}
+
+/// Which of the four a click on `hero` is.
+///
+/// `role` is the row the tile was drawn in, which is the hero's own role — the
+/// rows are built by walking [`Dataset::heroes_in_role`]. A hero the roster
+/// cannot name has no row to be on and so cannot be the one I am claiming;
+/// passing `None` types it in, which is the same conservative reading
+/// `Seat::lock` takes when it leaves a declared role alone rather than guessing.
+///
+/// [`Dataset::heroes_in_role`]: overwatch_core::Dataset::heroes_in_role
+pub fn ally_click(
+    hero: HeroId,
+    role: Option<Role>,
+    my_lock: Option<HeroId>,
+    my_role: Role,
+    extras: &[HeroId],
+) -> AllyClick {
+    if my_lock == Some(hero) {
+        return AllyClick::TakeBack;
+    }
+    if extras.contains(&hero) {
+        return AllyClick::RemoveExtra;
+    }
+    if my_lock.is_none() && role == Some(my_role) {
+        return AllyClick::Claim;
+    }
+    AllyClick::AddExtra
 }
 
 /// A teammate's pick as the board should credit it.
@@ -104,6 +163,8 @@ mod tests {
     const REIN: HeroId = HeroId(1);
     const TRACER: HeroId = HeroId(2);
     const ANA: HeroId = HeroId(3);
+    const KIRIKO: HeroId = HeroId(4);
+    const SOJOURN: HeroId = HeroId(5);
 
     fn seat(id: &str, hero: HeroId) -> SeatedPick {
         SeatedPick {
@@ -131,6 +192,7 @@ mod tests {
             SIGMA,
             Role::Tank,
             Some(SIGMA),
+            Role::Tank,
             &[],
             &[],
             &room_with(Role::Tank, 1),
@@ -151,6 +213,7 @@ mod tests {
             ANA,
             Role::Support,
             None,
+            Role::Support,
             &seated,
             &[],
             &Capacity::of(Format::default()),
@@ -171,6 +234,7 @@ mod tests {
             ANA,
             Role::Support,
             None,
+            Role::Support,
             &seated,
             &[ANA],
             &Capacity::of(Format::default()),
@@ -180,15 +244,130 @@ mod tests {
     }
 
     /// The whole of the rule, stated over a full board: before I have picked,
-    /// every click is about me, and a pick of mine is never refused by a cap.
+    /// my own row is about me, and a pick of mine is never refused by a cap.
     #[test]
-    fn nothing_on_the_ally_board_is_blocked_while_i_have_no_pick() {
+    fn nothing_in_my_own_row_is_blocked_while_i_have_no_pick() {
         let full = room_with(Role::Support, 2);
         assert_eq!(full.free_in(Role::Support), 0, "the row really is full");
 
-        let (state, _) = ally_tile_state(ANA, Role::Support, None, &[], &[], &full);
+        let (state, _) = ally_tile_state(ANA, Role::Support, None, Role::Support, &[], &[], &full);
         assert_eq!(state, TileState::Free);
         assert!(state.is_clickable());
+    }
+
+    /// The reported bug. In tank mode, clicking a damage hero on the ally board
+    /// took it as *my* pick and dragged my declared role to damage with it —
+    /// the pick column, the pool board and the roster all following a click
+    /// that only ever meant "a teammate is on this".
+    #[test]
+    fn a_hero_outside_my_role_is_a_teammate_rather_than_my_pick() {
+        assert_eq!(
+            ally_click(TRACER, Some(Role::Damage), None, Role::Tank, &[]),
+            AllyClick::AddExtra,
+            "clicking a dps in tank mode says nothing about what I am playing"
+        );
+        assert_eq!(
+            ally_click(SIGMA, Some(Role::Tank), None, Role::Tank, &[]),
+            AllyClick::Claim,
+            "my own row is still the one click that takes a hero for me"
+        );
+    }
+
+    /// The other half of the same fix, and something that was impossible
+    /// before: every first click was claimed as mine, so the only way to type a
+    /// teammate in was to pick myself first.
+    #[test]
+    fn an_out_of_role_teammate_can_be_typed_in_before_i_have_picked() {
+        let (state, _) = ally_tile_state(
+            TRACER,
+            Role::Damage,
+            None,
+            Role::Tank,
+            &[],
+            &[],
+            &Capacity::of(Format::default()),
+        );
+
+        assert_eq!(state, TileState::Free, "the dps row is open to be typed in");
+        assert_eq!(
+            ally_click(TRACER, Some(Role::Damage), None, Role::Tank, &[]),
+            AllyClick::AddExtra
+        );
+    }
+
+    /// A hero the roster cannot name has no row to be on, so it cannot be the
+    /// one I am claiming. Typed in rather than guessed at, for the same reason
+    /// `Seat::lock` leaves a declared role alone when it cannot name the pick.
+    #[test]
+    fn a_hero_the_roster_cannot_name_is_typed_in_rather_than_claimed() {
+        assert_eq!(
+            ally_click(HeroId(99), None, None, Role::Tank, &[]),
+            AllyClick::AddExtra
+        );
+    }
+
+    /// The two ladders are one rule written twice, and the whole reason they
+    /// live in the same file. A tile the board draws as clickable must have a
+    /// meaning, and the meaning must be the one the tile promised.
+    #[test]
+    fn the_click_ladder_and_the_tile_ladder_agree() {
+        let room = room_with(Role::Support, 2);
+        let seated = vec![seat("mika", KIRIKO)];
+        let extras = [TRACER];
+
+        // I am a tank who has not picked, so the tank row is mine to spend and
+        // the support row is the one the caps have closed.
+        // (hero, its role, my lock, what the tile is, what a click means)
+        let cases = [
+            (
+                SIGMA,
+                Role::Tank,
+                Some(SIGMA),
+                TileState::Mine,
+                Some(AllyClick::TakeBack),
+            ),
+            (KIRIKO, Role::Support, None, TileState::Theirs, None),
+            (
+                TRACER,
+                Role::Damage,
+                None,
+                TileState::Picked,
+                Some(AllyClick::RemoveExtra),
+            ),
+            (
+                REIN,
+                Role::Tank,
+                None,
+                TileState::Free,
+                Some(AllyClick::Claim),
+            ),
+            (
+                SOJOURN,
+                Role::Damage,
+                None,
+                TileState::Free,
+                Some(AllyClick::AddExtra),
+            ),
+            (ANA, Role::Support, None, TileState::Blocked, None),
+        ];
+
+        for (hero, role, my_lock, want_state, want_click) in cases {
+            let (state, _) =
+                ally_tile_state(hero, role, my_lock, Role::Tank, &seated, &extras, &room);
+            assert_eq!(state, want_state, "tile for {hero:?}");
+            assert_eq!(
+                state.is_clickable(),
+                want_click.is_some(),
+                "a tile with a meaning must be clickable, and one without must not be: {hero:?}"
+            );
+            if let Some(want) = want_click {
+                assert_eq!(
+                    ally_click(hero, Some(role), my_lock, Role::Tank, &extras),
+                    want,
+                    "click for {hero:?}"
+                );
+            }
+        }
     }
 
     /// The case that made the old board argue with itself: in 5v5 your own
@@ -199,11 +378,16 @@ mod tests {
         let room = room_with(Role::Tank, 1);
         assert_eq!(room.free_in(Role::Tank), 0);
 
-        let (state, _) = ally_tile_state(SIGMA, Role::Tank, None, &[], &[], &room);
+        let (state, _) = ally_tile_state(SIGMA, Role::Tank, None, Role::Tank, &[], &[], &room);
         assert_eq!(
             state,
             TileState::Free,
             "the slot is not gone, it is mine, and this click spends it"
+        );
+        assert_eq!(
+            ally_click(SIGMA, Some(Role::Tank), None, Role::Tank, &[]),
+            AllyClick::Claim,
+            "and spending it is what the click does"
         );
     }
 
@@ -213,12 +397,14 @@ mod tests {
     fn a_full_role_blocks_the_rest_of_its_row_once_i_am_locked() {
         let room = room_with(Role::Support, 2);
 
-        let (state, _) = ally_tile_state(ANA, Role::Support, Some(SIGMA), &[], &[], &room);
+        let (state, _) =
+            ally_tile_state(ANA, Role::Support, Some(SIGMA), Role::Tank, &[], &[], &room);
         assert_eq!(state, TileState::Blocked);
         assert!(!state.is_clickable());
 
         // And my own tile in that same board is still mine to take back.
-        let (mine, _) = ally_tile_state(SIGMA, Role::Tank, Some(SIGMA), &[], &[], &room);
+        let (mine, _) =
+            ally_tile_state(SIGMA, Role::Tank, Some(SIGMA), Role::Tank, &[], &[], &room);
         assert_eq!(mine, TileState::Mine);
     }
 
@@ -229,7 +415,15 @@ mod tests {
     fn a_typed_name_the_team_had_no_room_for_is_still_there_to_take_back() {
         let full = room_with(Role::Support, 2);
 
-        let (state, _) = ally_tile_state(ANA, Role::Support, Some(SIGMA), &[], &[ANA], &full);
+        let (state, _) = ally_tile_state(
+            ANA,
+            Role::Support,
+            Some(SIGMA),
+            Role::Tank,
+            &[],
+            &[ANA],
+            &full,
+        );
         assert_eq!(state, TileState::Picked);
         assert!(state.is_clickable(), "or it is stuck there for good");
     }
@@ -239,10 +433,13 @@ mod tests {
     /// meaning every board on this screen already has.
     #[test]
     fn clicking_a_typed_name_takes_it_back_rather_than_claiming_it() {
+        // In damage mode, so the row is the very one a click would otherwise
+        // claim: a typed name outranks that, and is still there to take back.
         let (state, _) = ally_tile_state(
             TRACER,
             Role::Damage,
             None,
+            Role::Damage,
             &[],
             &[TRACER],
             &Capacity::of(Format::default()),
@@ -253,6 +450,10 @@ mod tests {
             TileState::Picked,
             "even with no pick of my own, the typed name is what the tile is"
         );
+        assert_eq!(
+            ally_click(TRACER, Some(Role::Damage), None, Role::Damage, &[TRACER]),
+            AllyClick::RemoveExtra
+        );
     }
 
     /// Drafting alone there are no other seats, so the board is only ever about
@@ -262,10 +463,26 @@ mod tests {
     fn drafting_alone_the_board_still_tells_my_pick_from_a_typed_name() {
         let room = Capacity::of(Format::default());
 
-        let (mine, _) = ally_tile_state(SIGMA, Role::Tank, Some(SIGMA), &[], &[TRACER], &room);
+        let (mine, _) = ally_tile_state(
+            SIGMA,
+            Role::Tank,
+            Some(SIGMA),
+            Role::Tank,
+            &[],
+            &[TRACER],
+            &room,
+        );
         assert_eq!(mine, TileState::Mine);
 
-        let (typed, _) = ally_tile_state(TRACER, Role::Damage, Some(SIGMA), &[], &[TRACER], &room);
+        let (typed, _) = ally_tile_state(
+            TRACER,
+            Role::Damage,
+            Some(SIGMA),
+            Role::Tank,
+            &[],
+            &[TRACER],
+            &room,
+        );
         assert_eq!(typed, TileState::Picked);
     }
 
@@ -279,6 +496,7 @@ mod tests {
             SIGMA,
             Role::Tank,
             Some(SIGMA),
+            Role::Tank,
             &seated,
             &[],
             &Capacity::of(Format::default()),
@@ -296,11 +514,13 @@ mod tests {
             room.take(Some(Role::Support));
         }
 
-        let (state, _) = ally_tile_state(ANA, Role::Support, Some(SIGMA), &[], &[], &room);
+        let (state, _) =
+            ally_tile_state(ANA, Role::Support, Some(SIGMA), Role::Tank, &[], &[], &room);
         assert_eq!(state, TileState::Free, "open queue fields four supports");
 
         room.take(Some(Role::Damage));
-        let (full, _) = ally_tile_state(ANA, Role::Support, Some(SIGMA), &[], &[], &room);
+        let (full, _) =
+            ally_tile_state(ANA, Role::Support, Some(SIGMA), Role::Tank, &[], &[], &room);
         assert_eq!(full, TileState::Blocked, "but not a sixth body");
     }
 
@@ -310,7 +530,15 @@ mod tests {
         let mut room = Capacity::of(Format::new(TeamSize::SixVSix, Queue::Role));
         room.take(Some(Role::Tank));
 
-        let (state, _) = ally_tile_state(REIN, Role::Tank, Some(TRACER), &[], &[], &room);
+        let (state, _) = ally_tile_state(
+            REIN,
+            Role::Tank,
+            Some(TRACER),
+            Role::Damage,
+            &[],
+            &[],
+            &room,
+        );
         assert_eq!(state, TileState::Free);
     }
 

@@ -765,10 +765,12 @@ body {
     cursor: default;
 }
 
-/* Before you have taken a hero, the next click on this board is you. Colouring
-   the hover border in the amber the tile is about to become says which of the
-   two meanings a click carries, before it is spent rather than after. */
-.board-ally.claiming .tile:hover {
+/* Before you have taken a hero, the next click on *your own row* is you; every
+   other row types a teammate in. Colouring that row's hover border in the amber
+   the tile is about to become says which of the two meanings a click carries,
+   before it is spent rather than after. Scoped to `.mine`, or the board would
+   promise a claim on all three rows and deliver it on one. */
+.board-ally.claiming .board-row.mine .tile:hover {
     border-color: var(--warn);
 }
 

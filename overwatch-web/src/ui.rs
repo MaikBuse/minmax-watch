@@ -543,7 +543,13 @@ pub fn HeroBoard(
                 ResetButton { confirm: reset_confirm, on_reset }
             }
             for row in rows.iter() {
-                div { key: "{row.label}", class: "board-row",
+                // `mine` is exactly "the row your next click claims", so the
+                // amber claiming hover can be scoped to it rather than painted
+                // over a whole board where two of the three rows type a
+                // teammate in.
+                div {
+                    key: "{row.label}",
+                    class: if row.mine { "board-row mine" } else { "board-row" },
                     span { class: format!("board-role {}", role_class(row.role)),
                         "{row.label}"
                         // A zero here is the answer to "why can I not click
