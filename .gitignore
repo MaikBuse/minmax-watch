@@ -9,5 +9,9 @@
 # produced it. Re-fetching is one `just ingest --refresh`.
 /data/sources/
 
-# Personal match history. Uncomment to keep it out of the repo instead.
-# /data/matches.jsonl
+# Personal match history. Every line is a game somebody actually played, which
+# is theirs rather than the repo's, and of no use to a fresh clone. The server
+# writes it wherever OVERWATCH_MATCH_LOG points, so a deployment that wants to
+# keep results puts them outside the working tree rather than un-ignoring this.
+# Comment it out to track your own.
+/data/matches.jsonl
