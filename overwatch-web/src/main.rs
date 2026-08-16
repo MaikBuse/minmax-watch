@@ -20,6 +20,7 @@
 //! switch between and nothing appears or disappears as picks land — a portrait
 //! stays where your hand learned it.
 
+mod board;
 mod icons;
 mod matchlog;
 mod profile;
@@ -37,7 +38,9 @@ use overwatch_core::{
 
 use crate::profile::Profile;
 use crate::session::Membership;
-use crate::ui::{BanRow, BoardRow, HeroChip, HeroTile, MapChip, MapTile, ModeChip, RosterRow};
+use crate::ui::{
+    BanRow, BoardRow, HeroChip, HeroTile, MapChip, MapTile, ModeChip, RosterRow, TileState,
+};
 
 static CSS: Asset = asset!("/assets/style.css");
 
@@ -181,7 +184,9 @@ fn App() -> Element {
         let ds = dataset.clone();
         use_callback(move |code: String| {
             let name = profile.peek().name.clone();
-            connection.peek().close();
+            // Moving to another session is a departure from this one, and the
+            // seat left behind would otherwise hold a slot nobody will spend.
+            connection.peek().leave();
             connection.set(sync::connect(&code, &name, sinks));
             membership.set(Membership::In(code.clone()));
             status.set(sync::Status::Connecting);
@@ -193,10 +198,50 @@ fn App() -> Element {
         })
     };
 
+    // The three things that move your own seat, in one place each.
+    //
+    // `profile.role` and `me.role` are the same fact stored twice — one drives
+    // the pool board, the recommendations and the ban subject, the other holds
+    // your slot and shows on everyone's roster — and every site that moved one
+    // had to remember to move the other. Now that locking a hero can *change*
+    // your role, forgetting would put the header on tank while the roster reads
+    // "support · Ana" and the pick column ranks tanks. So they move together,
+    // here, and nowhere else.
+    let lock_hero = {
+        let ds = dataset.clone();
+        use_callback(move |hero: HeroId| {
+            let role = me.write().lock(&ds, hero);
+            // A name somebody typed for this hero is now answered by a real
+            // pick. Dropped by the one client that acted, rather than by
+            // everyone noticing at once and racing to write the shared board.
+            board.write().remove_extra_ally(hero);
+            if profile.peek().role != role {
+                let mut p = profile.write();
+                p.role = role;
+                p.save(&ds);
+            }
+        })
+    };
+
+    let set_role = {
+        let ds = dataset.clone();
+        use_callback(move |next: Role| {
+            me.write().set_role(&ds, next);
+            let mut p = profile.write();
+            p.role = next;
+            p.save(&ds);
+        })
+    };
+
+    let unlock = use_callback(move |()| me.write().unlock());
+
     let leave = {
         let ds = dataset.clone();
         use_callback(move |()| {
-            connection.peek().close();
+            // Saying so, rather than just dropping the socket: a seat outlives
+            // its connection on purpose, so a silent close would leave the slot
+            // held for the ten minutes the room takes to expire.
+            connection.peek().leave();
             connection.set(sync::Connection::idle(sync::client_id()));
             membership.set(Membership::Alone);
             status.set(sync::Status::Solo);
@@ -253,15 +298,64 @@ fn App() -> Element {
         }
     });
 
+    // Take back the seat the server kept for us, once per page.
+    //
+    // A seat outlives its socket precisely so that a reload does not empty a
+    // slot mid-draft, and the server hands it back on the snapshot — but `me`
+    // is seeded from the profile with nothing locked, and `roster_including_me`
+    // prefers the local copy. So without this the pick survives on every screen
+    // except the one it belongs to, and the next local edit publishes the empty
+    // seat over it.
+    //
+    // A one-shot latch rather than a test on `locked`, because "never picked"
+    // and "just un-picked" look identical from the value alone: the reconnect
+    // loop re-delivers a snapshot on every successful retry, and pressing Esc
+    // during an outage would otherwise be silently undone by a stale seat
+    // arriving behind it. The server's copy is a backup for a page with no
+    // memory of one, and a page only lacks that memory once.
+    let mut seat_restored = use_signal(|| false);
+    {
+        let ds = dataset.clone();
+        let my_id = my_id.clone();
+        use_effect(move || {
+            let mine = seats.read().iter().find(|seat| seat.id == my_id).cloned();
+            // Nothing about us on the roster yet — not our one chance.
+            let Some(mine) = mine else { return };
+            if *seat_restored.peek() {
+                return;
+            }
+            seat_restored.set(true);
+
+            if let Some(hero) = mine.locked {
+                if me.peek().locked.is_none() {
+                    let role = me.write().lock(&ds, hero);
+                    let mut p = profile.write();
+                    p.role = role;
+                    p.save(&ds);
+                }
+            }
+        });
+    }
+
     // Publish local board edits only. A board that already equals what we last
     // received came from another screen, and echoing it would fight with
     // whatever they are typing.
+    //
+    // Both of these read `status` so that they run again when the light comes
+    // back on, and both move their shadow only on a send that actually went.
+    // A socket that is connecting or reconnecting drops what it is handed; a
+    // shadow advanced anyway would record the edit as published and never offer
+    // it again, losing it to the team for good while looking sent on this
+    // screen.
     use_effect(move || {
+        // Read, not peeked: this is what makes the effect run again when the
+        // light comes back on, and so what gets an edit made during an outage
+        // finally sent.
+        let live = status.read().is_live();
         let current = board.read().clone();
         let mut synced_board = synced_board;
-        if current != *synced_board.peek() {
-            synced_board.set(current.clone());
-            connection.peek().publish_board(&current);
+        if live && current != *synced_board.peek() && connection.peek().publish_board(&current) {
+            synced_board.set(current);
         }
     });
 
@@ -269,11 +363,11 @@ fn App() -> Element {
     // this can never conflict — the shadow exists only to keep the socket quiet
     // when nothing actually changed.
     use_effect(move || {
+        let live = status.read().is_live();
         let current = me.read().clone();
         let mut synced_seat = synced_seat;
-        if current != *synced_seat.peek() {
-            synced_seat.set(current.clone());
-            connection.peek().publish_seat(&current);
+        if live && current != *synced_seat.peek() && connection.peek().publish_seat(&current) {
+            synced_seat.set(current);
         }
     });
 
@@ -332,7 +426,7 @@ fn App() -> Element {
                 // only ever unlocks *your own* hero. Reaching across and
                 // clearing a teammate's pick is not a thing one key should do.
                 board.write().clear_picks();
-                me.write().locked = None;
+                unlock.call(());
             }
             // Alt+W / Alt+L record the result. Modified rather than bare
             // letters because they also clear the draft: a guard against a
@@ -358,7 +452,7 @@ fn App() -> Element {
                         // The draft is over; the map usually is not, so it
                         // survives into the next round.
                         board.write().clear_picks();
-                        me.write().locked = None;
+                        unlock.call(());
                         logged.set(Some(won));
                     }
                     // Nothing was locked, so there is no hero to credit.
@@ -376,28 +470,28 @@ fn App() -> Element {
                         if let Some(hero) = top {
                             // Your seat, not the board: locking in is the one
                             // thing in a session that is nobody else's.
-                            me.write().locked = Some(hero);
+                            lock_hero.call(hero);
                         }
                     }
                     // Walk the pick modes in order, wrapping at the end. One key
                     // for three modes rather than three keys, because the hand
                     // already knows this one and a mode switch mid-draft is
                     // rare enough that a second press costs nothing.
+                    //
+                    // It now gives up a pick the new mode cannot hold, so a
+                    // stray press mid-draft costs one. That is the same trade
+                    // the mode switch itself makes, and the alternative — a
+                    // seat declared dps while holding a tank — is the state
+                    // this key existed to avoid producing.
                     "r" => {
                         evt.prevent_default();
-                        let next = {
-                            let mut p = profile.write();
-                            let at = Role::PLAYABLE_MODES
-                                .iter()
-                                .position(|mode| *mode == p.role)
-                                .unwrap_or(0);
-                            p.role = Role::PLAYABLE_MODES[(at + 1) % Role::PLAYABLE_MODES.len()];
-                            p.save(&ds_keys);
-                            p.role
-                        };
+                        let at = Role::PLAYABLE_MODES
+                            .iter()
+                            .position(|mode| *mode == profile.peek().role)
+                            .unwrap_or(0);
                         // The roster shows what everyone is playing, so a role
                         // switch is news to the rest of the session.
-                        me.write().role = next;
+                        set_role.call(Role::PLAYABLE_MODES[(at + 1) % Role::PLAYABLE_MODES.len()]);
                     }
                     _ => {}
                 }
@@ -459,40 +553,35 @@ fn App() -> Element {
         let room = draft.enemy_capacity(&dataset);
         roster(
             &dataset,
-            |hero| enemies.contains(&hero),
-            |role, _| !room.fits(Some(role)),
+            |role, hero| plain_tile(enemies.contains(&hero), !room.fits(Some(role))),
             Some(&room),
+            None,
         )
     };
 
-    // Which allies came from a teammate's seat rather than from this board.
-    //
-    // They are shown as picked but cannot be clicked: the hero is theirs, and a
-    // click here would silently do nothing to it. Better to draw it as
-    // something that is not yours to change than to accept a click and discard
-    // it — the second is how a board starts feeling broken.
-    let seated_allies: Vec<HeroId> = state
-        .seats
-        .iter()
-        .filter(|seat| seat.id != my_id)
-        .filter_map(|seat| seat.locked)
-        .collect();
+    // Which picks came from a teammate's seat rather than from this board.
+    // Theirs to change, not yours, so the board draws them as such.
+    let seated_allies = board::seated_picks(&state.seats, &my_id);
+    let my_lock = draft.locked;
+    let my_role = me.read().role;
 
     let ally_board = {
-        let allies = &draft.allies;
         // Holds a slot for every seat that has not picked yet, your own
         // included — in 5v5 role queue as tank, nobody else on your team is one.
         let room = state.ally_capacity(&dataset, &my_id);
-        let locked = draft.locked;
-        // Your own locked hero is blocked too: a team cannot run duplicates,
-        // and `add_ally` would refuse it anyway.
+        // The extras as *shared*, not as derived. See `ally_tile_state`: a name
+        // the team had no room for still has to be takeable back.
+        let extras = board.read().extra_allies.clone();
+        // Before you have picked, the slot your row is short is the one you are
+        // about to spend, so the row says "you" rather than counting zero.
+        let held = my_lock.is_none().then_some(my_role);
         roster(
             &dataset,
-            |hero| allies.contains(&hero),
             |role, hero| {
-                !room.fits(Some(role)) || locked == Some(hero) || seated_allies.contains(&hero)
+                board::ally_tile_state(hero, role, my_lock, &seated_allies, &extras, &room)
             },
             Some(&room),
+            held,
         )
     };
 
@@ -501,6 +590,18 @@ fn App() -> Element {
         .into_iter()
         .map(|seat| {
             let chip = seat.locked.map(|hero| hero_chip(&dataset, hero));
+            // Two people can put the same hero up before the game stops them.
+            // The boards can only draw it once — it is one hero and the team
+            // fields one of it — so this is the only place the collision can
+            // be seen at all.
+            let contested = seat.locked.is_some_and(|hero| {
+                state
+                    .seats
+                    .iter()
+                    .filter(|other| other.locked == Some(hero))
+                    .count()
+                    > 1
+            });
             RosterRow {
                 name: seat.display_name().to_owned(),
                 role_label: seat.role.label().to_owned(),
@@ -508,6 +609,7 @@ fn App() -> Element {
                 icon: chip.map(|c| c.icon),
                 connected: seat.connected,
                 is_me: seat.id == my_id,
+                contested,
             }
         })
         .collect();
@@ -519,9 +621,13 @@ fn App() -> Element {
         label: role.label().to_owned(),
         // Your pool is not a team, so there is nothing for it to be out of.
         capacity: None,
+        mine: false,
         tiles: dataset
             .heroes_in_role(role)
-            .map(|hero| tile_of(&dataset, hero, pool.contains(hero), false))
+            .map(|hero| {
+                let (state, owner) = plain_tile(pool.contains(hero), false);
+                tile_of(&dataset, hero, state, owner)
+            })
             .collect(),
     }];
 
@@ -584,17 +690,7 @@ fn App() -> Element {
                 modes,
                 generated: dataset.generated.clone(),
                 sync_status: status.read().label(),
-                on_role: {
-                    let ds = dataset.clone();
-                    move |next: Role| {
-                        {
-                            let mut p = profile.write();
-                            p.role = next;
-                            p.save(&ds);
-                        }
-                        me.write().role = next;
-                    }
-                },
+                on_role: move |next: Role| set_role.call(next),
                 // One handler for both halves of the switch, so there is exactly
                 // one place that moves the room, remembers the choice and drops
                 // what the new format has no room for.
@@ -616,12 +712,12 @@ fn App() -> Element {
                     // your own pick with it — but not anyone else's, which is
                     // theirs to take back.
                     board.write().clear_all();
-                    me.write().locked = None;
+                    unlock.call(());
                 },
             }
 
             div { class: "statusbar",
-                span { class: "hint", "^L lock · ^R role · ⌥W/⌥L result · Esc clear · click a portrait to pick, click it again to take it back" }
+                span { class: "hint", "^L lock · ^R role · ⌥W/⌥L result · Esc clear · on the ally board your first pick is your own · click again to take it back" }
                 match *logged.read() {
                     Some(true) => rsx! { span { class: "logged win", "win recorded" } },
                     Some(false) => rsx! { span { class: "logged loss", "loss recorded" } },
@@ -682,7 +778,11 @@ fn App() -> Element {
                 },
             }
 
-            if !roster_rows.is_empty() && status.read().is_live() {
+            // Shown when drafting alone too. It is one row, and it is the
+            // legend for the ally board's amber tile: this is you, this is what
+            // you are on. Hiding it solo left the board's one "mine" marker
+            // with nothing on screen to explain it.
+            if !roster_rows.is_empty() {
                 ui::Roster { rows: roster_rows }
             }
 
@@ -765,18 +865,43 @@ fn App() -> Element {
             // you see.
             div { class: "boards",
                 ui::HeroBoard {
-                    title: "ally".to_owned(),
+                    // The board is your whole team, you included, so it says
+                    // which of the two the next click is about.
+                    title: if my_lock.is_none() {
+                        "ally · click to take yours".to_owned()
+                    } else {
+                        "ally".to_owned()
+                    },
                     side: "ally".to_owned(),
                     rows: ally_board,
-                    // Edits the hand-typed list only. A teammate's own lock
-                    // arrives from their seat and is drawn unclickable, so a
-                    // click here can only ever be about someone who is not in
-                    // the session.
+                    claiming: my_lock.is_none(),
+                    // Dispatches on the same ladder the tiles were drawn from,
+                    // so what a click does is what the tile said it would. A
+                    // teammate's pick never reaches here — the component drops
+                    // those before they leave it.
                     on_toggle: move |hero: HeroId| {
                         logged.set(None);
-                        board.write().toggle_extra_ally(hero);
+                        if my_lock == Some(hero) {
+                            unlock.call(());
+                        } else if board.peek().extra_allies.contains(&hero) {
+                            board.write().remove_extra_ally(hero);
+                        } else if my_lock.is_none() {
+                            // Nothing of yours yet, so this is you. Your role
+                            // follows the hero, which is what keeps the slot you
+                            // hold and the hero you are on the same statement.
+                            lock_hero.call(hero);
+                        } else {
+                            // Already picked, so this is a teammate who is not
+                            // in the session and whom somebody has to type in.
+                            board.write().add_extra_ally(hero);
+                        }
                     },
-                    on_reset: move |_| { board.write().extra_allies.clear(); },
+                    // Your own pick goes with the typed names. A reset that
+                    // visibly left one tile lit would read as broken.
+                    on_reset: move |_| {
+                        board.write().extra_allies.clear();
+                        unlock.call(());
+                    },
                 }
 
                 ui::HeroBoard {
@@ -839,7 +964,7 @@ fn App() -> Element {
                         })
                         .collect::<Vec<_>>(),
                     swap_mode: draft.locked.is_some(),
-                    on_lock: move |hero: HeroId| { me.write().locked = Some(hero); },
+                    on_lock: move |hero: HeroId| lock_hero.call(hero),
                 }
             }
 
@@ -850,22 +975,29 @@ fn App() -> Element {
 
 /// One roster board's rows: every hero the game has, grouped by role.
 ///
-/// `picked` and `blocked` are asked per board rather than per hero, because the
-/// same hero can be a live enemy pick, an untaken ally slot, and one of yours at
-/// the same time — which is the whole reason the boards are separate rather than
-/// one list with a mode.
-/// `blocked` takes the row's role as well as the hero, because with per-role
-/// caps the answer is a property of the row: a full dps row says nothing about
-/// whether a tank can still be entered. Taking it here also means the roles are
-/// free — the rows are built by walking them — rather than one lookup per tile.
+/// `state` is asked per board rather than per hero, because the same hero can
+/// be a live enemy pick, an untaken ally slot, and one of yours at the same
+/// time — which is the whole reason the boards are separate rather than one
+/// list with a mode. It takes the row's role as well as the hero, because with
+/// per-role caps the answer is a property of the row: a full dps row says
+/// nothing about whether a tank can still be entered. Taking it here also means
+/// the roles are free — the rows are built by walking them — rather than one
+/// lookup per tile.
+///
+/// One closure returning one state, rather than the two independent predicates
+/// this used to take. Those could describe a tile that was both picked and
+/// unclickable, and the caller had to remember to rule it out by hand; it did
+/// not, and a teammate's pick came out clickable for months. There is nothing
+/// left here to get wrong.
 ///
 /// `room` is what the row's count is drawn from, and `None` on a board that has
-/// no cap to count against.
+/// no cap to count against. `mine` names the row, if any, whose remaining slot
+/// is one the viewer is holding open themselves.
 fn roster(
     dataset: &Dataset,
-    picked: impl Fn(HeroId) -> bool,
-    blocked: impl Fn(Role, HeroId) -> bool,
+    state: impl Fn(Role, HeroId) -> (TileState, Option<String>),
     room: Option<&Capacity>,
+    mine: Option<Role>,
 ) -> Vec<BoardRow> {
     Role::ALL
         .into_iter()
@@ -873,11 +1005,12 @@ fn roster(
             role,
             label: role.label().to_owned(),
             capacity: room.map(|room| room.free_in(role)),
+            mine: mine == Some(role),
             tiles: dataset
                 .heroes_in_role(role)
                 .map(|hero| {
-                    let selected = picked(hero);
-                    tile_of(dataset, hero, selected, !selected && blocked(role, hero))
+                    let (state, owner) = state(role, hero);
+                    tile_of(dataset, hero, state, owner)
                 })
                 .collect(),
         })
@@ -885,15 +1018,27 @@ fn roster(
 }
 
 /// One board tile, with the portrait and the name already resolved.
-fn tile_of(dataset: &Dataset, hero: HeroId, selected: bool, disabled: bool) -> HeroTile {
+fn tile_of(dataset: &Dataset, hero: HeroId, state: TileState, owner: Option<String>) -> HeroTile {
     let chip = hero_chip(dataset, hero);
     HeroTile {
         hero,
         name: chip.name,
         icon: chip.icon,
-        selected,
-        disabled,
+        state,
+        owner,
     }
+}
+
+/// The state of a tile on a board that only ever holds picks and refusals —
+/// the enemy roster and your own pool. Neither has seats, so neither can have
+/// a hero that is somebody else's.
+fn plain_tile(picked: bool, blocked: bool) -> (TileState, Option<String>) {
+    let state = match (picked, blocked) {
+        (true, _) => TileState::Picked,
+        (false, true) => TileState::Blocked,
+        (false, false) => TileState::Free,
+    };
+    (state, None)
 }
 
 /// The hero the "lock" shortcut should snap to: the current best suggestion.
