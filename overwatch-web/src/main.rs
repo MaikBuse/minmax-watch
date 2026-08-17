@@ -173,6 +173,43 @@ fn map_chip(dataset: &Dataset, map: overwatch_core::MapId) -> Option<MapChip> {
     })
 }
 
+/// What the ban list is defending, named rather than left to be inferred: the
+/// number on every row means a different thing in each case, and on the patch
+/// rung it is not about this team at all.
+///
+/// `rank` reaches exactly one arm, and that is the whole point of it being here.
+/// `Patch` is the one subject `ban_recommendations` scores with
+/// `base_strength_at(rank, ..)` — every other arm is pure threat, where the rung
+/// does not enter and naming it would be a claim the score does not make.
+fn ban_subject(subject: &BanSubject, rank: Rank, role: Role) -> String {
+    match subject {
+        // The rung that sorted the list, said in the caption. Without it this
+        // reads as a claim about the whole ladder while ranking on one division
+        // of it — and the row underneath already qualifies its win rate as the
+        // ladder's, so the two lines would contradict each other.
+        BanSubject::Patch if rank == Rank::All => "strongest right now".to_owned(),
+        BanSubject::Patch => format!("strongest at {} right now", rank.label()),
+        BanSubject::One {
+            is_me: true,
+            locked: true,
+            ..
+        } => "vs your pick".to_owned(),
+        BanSubject::One {
+            who, locked: true, ..
+        } => format!("vs {who}'s pick"),
+        BanSubject::One {
+            is_me: true,
+            heroes,
+            ..
+        } => format!("vs your pool · {heroes} {}", role.label()),
+        BanSubject::One { who, heroes, .. } => format!("vs {who}'s pool · {heroes}"),
+        BanSubject::Team { known, locked } if *locked > 0 => {
+            format!("vs your team · {known} known, {locked} in")
+        }
+        BanSubject::Team { known, .. } => format!("vs your team · {known} known"),
+    }
+}
+
 #[component]
 fn App() -> Element {
     // The dataset is immutable and shared by every panel.
@@ -756,30 +793,7 @@ fn App() -> Element {
             .collect(),
     }];
 
-    // What the ban list is defending, named rather than left to be inferred:
-    // the number on every row means a different thing in each case, and on the
-    // patch rung it is not about this team at all.
-    let ban_subject = match &frame.bans.subject {
-        BanSubject::Patch => "strongest right now".to_owned(),
-        BanSubject::One {
-            is_me: true,
-            locked: true,
-            ..
-        } => "vs your pick".to_owned(),
-        BanSubject::One {
-            who, locked: true, ..
-        } => format!("vs {who}'s pick"),
-        BanSubject::One {
-            is_me: true,
-            heroes,
-            ..
-        } => format!("vs your pool · {heroes} {}", role.label()),
-        BanSubject::One { who, heroes, .. } => format!("vs {who}'s pool · {heroes}"),
-        BanSubject::Team { known, locked } if *locked > 0 => {
-            format!("vs your team · {known} known, {locked} in")
-        }
-        BanSubject::Team { known, .. } => format!("vs your team · {known} known"),
-    };
+    let ban_subject = ban_subject(&frame.bans.subject, profile.read().rank, role);
     // With one hero to defend, "hardest on" can only name it back at you.
     let locked_subject = matches!(frame.bans.subject, BanSubject::One { locked: true, .. });
     let patch_subject = matches!(frame.bans.subject, BanSubject::Patch);
@@ -863,17 +877,7 @@ fn App() -> Element {
                 generated: dataset.generated.clone(),
                 sync_status: status.read().label(),
                 logged: *logged.read(),
-                rank: profile.read().rank,
-                rank_open: rank_open(),
                 on_role: move |next: Role| set_role.call(next),
-                on_rank: move |next: Rank| set_rank.call(next),
-                // Picking a rung closes the sheet: it is a one-shot choice, not
-                // something to sit comparing, and leaving it open would cover
-                // the board the change was made to affect.
-                on_rank_open: move |_| {
-                    let next = !rank_open();
-                    rank_open.set(next);
-                },
                 // One handler for both halves of the switch, so there is exactly
                 // one place that moves the room, remembers the choice and drops
                 // what the new format has no room for.
@@ -1203,7 +1207,17 @@ fn App() -> Element {
                     ui::Recommendations {
                         items: rec_rows.clone(),
                         swap_mode: draft.locked.is_some(),
+                        rank: profile.read().rank,
+                        rank_open: rank_open(),
                         on_lock: move |hero: HeroId| lock_hero.call(hero),
+                        on_rank: move |next: Rank| set_rank.call(next),
+                        // Picking a rung closes the sheet: it is a one-shot choice,
+                        // not something to sit comparing, and leaving it open would
+                        // cover the list the change was made to reorder.
+                        on_rank_open: move |_| {
+                            let next = !rank_open();
+                            rank_open.set(next);
+                        },
                     }
                 }
             }
@@ -1303,4 +1317,139 @@ fn frame_top(dataset: &Dataset, draft: &Draft, profile: &Profile) -> Option<Hero
         .ok()?
         .first()
         .map(|rec| rec.hero)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // The caption is the only place the ban list says which rung sorted it, and
+    // it is one arm of a match on a subject with four other shapes. A branch on
+    // a string nothing asserts is how `synergy.toml` shipped empty behind a
+    // weighted term for months.
+    #[test]
+    fn the_patch_ban_caption_names_the_rung_that_sorted_it() {
+        assert_eq!(
+            ban_subject(&BanSubject::Patch, Rank::Grandmaster, Role::Tank),
+            "strongest at grandmaster+ right now"
+        );
+    }
+
+    // The aggregate is not a division, and saying "strongest at all ranks"
+    // would invent a bracket for somebody who never opened the picker.
+    #[test]
+    fn the_whole_ladder_is_not_named_as_though_it_were_a_division() {
+        assert_eq!(
+            ban_subject(&BanSubject::Patch, Rank::All, Role::Tank),
+            "strongest right now"
+        );
+    }
+
+    // Every other subject scores on threat, where the rung does not enter. A
+    // rung in these captions would be a claim the number does not make.
+    #[test]
+    fn no_other_ban_subject_mentions_a_rung_at_any_rank() {
+        let others = [
+            BanSubject::One {
+                who: "Sam".to_owned(),
+                is_me: true,
+                locked: true,
+                heroes: 1,
+            },
+            BanSubject::One {
+                who: "Sam".to_owned(),
+                is_me: false,
+                locked: true,
+                heroes: 1,
+            },
+            BanSubject::One {
+                who: "Sam".to_owned(),
+                is_me: true,
+                locked: false,
+                heroes: 3,
+            },
+            BanSubject::One {
+                who: "Sam".to_owned(),
+                is_me: false,
+                locked: false,
+                heroes: 3,
+            },
+            BanSubject::Team {
+                known: 3,
+                locked: 0,
+            },
+            BanSubject::Team {
+                known: 3,
+                locked: 2,
+            },
+        ];
+
+        for subject in &others {
+            for rank in Rank::CHOICES {
+                let text = ban_subject(subject, rank, Role::Tank);
+                assert!(
+                    !text.contains(rank.label()) && !text.contains("strongest"),
+                    "{subject:?} at {rank:?} named a rung: {text:?}"
+                );
+            }
+        }
+    }
+
+    // The rung is the only thing that moved. Pinned so a future edit to the
+    // caption cannot quietly reword the five subjects that carry the draft.
+    #[test]
+    fn the_threat_captions_still_read_as_they_did() {
+        let at = |subject: &BanSubject| ban_subject(subject, Rank::Diamond, Role::Support);
+
+        assert_eq!(
+            at(&BanSubject::One {
+                who: "Sam".to_owned(),
+                is_me: true,
+                locked: true,
+                heroes: 1,
+            }),
+            "vs your pick"
+        );
+        assert_eq!(
+            at(&BanSubject::One {
+                who: "Sam".to_owned(),
+                is_me: false,
+                locked: true,
+                heroes: 1,
+            }),
+            "vs Sam's pick"
+        );
+        assert_eq!(
+            at(&BanSubject::One {
+                who: "Sam".to_owned(),
+                is_me: true,
+                locked: false,
+                heroes: 3,
+            }),
+            "vs your pool · 3 support"
+        );
+        assert_eq!(
+            at(&BanSubject::One {
+                who: "Sam".to_owned(),
+                is_me: false,
+                locked: false,
+                heroes: 3,
+            }),
+            "vs Sam's pool · 3"
+        );
+        assert_eq!(
+            at(&BanSubject::Team {
+                known: 3,
+                locked: 0,
+            }),
+            "vs your team · 3 known"
+        );
+        assert_eq!(
+            at(&BanSubject::Team {
+                known: 3,
+                locked: 2,
+            }),
+            "vs your team · 3 known, 2 in"
+        );
+    }
 }

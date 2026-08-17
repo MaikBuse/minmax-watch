@@ -430,10 +430,9 @@ body {
     align-items: center;
     gap: var(--sp-4);
     margin-bottom: var(--sp-4);
-    /* The fallback containing block for the two sheets `.context` carries. Both
-       hang off their own trigger at normal widths; once the row wraps and the
-       trigger could be anywhere, they resolve against this instead — see the
-       ≤560px block. */
+    /* The fallback containing block for the chords sheet, which hangs off its own
+       button at normal widths and resolves against this once the row has wrapped
+       and the button could be anywhere — see the ≤560px block. */
     position: relative;
 }
 
@@ -1336,24 +1335,26 @@ body {
    the map, so it is asked where the map is picked. Only rendered on the payload
    modes, so its absence on a tile is information too. */
 
-/* Attack/defend, team size, queue and rank are one control language: a small
-   statement about the match in front of you. They share these rules rather than
-   each growing a look of its own, so that changing how one of them reads changes
-   all of them. Deliberately not the .modes segmented control above — that one
-   belongs to the role you are picking as, and borrowing it here would claim the
-   two are the same kind of choice.
+/* Attack/defend, team size and queue are one control language: a small statement
+   about the match in front of you. They share these rules rather than each
+   growing a look of its own, so that changing how one of them reads changes all
+   of them. Deliberately not the .modes segmented control above — that one belongs
+   to the role you are picking as, and borrowing it here would claim the two are
+   the same kind of choice.
 
-   Rank is the first member with more than two options, which is why it is the
-   only one whose options live behind a disclosure rather than on the header
-   itself — see .rank-picker below.
+   Rank used to be the fourth member and is no longer in the header at all. Being
+   a statement about the match is exactly what was wrong with it there: it reads
+   as a fact you are recording, when it is a knob that reorders the pick column
+   for a fifth to over a quarter of drafts and re-sorts the ban list's patch rung.
+   It lives in the pick panel's own heading now, next to the list it changes.
 
-   What is inside that disclosure is no longer a pill. Rank is also the only one
-   of the four whose options carry artwork, and a Blizzard rank badge needs a box
-   that fits rather than fills, a row wide enough to seat a label beside it, and
-   an active state that is not a solid accent fill painted behind gold. So those
-   became `.rank-row` and left this block. The chip did not: `.rank-chip` is the
-   statement, and a statement about the match is exactly what `.side` and
-   `.queue` are.
+   `.rank-chip` keeps these rules anyway, and that is not inertia. Sized and
+   coloured like the header's chips it stays a quiet control rather than becoming
+   a second call to action inside a panel whose rows are the thing to click. What
+   is *inside* its disclosure never belonged to this block: those options carry
+   artwork, and a Blizzard rank badge needs a box that fits rather than fills, a
+   row wide enough to seat a label beside it, and an active state that is not a
+   solid accent fill painted behind gold. They are `.rank-row`.
 
    Nothing here may be called `.rank`. That is already the ordinal column in the
    pick list and it carries `width: 14px`; anything given that class inherits the
@@ -1417,23 +1418,37 @@ body {
 }
 
 /* The rank picker: a chip that states its own answer, and a sheet of the
-   alternatives behind a click.
+   alternatives behind a click. It sits in the pick panel's heading row, and the
+   caveat under that row (`.rank-note`) is half of the control — see there.
 
-   Nine pills laid out flat measure about 640px, and the header has been
-   overflowing below 950px since before this existed (see the note above
-   .header). So the header pays for one pill and the rest is a disclosure. The
-   sheet is `position: absolute` off .rank-picker rather than in flow, because a
-   sheet that pushed the header taller would move the whole board down the moment
-   it opened — which is the one thing a control changed mid-draft must not do.
+   Still a disclosure, now that there is more room than the header had. Nine rows
+   carrying badges are about 300px of column, and the pick panel's job is the list
+   underneath: a permanently open menu would push the first recommendation below
+   the fold on a phone, and the top row is the answer this screen exists to give.
+   The sheet is `position: absolute` rather than in flow for the same reason it
+   always was — one that pushed the panel taller would move every row down the
+   moment it opened, which is the one thing a control changed mid-draft must not
+   do.
 
    It is held open by a click rather than a hover: something that vanishes when
    the pointer leaves cannot be aimed at with a thumb. */
 .rank-picker {
-    /* The containing block for the sheet. Without it the sheet resolves against
-       `.header` instead and hangs off the page's right edge, a chip's width plus
-       four more controls away from the thing that opened it. */
+    /* The containing block for the sheet. Nothing between here and `.app` sets
+       `position`, so without this the sheet resolves against the viewport. */
     position: relative;
     display: inline-flex;
+}
+
+/* Right end of the pick panel's heading row, opposite the "pick" title. Same
+   `margin-left: auto` + `flex: 0 0 auto` the reset uses in a `.board-head`,
+   which is the established way a control sits at the far end of one of these
+   rows and survives the row wrapping.
+
+   That right edge is also what lets `.ranks` keep one anchor at every width —
+   see the note there before moving this. */
+.recommendations .panel-head .rank-picker {
+    margin-left: auto;
+    flex: 0 0 auto;
 }
 
 .rank-chip {
@@ -1490,25 +1505,20 @@ body {
     display: none;
     position: absolute;
     z-index: 20;
-    /* Under the chip's right edge — `top`/`right` measured off `.rank-picker`.
-       This hung off `.header` instead for as long as the sheet was a wrapping
-       grid of pills about 480px wide, because 480px starting at the chip (x=1072
-       at 1440px) ran 112px off the viewport and took the page into a horizontal
-       scroll. The column is 13rem, so that arithmetic is gone: 208px fits beside
-       the chip at every width the header does not wrap at, and the sheet belongs
-       under the control it describes rather than at the far end of the row.
+    /* Under the chip's right edge, measured off `.rank-picker`, and that is the
+       whole of it at every width — no breakpoint and no fallback anchor.
 
-       Right-anchored, not left: `.context` is pushed to the right by its own
-       margin, so a menu under one of its chips reads right-aligned — and it is
-       what `.keys-sheet` does three elements over.
+       Both of which this needed while the chip was in the header. There it sat
+       mid-row among six other controls, so its x depended on where a wrapping
+       flex row happened to break and the sheet had to fall back to `.header` on a
+       phone to stay on screen. In the pick panel's head the chip is pinned to the
+       right edge by `margin-left: auto`, and the panel is never narrower than the
+       sheet — 344px against 208px at a 360px viewport, and wider everywhere else,
+       because below 700px `.columns` stops being two tracks. A right-anchored
+       sheet therefore lands inside the panel by construction.
 
-       The one width this cannot cover is the chip starting a *wrapped* line, at
-       the page's left gutter with less than 208px to its left; see the ≤560px
-       block. `position-try-fallbacks` would flip the sheet back on screen with
-       no breakpoint at all, which is the honest answer to "the chip moves", but
-       Firefox does not ship anchor positioning — it would need this rule and the
-       media query underneath it regardless, so that is three mechanisms for one
-       208px menu. */
+       Right and not left for the same reason the chip is: the head reads title on
+       the left, control on the right, and the menu belongs under the control. */
     top: calc(100% + var(--sp-2));
     right: 0;
 
@@ -1604,11 +1614,17 @@ body {
 }
 
 /* The caveat the picker would otherwise imply away: only patch strength is
-   sliced by rank. Padded to the rows' text so it reads as a note about the menu
-   rather than as a tenth option. */
+   sliced by rank. It used to be the last line inside the sheet, which put the
+   limits of the control behind the click that changes it. It sits under the pick
+   panel's heading now, permanently, because the pick list is the thing that would
+   otherwise imply the counter term moved too.
+
+   Full panel width and left-aligned, not tucked under the chip: it qualifies the
+   list, and a note ragged-right under a right-aligned control reads as a label
+   for the control instead. Sits tight to the head — the heading and its caveat
+   are one block, and the first row should not look like it belongs to them. */
 .rank-note {
-    margin: var(--sp-3) 0 0;
-    padding: 0 6px;
+    margin: -0.15rem 0 0.6rem;
     font-size: var(--fs-micro);
     color: var(--text-faint);
 }
@@ -2232,25 +2248,20 @@ body {
         letter-spacing: 0.02em;
     }
 
-    /* Both header sheets fall back to being anchored to the header rather than
-       to their own trigger. `right: 0` on a sheet of 176px or 208px is correct
-       while its button is somewhere along a single row; once `.context` wraps the
-       button can start a line at the left gutter, and a sheet hung off its right
-       edge reaches off the left of the screen. `.header` spans the page at every
-       width, so it is the one anchor that cannot. (It carries `position:
+    /* The chords sheet falls back to being anchored to the header rather than to
+       its own button, and stretches the width of it. `right: 0` on a 176px sheet
+       is correct while the button is somewhere along a single row; once `.context`
+       wraps, the button can start a line at the left gutter and a sheet hung off
+       its right edge reaches off the left of the screen. `.header` spans the page
+       at every width, so it is the one anchor that cannot. (It carries `position:
        relative` in the base rules already — no need to repeat it here.)
 
-       Both stretch the full width rather than pinning to one edge of it. Pinning
-       looked cheaper for `.ranks`, whose 13rem is load-bearing at full size — it
-       sizes the menu to its choices rather than to `.rank-note`. But the chip
-       does not wrap at every width below this breakpoint: measured at 480px it is
-       at x=8 with `grandmaster+` in it and at x=289 with `all ranks`, because the
-       label's own width decides where the row breaks. A sheet pinned to the left
-       gutter is then 281px away from the chip that opened it, which is the
-       misalignment this breakpoint exists to fix, reappearing in a band. Stretched
-       there is no edge to be on the wrong side of: the sheet spans the header, so
-       it reads as belonging to the row rather than as offset from anything in it.
-       That is worth overriding the 13rem for, and only here. */
+       The rank sheet needed the identical pair of rules for as long as its chip
+       was in this row. It does not now: in the pick panel's head the chip is
+       right-pinned in a container always wider than the sheet, so one anchor
+       covers every width. Do not add them back without moving the chip back —
+       `.panel` sets no `position`, so `position: static` on `.rank-picker` here
+       would send the sheet to the viewport rather than to a container. */
     .keys {
         position: static;
     }
@@ -2259,17 +2270,6 @@ body {
         left: 0;
         right: 0;
         min-width: 0;
-    }
-
-    .rank-picker {
-        position: static;
-    }
-
-    .ranks {
-        left: 0;
-        right: 0;
-        width: auto;
-        max-width: none;
     }
 
     /* The role label goes above its grid instead of beside it, which hands the

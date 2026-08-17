@@ -763,12 +763,8 @@ pub fn Header(
     /// visible confirmation. It sits beside the sync light because both are
     /// transient status about what just happened rather than part of the draft.
     logged: Option<bool>,
-    rank: Rank,
-    rank_open: bool,
     on_role: EventHandler<Role>,
     on_format: EventHandler<Format>,
-    on_rank: EventHandler<Rank>,
-    on_rank_open: EventHandler<()>,
     on_reset_all: EventHandler<()>,
 ) -> Element {
     let sync_class = format!("sync sync-{}", sync_status.replace(' ', "-"));
@@ -817,11 +813,10 @@ pub fn Header(
                         None => rsx! { span { class: "map unset", "no map" } },
                     }
                 }
-                // After the map rather than before it: the map is a fact about
-                // the match in front of you and this is a standing fact about
-                // you, so the cluster stays ordered widest-scope-first and the
-                // thing that changes every game keeps its place in the line.
-                RankPicker { rank, open: rank_open, on_rank, on_open: on_rank_open }
+                // The rank picker used to sit here, after the map. It states a
+                // fact about the match like everything else in this row, which is
+                // exactly why it read as one — nothing here connected it to the
+                // two lists it reorders. It is in the pick panel's own head now.
                 // The pool count used to sit here, adrift between the map and
                 // the sync light. It lives on the mode segment it describes now,
                 // where it is also legible for the modes you are not in.
@@ -905,6 +900,13 @@ fn rank_chip_badge(rank: Rank) -> Element {
 /// No keyboard chord, on the argument at [`FormatSwitch`]: every chord that
 /// exists is for something done repeatedly inside a draft, and this is changed
 /// when you change bracket.
+///
+/// **The scope caveat is not in here.** "Only patch strength is sliced by rank"
+/// is rendered by [`Recommendations`], beside the control rather than inside a
+/// sheet you have to open to be told what the control does not do. Anything else
+/// that mounts this picker has to carry that line too — a rank control with no
+/// caveat on it implies the counter term moved, which is the one reading
+/// `overwatch_core::Rank`'s own module docs forbid.
 #[component]
 fn RankPicker(
     rank: Rank,
@@ -949,12 +951,6 @@ fn RankPicker(
                         {rank_badge(option)}
                         span { class: "rank-row-label", "{option.label()}" }
                     }
-                }
-                // Said outright rather than left to be inferred. The rank slices
-                // only exist for win rate: no source publishes matchups or duos
-                // per rung, and a picker with no caveat implies otherwise.
-                p { class: "rank-note",
-                    "only patch strength is sliced by rank \u{2014} matchups read the same at every rung"
                 }
             }
         }
@@ -1304,7 +1300,15 @@ impl RecRow {
 pub fn Recommendations(
     items: Vec<RecRow>,
     swap_mode: bool,
+    /// The rung patch strength is read on. The control lives here rather than in
+    /// the header because this is the list it reorders: selecting one changes the
+    /// top row for a fifth to well over a quarter of drafts, depending on the
+    /// rung, and a chip among the header's match facts claimed none of that.
+    rank: Rank,
+    rank_open: bool,
     on_lock: EventHandler<HeroId>,
+    on_rank: EventHandler<Rank>,
+    on_rank_open: EventHandler<()>,
 ) -> Element {
     rsx! {
         section { class: "panel recommendations",
@@ -1312,6 +1316,15 @@ pub fn Recommendations(
                 h2 {
                     if swap_mode { "should you swap?" } else { "pick" }
                 }
+                RankPicker { rank, open: rank_open, on_rank, on_open: on_rank_open }
+            }
+            // Outside the sheet on purpose: a caveat you have to open a menu to
+            // read is not a caveat on a control this prominent. Rank slices win
+            // rate and nothing else — no source publishes matchups or duos per
+            // rung — and next to the pick list is where that has to be said,
+            // because the list is what would otherwise imply it.
+            p { class: "rank-note",
+                "only patch strength is sliced by rank \u{2014} matchups read the same at every rung"
             }
             if items.is_empty() {
                 p { class: "empty", "every hero in this role is already on your team" }
