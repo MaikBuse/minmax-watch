@@ -430,8 +430,10 @@ body {
     align-items: center;
     gap: var(--sp-4);
     margin-bottom: var(--sp-4);
-    /* The containing block for the rank sheet, which hangs below the whole
-       header rather than off the chip that opens it — see .ranks. */
+    /* The fallback containing block for the two sheets `.context` carries. Both
+       hang off their own trigger at normal widths; once the row wraps and the
+       trigger could be anywhere, they resolve against this instead — see the
+       ≤560px block. */
     position: relative;
 }
 
@@ -1427,6 +1429,10 @@ body {
    It is held open by a click rather than a hover: something that vanishes when
    the pointer leaves cannot be aimed at with a thumb. */
 .rank-picker {
+    /* The containing block for the sheet. Without it the sheet resolves against
+       `.header` instead and hangs off the page's right edge, a chip's width plus
+       four more controls away from the thing that opened it. */
+    position: relative;
     display: inline-flex;
 }
 
@@ -1484,15 +1490,25 @@ body {
     display: none;
     position: absolute;
     z-index: 20;
-    /* Anchored to the header's right edge, not to the chip.
-       `.header` wraps, and the chip lands anywhere from x=1072 at 1440px to x=8
-       at 360px once the row breaks — so a sheet pinned to the chip runs 112px
-       off the right of the viewport at every width from 768 up, and takes the
-       whole page into a horizontal scroll with it. The header spans the page, so
-       hanging the sheet off *that* is the one anchor that fits at every width
-       without a breakpoint or a line of JS.
-       `top: 100%` for the same reason: below the header as a whole, so it never
-       lands on top of the header's own second row once it has wrapped. */
+    /* Under the chip's right edge — `top`/`right` measured off `.rank-picker`.
+       This hung off `.header` instead for as long as the sheet was a wrapping
+       grid of pills about 480px wide, because 480px starting at the chip (x=1072
+       at 1440px) ran 112px off the viewport and took the page into a horizontal
+       scroll. The column is 13rem, so that arithmetic is gone: 208px fits beside
+       the chip at every width the header does not wrap at, and the sheet belongs
+       under the control it describes rather than at the far end of the row.
+
+       Right-anchored, not left: `.context` is pushed to the right by its own
+       margin, so a menu under one of its chips reads right-aligned — and it is
+       what `.keys-sheet` does three elements over.
+
+       The one width this cannot cover is the chip starting a *wrapped* line, at
+       the page's left gutter with less than 208px to its left; see the ≤560px
+       block. `position-try-fallbacks` would flip the sheet back on screen with
+       no breakpoint at all, which is the honest answer to "the chip moves", but
+       Firefox does not ship anchor positioning — it would need this rule and the
+       media query underneath it regardless, so that is three mechanisms for one
+       208px menu. */
     top: calc(100% + var(--sp-2));
     right: 0;
 
@@ -2216,14 +2232,25 @@ body {
         letter-spacing: 0.02em;
     }
 
-    /* Anchored to the header rather than to its own button. `right: 0` on a
-       176px sheet is correct while the button is at the right end of a single
-       row; once the header wraps the button can be anywhere, and the sheet
-       hangs off the left edge of the screen. */
-    .header {
-        position: relative;
-    }
+    /* Both header sheets fall back to being anchored to the header rather than
+       to their own trigger. `right: 0` on a sheet of 176px or 208px is correct
+       while its button is somewhere along a single row; once `.context` wraps the
+       button can start a line at the left gutter, and a sheet hung off its right
+       edge reaches off the left of the screen. `.header` spans the page at every
+       width, so it is the one anchor that cannot. (It carries `position:
+       relative` in the base rules already — no need to repeat it here.)
 
+       Both stretch the full width rather than pinning to one edge of it. Pinning
+       looked cheaper for `.ranks`, whose 13rem is load-bearing at full size — it
+       sizes the menu to its choices rather than to `.rank-note`. But the chip
+       does not wrap at every width below this breakpoint: measured at 480px it is
+       at x=8 with `grandmaster+` in it and at x=289 with `all ranks`, because the
+       label's own width decides where the row breaks. A sheet pinned to the left
+       gutter is then 281px away from the chip that opened it, which is the
+       misalignment this breakpoint exists to fix, reappearing in a band. Stretched
+       there is no edge to be on the wrong side of: the sheet spans the header, so
+       it reads as belonging to the row rather than as offset from anything in it.
+       That is worth overriding the 13rem for, and only here. */
     .keys {
         position: static;
     }
@@ -2232,6 +2259,17 @@ body {
         left: 0;
         right: 0;
         min-width: 0;
+    }
+
+    .rank-picker {
+        position: static;
+    }
+
+    .ranks {
+        left: 0;
+        right: 0;
+        width: auto;
+        max-width: none;
     }
 
     /* The role label goes above its grid instead of beside it, which hands the
