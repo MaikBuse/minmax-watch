@@ -6,6 +6,10 @@
 Ranks every hero in your role against the enemy team you are actually facing,
 and shares one draft with your whole team by session code.</p>
 
+<p align="center">
+  <img src="docs/screenshot.webp" alt="The draft screen: role tabs and session bar across the top, then hero pool, map picker, ally and enemy rosters, and the ban and pick lists with their reasons." width="100%">
+</p>
+
 ---
 
 Hero select is seconds long, so the scoring engine is compiled into the client
