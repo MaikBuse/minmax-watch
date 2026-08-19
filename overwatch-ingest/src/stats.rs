@@ -32,32 +32,49 @@ use crate::counterwatch::HeroRates;
 const WIN_RATE_FLOOR: f32 = 44.0;
 const WIN_RATE_CEILING: f32 = 56.0;
 
-/// How the two published win rates are weighed against each other.
+/// How the three published win rates are weighed against each other.
 ///
 /// Even, which is deliberately *not* the 0.75/0.25 the matchup blend uses. That
 /// split was earned by a correlation argument about three sources measuring a
 /// construct none of them defines the same way. This is one observable quantity
-/// — what fraction of games a hero wins — measured twice, and when two
-/// instruments read the same thing the average of both beats either.
+/// — what fraction of games a hero wins — measured three times, and when
+/// instruments read the same thing the average of them beats any one.
 ///
 /// If anything the case runs the other way. counterpickgg publishes a rounded
 /// integer with no sample size and no stated method, which on the ±6 point band
 /// above quantises the whole roster onto twelve values 16.67 apart;
 /// counterwatch publishes a decimal, the number of tracked matches behind it,
 /// and says it applies Bayesian shrinkage. Even weighting is the conservative
-/// reading, and it keeps a second population in the estimate: the two sites
-/// track different players, and one site's community is not the ladder.
+/// reading, and it keeps three populations in the estimate: the two sites track
+/// different players, and one site's community is not the ladder.
+///
+/// Blizzard is the one that *is* the ladder — first-party, the whole ranked
+/// population of a region, and the only source here without a community behind
+/// it. It covers all 53 heroes and it disagrees with the other two no more than
+/// they disagree with each other: r = 0.755 against counterpickgg and 0.742
+/// against counterwatch, where those two sit at 0.871, and mean |Δ| is about 1.2
+/// points for every pairing. That is the argument for including it, and it is
+/// deliberately *not* an argument for weighting it above a third — any number
+/// over 1/3 is one nobody measured.
+///
+/// It was excluded for a long time by omission rather than by judgement: this
+/// step has always fetched it, and used it only as its own internal reference for
+/// the rank shifts. What that cost is visible on Torbjörn, whose two community
+/// readings of 58.0 and 55.7 put him alone on the rail at +100 while Blizzard
+/// read 51.6.
 const WIN_RATE_WEIGHT_CPGG: f32 = 0.5;
 const WIN_RATE_WEIGHT_CWATCH: f32 = 0.5;
+const WIN_RATE_WEIGHT_BLIZZARD: f32 = 0.5;
 
 /// Averages whichever win rates are actually present.
 ///
 /// Renormalised over the sources that answered, so a hero only one site rates
-/// is reported at that site's figure rather than dragged halfway to zero.
-fn blend_win_rate(cpgg: Option<f32>, cwatch: Option<f32>) -> Option<f32> {
+/// is reported at that site's figure rather than dragged toward the others'.
+fn blend_win_rate(cpgg: Option<f32>, cwatch: Option<f32>, blizzard: Option<f32>) -> Option<f32> {
     let parts = [
         (cpgg, WIN_RATE_WEIGHT_CPGG),
         (cwatch, WIN_RATE_WEIGHT_CWATCH),
+        (blizzard, WIN_RATE_WEIGHT_BLIZZARD),
     ];
     let total: f32 = parts
         .iter()
@@ -259,7 +276,11 @@ pub fn build(
         let cpgg = Some(hero.win_rate);
         let rates = cwatch_rates.get(&hero.hero);
         let cwatch = rates.map(|rates| rates.all_ranks);
-        let blended = blend_win_rate(cpgg, cwatch).unwrap_or(hero.win_rate);
+        // The same figure `rank_shift` already uses as Blizzard's own baseline,
+        // read here as a third reading of the quantity rather than only as the
+        // thing its own rungs are measured against.
+        let blizzard_rate = blizzard.baseline.get(&hero.hero).copied();
+        let blended = blend_win_rate(cpgg, cwatch, blizzard_rate).unwrap_or(hero.win_rate);
 
         strength.push(StrengthEntry {
             hero: hero.hero.clone(),
@@ -267,6 +288,7 @@ pub fn build(
             win_rate: Some((blended * 10.0).round() / 10.0),
             cpgg,
             cwatch,
+            blizzard: blizzard_rate,
         });
 
         let shifts = rank_shift(&hero.hero, rates, blizzard);
@@ -458,6 +480,74 @@ mod tests {
     /// The band tops out at 56, so a hero both sites put above it saturates
     /// whatever the blend says. Pinned so that nobody reads the blend as a
     /// general fix for the ceiling.
+    /// The real case that made this a three-source blend. Torbjörn's two
+    /// community readings put him alone on the rail at +100; Blizzard, the one
+    /// source that is the ladder rather than a tracker, read him four points
+    /// lower and takes him off it.
+    #[test]
+    fn a_third_reading_pulls_a_two_source_outlier_back() {
+        let torb = vec![HeroStats {
+            hero: "torbjorn".to_owned(),
+            win_rate: 58.0,
+            pick_rate: 5.0,
+            best_maps: Vec::new(),
+        }];
+        let cwatch = cwatch_all(&[("torbjorn", 55.7)]);
+
+        let two = &build("today", &torb, &cwatch, &no_ranks(), &known())
+            .0
+            .entries[0];
+        let three = &build(
+            "today",
+            &torb,
+            &cwatch,
+            &blizzard("torbjorn", 51.6, [51.6; 8]),
+            &known(),
+        )
+        .0
+        .entries[0];
+
+        assert_eq!(two.win_rate, Some(56.9), "the two-source blend");
+        assert_eq!(two.value, 100, "which saturates the band");
+
+        assert_eq!(three.win_rate, Some(55.1), "and the average of all three");
+        assert_eq!(three.value, 85, "off the rail");
+        assert_eq!(
+            three.blizzard,
+            Some(51.6),
+            "every reading stays traceable to the source that published it"
+        );
+    }
+
+    /// Renormalisation, from the third source's side: a hero only Blizzard rates
+    /// is reported at Blizzard's figure rather than dragged toward the two that
+    /// said nothing.
+    #[test]
+    fn a_hero_only_blizzard_rates_keeps_that_figure() {
+        let ana = vec![HeroStats {
+            hero: "ana".to_owned(),
+            win_rate: 50.0,
+            pick_rate: 12.0,
+            best_maps: Vec::new(),
+        }];
+
+        let entry = &build(
+            "today",
+            &ana,
+            &HashMap::new(),
+            &blizzard("ana", 53.0, [53.0; 8]),
+            &known(),
+        )
+        .0
+        .entries[0];
+
+        // counterpickgg's 50.0 and Blizzard's 53.0, evenly weighted, with
+        // counterwatch absent rather than counted as anything.
+        assert_eq!(entry.win_rate, Some(51.5));
+        assert_eq!(entry.cwatch, None);
+        assert_eq!(entry.blizzard, Some(53.0));
+    }
+
     #[test]
     fn a_hero_above_the_band_still_saturates_after_blending() {
         let cwatch = cwatch_all(&[("torbjorn", 55.7)]);

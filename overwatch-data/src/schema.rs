@@ -207,14 +207,18 @@ pub struct StrengthEntry {
     /// on it, because ranking on it directly would disagree with `value`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub win_rate: Option<f32>,
-    /// The two published readings behind the blend, kept for the same reason
-    /// `matchups.toml` keeps its per-source columns: the sites disagree
+    /// The three published readings behind the blend, kept for the same reason
+    /// `matchups.toml` keeps its per-source columns: the sources disagree
     /// systematically, and a surprising number should be traceable to whichever
     /// one produced it without re-running the scrape.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cpgg: Option<f32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cwatch: Option<f32>,
+    /// Blizzard's own figure, which is also the baseline the rank shifts in
+    /// `strength_by_rank.toml` are measured against.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub blizzard: Option<f32>,
 }
 
 /// How far each hero's strength moves from the ladder average on each rung of

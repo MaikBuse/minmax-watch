@@ -631,10 +631,10 @@ async fn main() -> Result<()> {
                 let blended = strength
                     .entries
                     .iter()
-                    .filter(|e| e.cpgg.is_some() && e.cwatch.is_some())
+                    .filter(|e| e.cpgg.is_some() && e.cwatch.is_some() && e.blizzard.is_some())
                     .count();
                 eprintln!(
-                    "  strength: {} heroes rated ({blended} from both sources) | \
+                    "  strength: {} heroes rated ({blended} from all three sources) | \
                      map affinity: {} hero/map pairs",
                     strength.entries.len(),
                     affinity.entries.len()
