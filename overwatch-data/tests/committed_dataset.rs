@@ -1037,11 +1037,12 @@ fn the_support_mirror_is_not_mostly_dead_even() {
         ));
     }
 
-    // 8 today, both Kiriko and Lifeweaver, out of 13 opponents each. Every value
-    // curated brings this down; tighten the bound when it does, because a bound
-    // that never moves is a bound nobody is reading.
+    // 5 today, Lifeweaver, out of 13 opponents each — down from 8 when reading
+    // counterwatch's published swing replaced 641 rank interpolations. Every
+    // reading added brings this down; tighten the bound when it does, because a
+    // bound that never moves is a bound nobody is reading.
     assert!(
-        worst <= 8,
+        worst <= 5,
         "a support reads dead even against more than 8 of the other 13 supports, \
          which is more of the role than the counter data can honestly call a coin flip\n  {}",
         table.join("\n  ")
@@ -1077,7 +1078,7 @@ fn almost_none_of_the_counter_readings_saturate_the_scale() {
         !readings.is_empty(),
         "counterwatch has no readings in the committed matrix at all"
     );
-    // 4 of 795 today, all of them D.Mon, whose ratings are the two outliers the
+    // 4 of 1219 today, all of them D.Mon, whose ratings are the two outliers the
     // site publishes.
     assert!(
         saturated * 50 <= readings.len(),

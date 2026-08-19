@@ -79,6 +79,11 @@ pub struct HeroCounters {
 /// median of 7.0 on its own scale, a modest edge, so calling the tail of a top
 /// ten strong overstated it. Where a list has published ratings the anchor now
 /// comes from those instead, and this only says where the decay stops.
+///
+/// It also matters far less than it did. Reading the swing the counters page
+/// states in its row tooltips ([`parse_swings`]) took the interpolation from 265
+/// of counterwatch's readings down to 48 — a published figure now covers almost
+/// everything a rank position used to have to guess at.
 const TAIL_MAGNITUDE: f32 = 25.0;
 
 /// Converts a 1-based rank into a value on -100..=100.
@@ -255,6 +260,151 @@ pub fn parse_page(html: &str) -> Result<HeroCounters> {
 /// else entirely: that one is a magnitude on our scale, this is a ceiling on the
 /// site's.
 const COUNTER_CEILING: f32 = 25.0;
+
+/// The band a published win-probability swing is stretched over to reach
+/// -100..=100, and the counterpart to [`COUNTER_CEILING`] on the other document.
+///
+/// Not fitted to taste: the counters page states a swing for 869 pairs and the
+/// stats page publishes a rating for 530, and 225 of them are the same pair. Over
+/// those 225, `committed value / swing` has a median of 4.333 and a mean of 4.327
+/// with a standard deviation of 0.240, running 3.12 to 5.00 — so the two documents
+/// are quoting one quantity at two precisions, and 100/23 = 4.35 lands on it.
+///
+/// It clamps two of the 869: the single swing of 27 and the single swing of 32.
+/// Everything else lands inside the scale, and the distribution is heavily
+/// bottom-weighted — 745 of 869 sit at a swing of 6 or less, which is ±26 or less
+/// on our scale. That is why reading this column adds no pressure at the rail:
+/// **none** of the 644 pairs it newly rates reaches ±75, let alone the ±90 that
+/// `the_extreme_end_of_the_matchup_scale_stays_rare` counts.
+const SWING_CEILING: f32 = 23.0;
+
+/// One published win-probability swing, from the perspective of the hero whose
+/// page it is — so `value` is always **unfavourable** for that hero. See
+/// [`parse_swings`] for why that is a property of the source and not a bug.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MatchupSwing {
+    /// The opponent, in our hero keys.
+    pub vs: String,
+    /// The site's own figure, in percentage points of win probability.
+    pub swing: u8,
+    /// On the canonical -100..=100 scale, from the page subject's side.
+    pub value: i8,
+}
+
+/// Reads the win-probability swing the counters page states in its row tooltips.
+///
+/// **This is a different document from [`parse_matchup_ratings`] and a much
+/// larger one.** The stats page publishes a rating for a hero's ten most lopsided
+/// matchups, 530 rows across the roster. The counters page carries a tooltip on
+/// *every* row — 52 per page, 2,756 in all, the complete directed matrix — and
+/// 869 of those state a counter impact. Until this existed the pipeline read those
+/// pages only for rank *position*, so 644 published readings were being thrown
+/// away and replaced with an interpolation.
+///
+/// Three things make the direction safe, and it needs all three because the
+/// phrasing gives nothing away:
+///
+/// - **The subject is never the leader.** All 2,756 tooltips read "{opponent}
+///   takes N% of the kills traded with {subject}", so the positional rule
+///   `parse_matchup_ratings` relies on is constant here and carries no signal.
+/// - **The swing always favours the leader.** Of the 225 pairs the stats page also
+///   rates, the committed value is positive for the leader in 225. Of the 445
+///   whose mirror carries a committed value, the mirror is negative in 445. Both
+///   are exact, so this is not a tendency.
+/// - **A pair is stated once.** Not one of the 869 appears on both heroes' pages,
+///   so the source can never contradict itself here and no tie-break is needed.
+///
+/// Checked against the one source that shares no code with this: counterpickgg
+/// agrees the leader is favoured on 69.5% of the 606 overlapping pairs, and the
+/// agreement rises with the swing — 62.7% at a swing of 1-2, 68.1% at 3-5, 79.3%
+/// at 6-10, 81.0% above that. That is the shape of two instruments disagreeing
+/// about soft matchups and converging on hard ones, and 70% is the rate these two
+/// sources already reach across the committed matrix. A parsing error would look
+/// flat, or worse than chance.
+///
+/// Selecting on the tooltip rather than a class, for the reason
+/// `parse_matchup_ratings` gives: a restyle must not be able to change what a
+/// number means. Rows without a counter-impact clause are skipped rather than
+/// read off the kill-share beside it — that figure is 47% explained by *which
+/// hero it is* (Mercy takes 10% of kill trades against the whole roster, Roadhog
+/// 68%), and against this source's own rating it manages r = +0.375 even after
+/// normalising each hero out. It measures how killy a hero is, not who beats whom.
+pub fn parse_swings(html: &str, subject_name: &str) -> Result<Vec<MatchupSwing>> {
+    let anchor = Selector::parse(r#"a[title*=" of the kills traded with "]"#)
+        .map_err(|e| anyhow::anyhow!("invalid selector: {e}"))?;
+    let portrait =
+        Selector::parse("img[alt]").map_err(|e| anyhow::anyhow!("invalid selector: {e}"))?;
+    let document = Html::parse_document(html);
+
+    let mut out: Vec<MatchupSwing> = Vec::new();
+    for row in document.select(&anchor) {
+        let Some(title) = row.value().attr("title") else {
+            continue;
+        };
+        let Some(swing) = swing_points(title) else {
+            continue;
+        };
+
+        let Some(slug) = row
+            .value()
+            .attr("href")
+            .and_then(|href| href.rsplit('/').next())
+            .filter(|slug| !slug.is_empty())
+        else {
+            continue;
+        };
+        let vs = crate::slugs::counterwatch_to_ours(slug);
+
+        // Split on the verb, never on punctuation — `D.Mon` and `D.Va` would
+        // truncate to `D`. The same rule as `parse_matchup_ratings`.
+        let leader = title.split(" takes ").next().unwrap_or_default().trim();
+        let Some(opponent_name) = row
+            .select(&portrait)
+            .next()
+            .and_then(|img| img.value().attr("alt"))
+        else {
+            continue;
+        };
+
+        // The invariant this document holds and the other one does not. If the
+        // subject ever leads a sentence here, the phrasing has changed and the
+        // direction rule above is no longer safe to apply.
+        anyhow::ensure!(
+            leader != subject_name,
+            "counterwatch now names {subject_name} first in its own counters row against              {vs}; the swing direction can no longer be taken from the leader"
+        );
+        if leader != opponent_name {
+            continue;
+        }
+
+        // Unfavourable for the subject, always: the swing favours the leader and
+        // the leader is always the other hero.
+        let value = overwatch_core::normalize(-f32::from(swing), -SWING_CEILING, SWING_CEILING);
+
+        if out.iter().any(|row| row.vs == vs) {
+            continue;
+        }
+        out.push(MatchupSwing { vs, swing, value });
+    }
+
+    Ok(out)
+}
+
+/// The `Counter impact: an estimated +N% swing` figure, or `None` on the rows
+/// that state kill shares and stop there.
+///
+/// Anchored on the label rather than on a bare percentage, because the sentence
+/// before it carries two other percentages — the kill share and the death share —
+/// and either would parse.
+fn swing_points(title: &str) -> Option<u8> {
+    let tail = title.split("Counter impact:").nth(1)?;
+    let digits: String = tail
+        .chars()
+        .skip_while(|c| !c.is_ascii_digit())
+        .take_while(char::is_ascii_digit)
+        .collect();
+    digits.parse().ok()
+}
 
 /// One published counter rating, from the perspective of the hero whose page it
 /// is.
@@ -490,6 +640,7 @@ fn list_anchor(
 fn hero_values(
     key: &str,
     parsed: &HeroCounters,
+    swings: &[MatchupSwing],
     ratings: &HashMap<(String, String), MatchupRating>,
     names: &HashMap<String, String>,
 ) -> HashMap<(String, String), i8> {
@@ -499,6 +650,20 @@ fn hero_values(
         if hero == key {
             out.insert((hero.clone(), opponent.clone()), rating.value);
         }
+    }
+
+    // Second tier, between the two documents' own precisions. The stats page
+    // quotes a rating to one decimal for ten pairs; the counters page quotes a
+    // whole-number swing for as many as 52, and the two agree to r = +0.978 where
+    // they overlap. So the finer figure is seeded first and kept, and this fills
+    // the rest — 644 pairs that were reaching the matrix as a rank interpolation
+    // or not at all.
+    for swing in swings {
+        if swing.vs == key {
+            continue;
+        }
+        out.entry((key.to_owned(), swing.vs.clone()))
+            .or_insert(swing.value);
     }
 
     let countered_top = list_anchor(
@@ -555,11 +720,13 @@ pub async fn scrape(
 
     let mut unresolved: Vec<&str> = Vec::new();
     let mut contradicted = 0usize;
+    let mut swung: HashSet<(String, String)> = HashSet::new();
 
     for (i, key) in hero_keys.iter().enumerate() {
         let cache_slug = format!("counterwatch-{key}.html");
 
         let mut parsed = HeroCounters::default();
+        let mut swings: Vec<MatchupSwing> = Vec::new();
         if fetcher.is_missing(&cache_slug).await {
             unresolved.push(key);
         } else {
@@ -572,6 +739,15 @@ pub async fn scrape(
 
                 parsed = parse_page(&body)
                     .with_context(|| format!("parsing the counterwatch page for {key}"))?;
+                // Off the same document, and free: the ranking comes out of the
+                // page's JSON-LD, the swings out of its DOM.
+                let subject_name = names
+                    .iter()
+                    .find(|(_, our_key)| *our_key == key)
+                    .map(|(name, _)| name.as_str())
+                    .unwrap_or_default();
+                swings = parse_swings(&body, subject_name)
+                    .with_context(|| format!("parsing the counterwatch swings for {key}"))?;
                 if !parsed.countered_by.is_empty() || !parsed.punishes.is_empty() {
                     break;
                 }
@@ -602,10 +778,20 @@ pub async fn scrape(
             }
         }
 
+        // Counted before the merge, because afterwards a swing and a rank
+        // interpolation are indistinguishable in `out` — and reporting a published
+        // reading as a guess is the kind of quiet wrongness this tool exists to
+        // avoid.
+        for swing in &swings {
+            if swing.vs != *key {
+                swung.insert((key.clone(), swing.vs.clone()));
+            }
+        }
+
         // Merged even for a hero with no counters page at all: `hero_values` over
         // an empty ranking is exactly the rows its stats page published, and
         // dropping those would make a missing document cost readings it has.
-        out.extend(hero_values(key, &parsed, ratings, names));
+        out.extend(hero_values(key, &parsed, &swings, ratings, names));
 
         if (i + 1) % 10 == 0 {
             eprintln!("  counterwatch: {}/{} heroes", i + 1, hero_keys.len());
@@ -620,11 +806,16 @@ pub async fn scrape(
     }
 
     let published = out.keys().filter(|key| ratings.contains_key(*key)).count();
+    let swung = out
+        .keys()
+        .filter(|key| !ratings.contains_key(*key) && swung.contains(*key))
+        .count();
     eprintln!(
-        "  counterwatch: {} readings - {published} published, {} from a rank position\n\
+        "  counterwatch: {} readings - {published} rated, {swung} from a published swing, \
+         {} from a rank position\n\
          \x20   {contradicted} published rating(s) contradict the list that ranked them",
         out.len(),
-        out.len() - published,
+        out.len() - published - swung,
     );
 
     Ok(out)
@@ -1518,6 +1709,7 @@ mod tests {
         let out = hero_values(
             "reinhardt",
             &parsed,
+            &[],
             &published(&[("pharah", -12.0)]),
             &merge_names(),
         );
@@ -1536,6 +1728,7 @@ mod tests {
         let out = hero_values(
             "reinhardt",
             &parsed,
+            &[],
             &published(&[("pharah", -12.0)]),
             &merge_names(),
         );
@@ -1553,7 +1746,7 @@ mod tests {
     #[test]
     fn the_punish_list_no_longer_borrows_the_countered_by_anchor() {
         let parsed = ranked(&["Pharah"], &["Brigitte", "Zarya"], Some(25.0));
-        let out = hero_values("reinhardt", &parsed, &HashMap::new(), &merge_names());
+        let out = hero_values("reinhardt", &parsed, &[], &HashMap::new(), &merge_names());
 
         assert_eq!(
             out[&("reinhardt".to_owned(), "pharah".to_owned())],
@@ -1571,7 +1764,7 @@ mod tests {
     #[test]
     fn a_list_with_no_published_rating_falls_back_to_the_published_top_rating() {
         let parsed = ranked(&["Pharah", "Brigitte"], &[], Some(10.0));
-        let out = hero_values("reinhardt", &parsed, &HashMap::new(), &merge_names());
+        let out = hero_values("reinhardt", &parsed, &[], &HashMap::new(), &merge_names());
 
         assert_eq!(out[&("reinhardt".to_owned(), "pharah".to_owned())], -55);
         assert_eq!(out[&("reinhardt".to_owned(), "brigitte".to_owned())], -25);
@@ -1590,12 +1783,163 @@ mod tests {
     }
 
     /// The two documents rank a hero's matchups differently, so the stats page
+    fn swing_row(
+        opponent: &str,
+        subject: &str,
+        kills: u32,
+        deaths: u32,
+        swing: Option<u32>,
+    ) -> String {
+        let impact = match swing {
+            Some(s) => format!(
+                " Counter impact: an estimated +{s}% swing to an even fight, from duel and \
+                 teamfight outcomes. Not a win rate."
+            ),
+            None => String::new(),
+        };
+        // counterwatch's own slugs drop the full stop and hyphenate spaces —
+        // `dmon`, `wrecking-ball` — as the cached pages show.
+        let slug = opponent
+            .to_ascii_lowercase()
+            .replace('.', "")
+            .replace(' ', "-");
+        format!(
+            r#"<li><a title="{opponent} takes {kills}% of the kills traded with {subject}, and                {subject} suffers {deaths}% of the deaths when both are up.{impact}"                href="/stats/overwatch/heroes/{slug}"><img alt="{opponent}"/></a></li>"#
+        )
+    }
+
+    /// The direction rule, which is the whole risk in reading this document: the
+    /// swing favours the hero the sentence names first, and that is never the page
+    /// subject. So every reading off a hero's own page is unfavourable for it.
+    #[test]
+    fn a_swing_is_unfavourable_for_the_hero_whose_page_it_is() {
+        let html = swing_row("Mauga", "Wrecking Ball", 61, 47, Some(20));
+        let out = parse_swings(&html, "Wrecking Ball").expect("parses");
+
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].vs, "mauga");
+        assert_eq!(out[0].swing, 20);
+        // 20 of a 23-point ceiling, negated for the subject.
+        assert_eq!(out[0].value, -87);
+    }
+
+    /// A row that states kill shares and stops there is skipped, not read off the
+    /// percentages beside it. Those measure how killy a hero is — 47% of their
+    /// variance is which hero, not which matchup — so they are not a matchup value.
+    #[test]
+    fn a_row_without_a_counter_impact_is_not_read_off_the_kill_share() {
+        let html = swing_row("Symmetra", "Wrecking Ball", 41, 42, None);
+        let out = parse_swings(&html, "Wrecking Ball").expect("parses");
+
+        assert!(
+            out.is_empty(),
+            "a kill share is not a counter reading: {out:?}"
+        );
+    }
+
+    /// The swing is anchored on its own label, because the sentence in front of it
+    /// carries two other percentages that would both parse.
+    #[test]
+    fn the_swing_is_read_past_the_kill_and_death_percentages() {
+        let html = swing_row("Roadhog", "Wrecking Ball", 61, 52, Some(9));
+        let out = parse_swings(&html, "Wrecking Ball").expect("parses");
+
+        assert_eq!(out[0].swing, 9, "read 61 or 52 and the row is nonsense");
+    }
+
+    /// Past the ceiling the reading clamps rather than wrapping, and the ceiling is
+    /// set so that this happens to two of the 869 rows the site publishes.
+    #[test]
+    fn a_swing_past_the_ceiling_clamps_to_the_rail() {
+        let html = swing_row("Mauga", "Wrecking Ball", 61, 47, Some(32));
+        let out = parse_swings(&html, "Wrecking Ball").expect("parses");
+
+        assert_eq!(out[0].value, -100);
+    }
+
+    /// A hero whose name contains a full stop survives the split, for the same
+    /// reason `parse_matchup_ratings` splits on the verb: terminating the name at
+    /// punctuation truncates `D.Mon` to `D` and silently drops every row.
+    #[test]
+    fn a_swing_row_for_a_hero_whose_name_contains_a_full_stop_is_read_whole() {
+        let html = swing_row("D.Mon", "Wrecking Ball", 34, 33, Some(6));
+        let out = parse_swings(&html, "Wrecking Ball").expect("parses");
+
+        assert_eq!(out.len(), 1, "D.Mon was truncated: {out:?}");
+        assert_eq!(out[0].vs, "dmon");
+    }
+
+    /// If the site ever names the subject first, the direction rule stops being
+    /// safe and the parse must stop rather than invert every reading on the page.
+    #[test]
+    fn the_subject_leading_its_own_row_stops_the_parse() {
+        let html = swing_row("Wrecking Ball", "Mauga", 61, 47, Some(20));
+        let err = parse_swings(&html, "Wrecking Ball").expect_err("must refuse");
+
+        assert!(
+            err.to_string().contains("names Wrecking Ball first"),
+            "unexpected error: {err}"
+        );
+    }
+
+    /// The finer figure wins. Both documents quote one quantity — they agree to
+    /// r = +0.978 over the 225 pairs they share — so where the stats page published
+    /// a rating to one decimal, the counters page's whole-number swing must not
+    /// overwrite it.
+    #[test]
+    fn a_published_rating_outranks_a_swing_for_the_same_pair() {
+        let swings = vec![MatchupSwing {
+            vs: "zarya".to_owned(),
+            swing: 20,
+            value: -87,
+        }];
+        let out = hero_values(
+            "reinhardt",
+            &HeroCounters::default(),
+            &swings,
+            &published(&[("zarya", 6.8)]),
+            &merge_names(),
+        );
+
+        assert_eq!(
+            out[&("reinhardt".to_owned(), "zarya".to_owned())],
+            overwatch_core::normalize(6.8, -COUNTER_CEILING, COUNTER_CEILING),
+            "the rating is the reading; the swing only fills what it does not cover"
+        );
+    }
+
+    /// And a swing beats a rank interpolation, which is the point of reading it:
+    /// 644 pairs were arriving as a guess from list position.
+    #[test]
+    fn a_swing_outranks_a_rank_interpolation() {
+        let parsed = ranked(&["Zarya", "Pharah"], &[], None);
+        let swings = vec![MatchupSwing {
+            vs: "zarya".to_owned(),
+            swing: 3,
+            value: -13,
+        }];
+        let out = hero_values(
+            "reinhardt",
+            &parsed,
+            &swings,
+            &HashMap::new(),
+            &merge_names(),
+        );
+
+        assert_eq!(
+            out[&("reinhardt".to_owned(), "zarya".to_owned())],
+            -13,
+            "a published swing must not be replaced by where the list put it"
+        );
+    }
+
     /// rates ten pairs that are not the ten the counters page lists.
     #[test]
     fn a_pair_the_counters_page_never_ranked_still_reaches_the_matrix() {
         let out = hero_values(
             "reinhardt",
             &HeroCounters::default(),
+            &[],
             &published(&[("zarya", 6.8)]),
             &merge_names(),
         );

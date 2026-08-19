@@ -86,16 +86,18 @@ Matchups are a weighted average of **counterpickgg 0.75 and counterwatch 0.25**,
 renormalised over whichever of the two has an opinion about a given pair.
 counterpickgg dominates because it is the only complete, fine-grained source and
 it carries the reasoning; counterwatch is duel-derived rather than
-opinion-derived and independently agrees with it (Pearson r = +0.51 over the
+opinion-derived and independently agrees with it (Pearson r = +0.45 over the 1,113
 pairs both cover), so it refines rather than drives.
 
-counterwatch contributes two different kinds of reading, and the difference is
+counterwatch contributes three different kinds of reading, and the difference is
 worth knowing. For 530 pairs it publishes an actual counter rating, measured from
 duel outcomes with a sample size beside it, and that number is used directly. For
-another 265 it publishes only a position in a top-ten list, which gets converted
-into a value by interpolating down from whatever the same list *did* publish a
-number for. A rank is a weaker reading than a rating and the file does not
-distinguish them, so `just ingest-counters` reports the split on every run.
+641 more it states a win-probability swing in the row tooltips of its counters
+page — the same quantity at coarser precision, agreeing with the rating to
+r = +0.98 where both exist. Only the remaining 48 are converted from a position in
+a ranked list, by interpolating down from whatever that list *did* publish a number
+for. A rank is the weakest of the three and the file does not distinguish them, so
+`just ingest-counters` reports the split on every run.
 
 overpicker is excluded on evidence rather than by taste: its published matrix has
 no measurable relationship to either other source — r = −0.04 against
@@ -127,7 +129,12 @@ spike outright.
 
 Every entry in [`data/matchups.toml`](data/matchups.toml) carries the per-source
 values it was blended from, so any number can be traced back to the sites that
-produced it. Where the two trusted sources disagree sharply the row is flagged
+produced it. The counterwatch column has three tiers, in order of how directly the
+site states them: a published counter rating for the ten most lopsided matchups on
+each hero's stats page, a published win-probability swing in the row tooltips of
+each hero's counters page, and — for what is left — an interpolation from where a
+hero sits in a ranked list. The second tier covers 641 pairs and the third only 48;
+before the swings were read it was 265. Where the two trusted sources disagree sharply the row is flagged
 **and pulled toward even**, rather than quietly averaged, and the app says so: the
 matchup carries a `disputed` tag on the matchups panel and a marker on the reason
 line that argues from it.
