@@ -73,12 +73,24 @@ pub struct MatchupEntry {
     pub hero: String,
     pub vs: String,
     /// Blended, on -100..=100.
-    pub value: i8,
-    /// Set when the sources disagree by more than the blend threshold.
     ///
-    /// Read by `Dataset::sources_disagree`, which asks about the *pair* — the
-    /// flag lands on a direction, and the secondary source rates only part of
-    /// each hero's list, so a contradiction routinely marks one row of two.
+    /// The weighted average of the per-source columns below, pulled toward even
+    /// in proportion to how far apart the two trusted sources are about the
+    /// *pair*. Reproducing it by hand therefore takes this row's columns and the
+    /// mirror row's: the sources are averaged across both directions before they
+    /// are compared, so that a contradiction one of them states only once still
+    /// reaches both.
+    pub value: i8,
+    /// Set when the two trusted sources contradict each other about this pair by
+    /// more than the blend threshold.
+    ///
+    /// Written on **both** directions of the pair, because that is where the
+    /// contradiction lives — the secondary source rates only part of each hero's
+    /// list, so it routinely states the disagreement once, and a row that escaped
+    /// the flag used to escape the correction with it. Read by
+    /// `Dataset::sources_disagree`, which asks about the pair for the same
+    /// reason.
+    ///
     /// Reaches the screen as a `disputed` tag beside the matchup and a marker on
     /// the reason line, so a blend nobody could reconcile is visible rather than
     /// quietly averaged away.

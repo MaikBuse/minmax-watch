@@ -1150,7 +1150,7 @@ pub fn ThreatPanel(
             // are marked. Tagging three quarters of the matrix as thin would be
             // noise rather than context, which is the complaint this answers.
             p { class: "matchup-note",
-                "three quarters of matchups are one site's rating \u{2014} \u{201c}disputed\u{201d} means the second source disagrees"
+                "three quarters of matchups are one site's rating \u{2014} \u{201c}disputed\u{201d} means the second source disagreed, and the number has been pulled toward even"
             }
             if items.is_empty() {
                 p { class: "empty", "{empty}" }
@@ -1168,7 +1168,7 @@ pub fn ThreatPanel(
                             if threat.disputed {
                                 span {
                                     class: "tag",
-                                    title: "the two sources disagree about this matchup",
+                                    title: "the two sources disagree about this matchup, so the reading has been pulled toward even",
                                     "disputed"
                                 }
                             }
@@ -1434,7 +1434,7 @@ pub fn Recommendations(
                                     if line.disputed {
                                         span {
                                             class: "caveat",
-                                            title: "the two sources disagree about this matchup",
+                                            title: "the two sources disagree about this matchup, so the reading has been pulled toward even",
                                             "disputed"
                                         }
                                     }

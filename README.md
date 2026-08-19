@@ -118,13 +118,19 @@ which leaves a straight trend exactly where it was and cancels a one-division
 spike outright.
 
 Every entry in [`data/matchups.toml`](data/matchups.toml) carries the per-source
-values it was blended from, so any number can be traced back to the site that
+values it was blended from, so any number can be traced back to the sites that
 produced it. Where the two trusted sources disagree sharply the row is flagged
-rather than quietly averaged, and the app says so: the matchup carries a
-`disputed` tag on the matchups panel and a marker on the reason line that argues
-from it. The flag is read for the pair rather than the direction, because the
-second source rates only part of each hero's list and a contradiction usually
-lands on one row of the two.
+**and pulled toward even**, rather than quietly averaged, and the app says so: the
+matchup carries a `disputed` tag on the matchups panel and a marker on the reason
+line that argues from it.
+
+Both the flag and the correction belong to the pair rather than to one direction
+of it. The second source rates only part of each hero's list, so it usually states
+a contradiction once — and the mirror row used to keep both its full magnitude and
+a clean flag, which is how a matchup the data called soft could still be scored as
+a near-maximum edge. Each source is therefore averaged across both directions
+before the two are compared, and the same factor is applied to both rows. Tracing
+a value back by hand takes the mirror row's columns as well as its own.
 
 **Not all of it is measured.** [`data/archetype.toml`](data/archetype.toml)
 (dive/poke/brawl) and [`data/side.toml`](data/side.toml) (attack/defend lean) are

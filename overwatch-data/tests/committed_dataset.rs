@@ -833,3 +833,71 @@ fn the_ban_lists_patch_rung_moves_with_the_rank() {
         "the same five heroes lead the patch rung at both ends of the ladder"
     );
 }
+
+/// The guard on the top of the matchup scale, and the counterpart to
+/// `almost_none_of_the_rank_shifts_saturate_the_scale`.
+///
+/// `-100..=100` claims to describe every matchup in the game, so the rail has to
+/// mean "as lopsided as this gets" rather than "somewhat lopsided". A handful of
+/// rows up there is the scale working; a lot of them means the extreme end has
+/// stopped separating a hard counter from a losing duel, and the conversion is
+/// then the thing to argue about rather than this test.
+///
+/// Counted over rated rows rather than over all `n x n` cells, because an unrated
+/// pair is not a reading at the middle of the scale — it is the absence of one.
+#[test]
+fn the_extreme_end_of_the_matchup_scale_stays_rare() {
+    let matchups: MatchupsFile =
+        toml::from_str(overwatch_data::MATCHUPS_TOML).expect("committed matchups must parse");
+
+    let rated = matchups.matchups.len();
+    let extreme = matchups
+        .matchups
+        .iter()
+        .filter(|entry| entry.value.abs() >= 90)
+        .count();
+
+    // 30 of 2534 today, a little over 1%.
+    assert!(
+        extreme * 50 <= rated,
+        "{extreme} of {rated} rated rows sit at |value| >= 90, which is more of the \
+         matchup scale's top end than a healthy blend reaches"
+    );
+}
+
+/// Nobody wins a matchup from both sides of it.
+///
+/// The matrix is deliberately not forced to be antisymmetric — see `Matrix` — so
+/// nothing in the pipeline makes this true by construction, and until the blend
+/// reached its verdicts per pair rather than per row, the mirror of a corrected
+/// row went uncorrected. This is the invariant that failure violated in spirit
+/// even where it did not violate it in arithmetic.
+///
+/// An empirical guard, then: it can only fire if the secondary source moves one
+/// direction of a pair past the primary's antisymmetry, and if it ever does, the
+/// thing to argue about is the blend and not this assertion.
+#[test]
+fn no_pair_reads_as_favourable_for_both_heroes() {
+    let ds = load().expect("committed data must load");
+
+    let n = ds.hero_count();
+    let mut both = Vec::new();
+    for a in 0..n {
+        for b in (a + 1)..n {
+            let (a, b) = (HeroId(a as u16), HeroId(b as u16));
+            if let (Some(forward), Some(reverse)) =
+                (ds.matchups().rating(a, b), ds.matchups().rating(b, a))
+            {
+                if forward > 0 && reverse > 0 {
+                    both.push((ds.hero(a).map(|h| h.key.clone()), forward, reverse));
+                }
+            }
+        }
+    }
+
+    assert!(
+        both.is_empty(),
+        "{} pair(s) read as favourable in both directions: {both:?}",
+        both.len()
+    );
+}

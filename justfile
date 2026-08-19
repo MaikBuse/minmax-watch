@@ -164,6 +164,13 @@ brand-icons:
     # diff empty. Run it after editing either SVG.
     cargo run -p overwatch-ingest -- brand
 
+# Re-run the blend over the columns already in data/matchups.toml
+reblend:
+    # No network. Every committed value is reproducible from the per-source
+    # columns beside it, so a change to the blend reviews as a diff of exactly
+    # the rows the blend moved. A second run must produce an empty diff.
+    cargo run -p overwatch-ingest -- reblend
+
 # Show what the last ingest changed
 ingest-diff:
     @git diff --stat -- data/ 2>/dev/null || echo "not a git repository yet"

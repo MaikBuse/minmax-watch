@@ -195,6 +195,18 @@ enum Command {
     /// Not part of `All`: it touches no upstream source, needs no network, and
     /// only has anything to do when the artwork itself changes.
     Brand,
+    /// Re-run the blend over the columns already in `matchups.toml`.
+    ///
+    /// Every committed `value` is reproducible from the `cpgg` and `cwatch`
+    /// columns beside it, so a change to the blend can be reviewed as a diff of
+    /// exactly the rows the blend moved. `Counters` would answer the same
+    /// question by re-fetching 107 pages, and the diff would then carry every
+    /// opinion the sites have changed since the last run mixed in with it.
+    ///
+    /// Not part of `All`, for the same reason as `Brand`: no network, and nothing
+    /// to do unless the blend itself has changed. Idempotent, because it derives
+    /// `value` from the source columns rather than from `value`.
+    Reblend,
 }
 
 struct Args {
@@ -215,6 +227,7 @@ fn parse_args() -> Result<Args> {
             "art" => command = Command::Art,
             "all" => command = Command::All,
             "brand" => command = Command::Brand,
+            "reblend" => command = Command::Reblend,
             "--refresh" | "-r" => refresh = true,
             "--help" | "-h" => {
                 print_usage();
@@ -228,7 +241,7 @@ fn parse_args() -> Result<Args> {
 }
 
 const USAGE: &str = "\
-usage: overwatch-ingest [roster|counters|synergy|strength|art|all|brand] [--refresh]
+usage: overwatch-ingest [roster|counters|synergy|strength|art|all|brand|reblend] [--refresh]
 
   roster      regenerate heroes.toml and maps.toml from the OverFast API
   counters    regenerate matchups.toml
@@ -237,6 +250,8 @@ usage: overwatch-ingest [roster|counters|synergy|strength|art|all|brand] [--refr
   art         redownload hero portraits, map thumbnails and rank badges
   all         all four (default)
   brand       rasterise the brand SVGs into favicons, PWA icons and og.png
+              (local only - no network, and not included in `all`)
+  reblend     re-run the blend over the columns already in matchups.toml
               (local only - no network, and not included in `all`)
 
   --refresh   ignore the cache in data/sources and re-fetch everything";
@@ -311,6 +326,65 @@ async fn main() -> Result<()> {
         match changed.len() {
             0 => eprintln!("brand: already up to date"),
             n => eprintln!("brand: wrote {n} file(s): {}", changed.join(", ")),
+        }
+        return Ok(());
+    }
+
+    // Handled before the fetcher exists, for the same reason `brand` is: this
+    // rereads a file the repo already holds and never goes near the network.
+    if args.command == Command::Reblend {
+        let roster = load_roster(&data_dir).await?;
+        let hero_keys: Vec<String> = roster.heroes.iter().map(|h| h.key.clone()).collect();
+
+        let path = data_dir.join("matchups.toml");
+        let text = tokio::fs::read_to_string(&path)
+            .await
+            .with_context(|| format!("reading {}", path.display()))?;
+        // Fatal where `load_synergy` is forgiving: there is no scrape here to
+        // rebuild the file from, so an unparseable one is the whole input gone.
+        let existing: MatchupsFile =
+            toml::from_str(&text).with_context(|| format!("parsing {}", path.display()))?;
+
+        let mut cpgg = blend::SourceMap::new();
+        let mut opick = blend::SourceMap::new();
+        let mut cwatch = blend::SourceMap::new();
+        let mut reasons: HashMap<(String, String), String> = HashMap::new();
+        for entry in &existing.matchups {
+            let key = (entry.hero.clone(), entry.vs.clone());
+            if let Some(value) = entry.cpgg {
+                cpgg.insert(key.clone(), value);
+            }
+            if let Some(value) = entry.opick {
+                opick.insert(key.clone(), value);
+            }
+            if let Some(value) = entry.cwatch {
+                cwatch.insert(key.clone(), value);
+            }
+            if !entry.reason.is_empty() {
+                reasons.insert(key, entry.reason.clone());
+            }
+        }
+
+        eprintln!(
+            "reblend: {} committed rows for {} heroes, no network",
+            existing.matchups.len(),
+            hero_keys.len()
+        );
+        let (matchups, report) = blend::blend_values(&hero_keys, &cpgg, &reasons, &opick, &cwatch);
+        eprintln!("{}", report.render());
+
+        // `generated` and `patch` carry over untouched. Nothing was fetched, and
+        // stamping today's date would claim otherwise.
+        let file = MatchupsFile {
+            generated: existing.generated,
+            patch: existing.patch,
+            matchups,
+        };
+        let toml = toml::to_string_pretty(&file).context("serialising matchups.toml")?;
+        if write_if_changed(&path, &toml).await? {
+            eprintln!("reblend: updated matchups.toml");
+        } else {
+            eprintln!("reblend: already up to date");
         }
         return Ok(());
     }
