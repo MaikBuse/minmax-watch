@@ -211,6 +211,13 @@ reason = "Mercy can basically only heal or damage-boost, so when an ally is hit 
 
 [[matchup]]
 hero = "ana"
+vs = "mizuki"
+value = 0
+curated = -25
+note = "Binding Chain hinders the movement of a hero who has none, and Katashiro Return commits into Ana's angle and leaves before Sleep Dart is back. Unreachable from the source: no site rates this pair in either direction."
+
+[[matchup]]
+hero = "ana"
 vs = "moira"
 value = -24
 cpgg = -25
@@ -1307,10 +1314,19 @@ reason = "Baptiste's hitscan shots make it easy to hit airborne Mercy."
 
 [[matchup]]
 hero = "baptiste"
+vs = "mizuki"
+value = 0
+curated = -25
+note = "Kekkai Sanctuary absorbs the projectiles Baptiste is made of, an amplified burst included, and Binding Chain takes away the Exo Boots reposition. Unreachable from the source: no site rates this pair, and an ultimate that blanks an ultimate is not a duel."
+
+[[matchup]]
+hero = "baptiste"
 vs = "moira"
 value = 0
 cpgg = 0
 opick = 100
+curated = 30
+note = "Biotic Grasp is a short beam and Fade the only way in, and the one window that buys her is the window Immortality Field exists for. Unreachable from the source: it publishes a counter impact for 16 of Moira's matchups and not one of them is a support."
 
 [[matchup]]
 hero = "baptiste"
@@ -2109,6 +2125,15 @@ vs = "mercy"
 value = 0
 cpgg = 0
 opick = 50
+curated = 20
+note = "Whip Shot knocks her out of a Guardian Angel path and Shield Bash punishes where it drops her, and the Blaster does nothing to armour. Unreachable from the source: neither hero kills the other, so a kill-traded statistic has nothing to read."
+
+[[matchup]]
+hero = "brigitte"
+vs = "mizuki"
+value = 0
+curated = 20
+note = "Spirit Glaive is chip and a burn, which armour and Barrier Shield are for, and Shield Bash punishes the moment Katashiro Return commits. Unreachable from the source: no site rates this pair in either direction."
 
 [[matchup]]
 hero = "brigitte"
@@ -6639,6 +6664,13 @@ reason = "Illari's hitscan shots make it easy to hit airborne Mercy."
 
 [[matchup]]
 hero = "illari"
+vs = "mizuki"
+value = 0
+curated = -20
+note = "Illari holds still to charge a shot and the Healing Pylon does not move, and Katashiro Return picks the moment. Unreachable from the source: no site rates this pair in either direction."
+
+[[matchup]]
+hero = "illari"
 vs = "moira"
 value = -2
 cpgg = 0
@@ -6826,6 +6858,8 @@ vs = "zenyatta"
 value = 0
 cpgg = 0
 opick = -50
+curated = 25
+note = "Solar Rifle is hitscan with a charged headshot, and Zenyatta holds the angle Discord Orb needs on 275 health with no movement ability. Unreachable from the source: two backlines rarely trade kills, so nothing is measured either way."
 
 [[matchup]]
 hero = "jetpack-cat"
@@ -8514,6 +8548,8 @@ vs = "lucio"
 value = 0
 cpgg = 0
 opick = -100
+curated = -20
+note = "Kunai and Healing Ofuda are both projectiles, and a wall-riding Lúcio at Crossfade speed is the target they miss. Unreachable from the source: neither hero kills the other often enough for it to state a swing."
 
 [[matchup]]
 hero = "kiriko"
@@ -9275,6 +9311,8 @@ vs = "kiriko"
 value = 0
 cpgg = 0
 opick = 0
+curated = 20
+note = "Wall Ride and Crossfade speed against a support whose whole kit is projectiles. Unreachable from the source: neither hero kills the other often enough for it to state a swing."
 
 [[matchup]]
 hero = "lucio"
@@ -10360,6 +10398,8 @@ vs = "brigitte"
 value = 0
 cpgg = 0
 opick = -50
+curated = -20
+note = "Guardian Angel is the only movement Mercy has and Whip Shot takes it away mid-flight. Unreachable from the source: neither hero kills the other, so a kill-traded statistic has nothing to read."
 
 [[matchup]]
 hero = "mercy"
@@ -10723,6 +10763,27 @@ cwatch = 28
 
 [[matchup]]
 hero = "mizuki"
+vs = "ana"
+value = 0
+curated = 25
+note = "Binding Chain lands on a hero with no movement ability at all, and Remedy Aura grows on the damage that pressure pays out. Unreachable from the source: no site rates this pair in either direction."
+
+[[matchup]]
+hero = "mizuki"
+vs = "baptiste"
+value = 0
+curated = 25
+note = "Kekkai Sanctuary absorbs enemy projectiles, which is Baptiste's entire output and Amplification Matrix with it. Unreachable from the source: no site rates this pair, and an ultimate that blanks an ultimate is not a duel."
+
+[[matchup]]
+hero = "mizuki"
+vs = "brigitte"
+value = 0
+curated = -20
+note = "Armour blunts the burn and Barrier Shield eats the bounce, and committing close is the one thing Shield Bash answers. Unreachable from the source: no site rates this pair in either direction."
+
+[[matchup]]
+hero = "mizuki"
 vs = "dmon"
 value = -3
 cpgg = 0
@@ -10780,6 +10841,13 @@ vs = "hazard"
 value = 24
 opick = 50
 cwatch = 24
+
+[[matchup]]
+hero = "mizuki"
+vs = "illari"
+value = 0
+curated = 20
+note = "Binding Chain answers a hero who has to hold an angle to charge a shot, and Outburst is the only way out. Unreachable from the source: no site rates this pair in either direction."
 
 [[matchup]]
 hero = "mizuki"
@@ -10930,6 +10998,13 @@ opick = 50
 cwatch = -4
 
 [[matchup]]
+hero = "mizuki"
+vs = "zenyatta"
+value = 0
+curated = 25
+note = "Mobile flankers are Zenyatta's worst case and this one arrives with a root, against 275 health and no movement ability. Unreachable from the source: no site rates this pair in either direction."
+
+[[matchup]]
 hero = "moira"
 vs = "ana"
 value = 25
@@ -10958,6 +11033,8 @@ vs = "baptiste"
 value = 0
 cpgg = 0
 opick = -50
+curated = -30
+note = "Biotic Grasp cannot reach the range Baptiste fights at, and Exo Boots hold the angle she would have to cross to. Unreachable from the source: it publishes a counter impact for 16 of Moira's matchups and not one of them is a support."
 
 [[matchup]]
 hero = "moira"
@@ -20211,6 +20288,8 @@ vs = "illari"
 value = 0
 cpgg = 0
 opick = 0
+curated = -25
+note = "Discord Orb has to hold a line of sight, which is the trade a charged hitscan headshot wants. Unreachable from the source: two backlines rarely trade kills, so nothing is measured either way."
 
 [[matchup]]
 hero = "zenyatta"
@@ -20290,6 +20369,13 @@ value = -26
 cpgg = -25
 opick = 0
 cwatch = -28
+
+[[matchup]]
+hero = "zenyatta"
+vs = "mizuki"
+value = 0
+curated = -25
+note = "Discord Orb needs the line of sight Katashiro Return breaks, and Binding Chain is the whole fight on a hero who cannot move. Unreachable from the source: no site rates this pair in either direction."
 
 [[matchup]]
 hero = "zenyatta"

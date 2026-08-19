@@ -1054,6 +1054,7 @@ fn the_support_mirror_is_not_mostly_dead_even() {
         table.join("\n  ")
     );
 }
+
 /// Whether a support player is shown a support worth banning.
 ///
 /// The reported bug in one line: no support ever appears on a support player's ban
@@ -1137,19 +1138,24 @@ fn a_support_player_is_offered_a_support_to_ban() {
         table.join("\n  ")
     );
 
-    // 10 of 14 today. Every curated support pair takes one off this, so tighten the
-    // bound as they land - a bound that never moves is a bound nobody is reading.
+    // 9 of 14, down from 10 before the first curated batch. Every curated support
+    // pair takes one off this, so tighten the bound as they land - a bound that never
+    // moves is a bound nobody is reading. It will not reach zero on curated values
+    // alone, for the reason in the doc comment above.
     assert!(
-        blind <= 10,
+        blind <= 9,
         "{blind} of {} support players see no support at all in the drawn {DRAWN}\n  {}",
         ds.heroes_in_role(Role::Support).count(),
         table.join("\n  ")
     );
-    // Moira today, and only Moira: the data has her favoured into 11 of the other 13
-    // supports and even against the last 2, so nothing in the role clears the
-    // `score <= 0` gate and her list has no support on it at any depth.
-    assert!(
-        absent <= 1,
+    // No band on this one, because it is a claim rather than a measurement: whoever
+    // you are playing, at least one hero in your own role is worth banning. It was 1
+    // before the first curated batch - Moira, whom the data had favoured into 11 of
+    // the other 13 supports and even against the last 2, so nothing in the role
+    // cleared the `score <= 0` gate at any depth.
+    assert_eq!(
+        absent,
+        0,
         "{absent} support players have no support anywhere on their ban list\n  {}",
         table.join("\n  ")
     );
