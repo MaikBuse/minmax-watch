@@ -4,10 +4,10 @@ patch = "ingested 2026-08-19"
 [[matchup]]
 hero = "ana"
 vs = "anran"
-value = -51
+value = -46
 cpgg = -50
 opick = 0
-cwatch = -55
+cwatch = -32
 reason = "Anran can dodge Ana's Nade and Sleep with high mobility. *Before the update, Anran could cleanse Nade, but this was removed in an update."
 
 [[matchup]]
@@ -57,9 +57,9 @@ reason = "Ana has little mobility, so if she fails to land Sleep when D.Mon clos
 [[matchup]]
 hero = "ana"
 vs = "domina"
-value = 40
+value = 34
 opick = 50
-cwatch = 40
+cwatch = 34
 
 [[matchup]]
 hero = "ana"
@@ -68,7 +68,7 @@ value = 27
 disagreement = true
 cpgg = 50
 opick = -50
-cwatch = -28
+cwatch = -26
 reason = "Ana can easily land Sleep or Nade on Doomfist during Power Block, while charging Rocket Punch, or right after Meteor Strike."
 
 [[matchup]]
@@ -158,18 +158,18 @@ reason = "Kiriko can cleanse Nade anti-heal with Protection Suzu."
 [[matchup]]
 hero = "ana"
 vs = "lifeweaver"
-value = -27
+value = -26
 cpgg = -25
 opick = -50
-cwatch = -32
+cwatch = -27
 
 [[matchup]]
 hero = "ana"
 vs = "lucio"
-value = -49
+value = -43
 cpgg = -50
 opick = 0
-cwatch = -45
+cwatch = -20
 reason = "Lucio can use speed boost to help teammates close in on Ana."
 
 [[matchup]]
@@ -190,20 +190,20 @@ opick = 0
 [[matchup]]
 hero = "ana"
 vs = "mercy"
-value = 29
+value = 34
 disagreement = true
 cpgg = 75
 opick = 0
-cwatch = -38
+cwatch = -28
 reason = "Mercy can basically only heal or damage-boost, so when an ally is hit by Ana's Nade, Mercy is left with few options."
 
 [[matchup]]
 hero = "ana"
 vs = "moira"
-value = -31
+value = -24
 cpgg = -25
 opick = 0
-cwatch = -48
+cwatch = -22
 
 [[matchup]]
 hero = "ana"
@@ -222,9 +222,10 @@ opick = 0
 [[matchup]]
 hero = "ana"
 vs = "ramattra"
-value = 50
+value = 44
 cpgg = 50
 opick = 0
+cwatch = 24
 reason = "Ana can gain the advantage against Ramattra's Nemesis Form by using Sleep or Nade."
 
 [[matchup]]
@@ -237,18 +238,19 @@ opick = 50
 [[matchup]]
 hero = "ana"
 vs = "reinhardt"
-value = 6
+value = 7
 cpgg = 0
 opick = 50
-cwatch = 25
+cwatch = 28
 
 [[matchup]]
 hero = "ana"
 vs = "roadhog"
-value = 89
+value = 82
+disagreement = true
 cpgg = 100
 opick = 0
-cwatch = 55
+cwatch = 37
 reason = "Ana's Nade anti-heal can negate Roadhog's sustain from Take a Breather."
 
 [[matchup]]
@@ -298,9 +300,10 @@ reason = "Ana has difficulty dealing with Sombra's flanks. Even if Ana lands Nad
 [[matchup]]
 hero = "ana"
 vs = "symmetra"
-value = 0
+value = 5
 cpgg = 0
 opick = 50
+cwatch = 18
 
 [[matchup]]
 hero = "ana"
@@ -328,10 +331,10 @@ reason = "Ana has difficulty dealing with Vendetta's dive."
 [[matchup]]
 hero = "ana"
 vs = "venture"
-value = -46
+value = -44
 cpgg = -50
 opick = -50
-cwatch = -35
+cwatch = -27
 reason = "Ana has difficulty dealing with Venture's dive."
 
 [[matchup]]
@@ -345,10 +348,11 @@ reason = "Ana easily takes Widowmaker's headshots due to her lack of mobility an
 [[matchup]]
 hero = "ana"
 vs = "winston"
-value = -88
+value = -71
+disagreement = true
 cpgg = -100
 opick = 0
-cwatch = -52
+cwatch = -22
 reason = "Ana has no escape ability, and Winston's barrier blocks her abilities during dives, making it very difficult to deal with."
 
 [[matchup]]
@@ -362,10 +366,10 @@ reason = "Ana can create kill pressure on Wrecking Ball by timing Sleep or Nade 
 [[matchup]]
 hero = "ana"
 vs = "wuyang"
-value = -48
+value = -42
 cpgg = -50
 opick = 50
-cwatch = -42
+cwatch = -19
 reason = "Wuyang can poke Ana at mid-range where she's vulnerable."
 
 [[matchup]]
@@ -386,19 +390,20 @@ opick = -50
 [[matchup]]
 hero = "anran"
 vs = "ana"
-value = 48
+value = 46
 cpgg = 50
 opick = 50
-cwatch = 40
+cwatch = 32
 reason = "Anran can dodge Ana's Nade and Sleep with high mobility. *Before the update, Anran could cleanse Nade, but this was removed in an update."
 
 [[matchup]]
 hero = "anran"
 vs = "baptiste"
-value = -34
+value = -29
 disagreement = true
 cpgg = -50
 opick = -50
+cwatch = 24
 reason = "Anran has difficulty destroying Baptiste's Lamp. Anran's Inferno Rush is vulnerable to hitscan attacks."
 
 [[matchup]]
@@ -421,10 +426,10 @@ reason = "Anran's mobility relies on abilities, so landing Cassidy's Flashbang i
 [[matchup]]
 hero = "anran"
 vs = "dmon"
-value = -13
+value = -10
 cpgg = 0
 opick = 0
-cwatch = -52
+cwatch = -38
 
 [[matchup]]
 hero = "anran"
@@ -452,25 +457,25 @@ reason = "Emre has difficulty dealing with Anran closing in."
 [[matchup]]
 hero = "anran"
 vs = "genji"
-value = 51
+value = 46
 cpgg = 50
 opick = 0
-cwatch = 55
+cwatch = 34
 reason = "Anran's attacks and abilities (except primary fire) pierce through Genji's Deflect."
 
 [[matchup]]
 hero = "anran"
 vs = "hazard"
-value = -28
+value = -27
 opick = 0
-cwatch = -28
+cwatch = -27
 
 [[matchup]]
 hero = "anran"
 vs = "illari"
-value = 25
+value = 28
 opick = -50
-cwatch = 25
+cwatch = 28
 
 [[matchup]]
 hero = "anran"
@@ -483,23 +488,24 @@ reason = "Anran's abilities and primary fire have difficulty hitting airborne ta
 [[matchup]]
 hero = "anran"
 vs = "junkrat"
-value = -38
+value = -32
 opick = -50
-cwatch = -38
+cwatch = -32
 
 [[matchup]]
 hero = "anran"
 vs = "juno"
-value = -41
+value = -29
 disagreement = true
 cpgg = -50
 opick = -100
+cwatch = 20
 reason = "Anran has difficulty attacking airborne targets."
 
 [[matchup]]
 hero = "anran"
 vs = "kiriko"
-value = -52
+value = -53
 disagreement = true
 cpgg = -75
 opick = -50
@@ -524,10 +530,10 @@ reason = "Anran has difficulty attacking airborne targets."
 [[matchup]]
 hero = "anran"
 vs = "moira"
-value = -68
+value = -64
 cpgg = -75
 opick = 50
-cwatch = -45
+cwatch = -32
 reason = "Moira can easily cleanse Anran's burning effect with Fade. Moira is generally favored in 1v1s against flankers."
 
 [[matchup]]
@@ -544,7 +550,7 @@ vs = "pharah"
 value = -64
 cpgg = -75
 opick = 0
-cwatch = -32
+cwatch = -29
 reason = "Anran has difficulty attacking airborne targets. Pharah can land attacks at the end of Anran's Dancing Blaze to secure kills on Anran."
 
 [[matchup]]
@@ -558,9 +564,9 @@ reason = "Reaper can cleanse Anran's burning effect with Wraith Form."
 [[matchup]]
 hero = "anran"
 vs = "reinhardt"
-value = -42
+value = -30
 opick = 0
-cwatch = -42
+cwatch = -30
 
 [[matchup]]
 hero = "anran"
@@ -574,7 +580,6 @@ reason = "Roadhog can easily land his Take a Breather by targeting the moment An
 hero = "anran"
 vs = "shion"
 value = 0
-disagreement = true
 cpgg = 0
 opick = -50
 
@@ -619,9 +624,9 @@ opick = -50
 [[matchup]]
 hero = "anran"
 vs = "venture"
-value = -35
+value = -30
 opick = -100
-cwatch = -35
+cwatch = -30
 
 [[matchup]]
 hero = "anran"
@@ -634,16 +639,16 @@ reason = "Anran has high mobility, making it difficult for Widowmaker to land he
 [[matchup]]
 hero = "anran"
 vs = "winston"
-value = -55
+value = -41
 opick = 100
-cwatch = -55
+cwatch = -41
 
 [[matchup]]
 hero = "anran"
 vs = "wrecking-ball"
-value = -49
+value = -36
 opick = 100
-cwatch = -49
+cwatch = -36
 
 [[matchup]]
 hero = "anran"
@@ -670,9 +675,9 @@ opick = 0
 [[matchup]]
 hero = "ashe"
 vs = "anran"
-value = -32
+value = -28
 opick = 50
-cwatch = -32
+cwatch = -28
 
 [[matchup]]
 hero = "ashe"
@@ -723,10 +728,10 @@ reason = "Ashe can easily blow a large hole in Domina's barrier with Dynamite."
 [[matchup]]
 hero = "ashe"
 vs = "doomfist"
-value = -31
+value = -25
 cpgg = -25
 opick = 100
-cwatch = -48
+cwatch = -24
 
 [[matchup]]
 hero = "ashe"
@@ -762,10 +767,10 @@ reason = "Ashe is weak in close-range combat and has difficulty when Genji close
 [[matchup]]
 hero = "ashe"
 vs = "hanzo"
-value = -49
+value = -44
 cpgg = -50
 opick = 50
-cwatch = -45
+cwatch = -24
 reason = "Ashe's peeking patterns tend to be predictable, making her vulnerable to Hanzo's headshots."
 
 [[matchup]]
@@ -787,10 +792,10 @@ reason = "Since Ashe typically attacks from long range, Illari's Pylon is hard f
 [[matchup]]
 hero = "ashe"
 vs = "jetpack-cat"
-value = 70
+value = 69
 cpgg = 75
 opick = 0
-cwatch = 55
+cwatch = 49
 reason = "Ashe's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
@@ -807,33 +812,34 @@ vs = "junkrat"
 value = 44
 cpgg = 50
 opick = 100
-cwatch = 25
+cwatch = 24
 reason = "Ashe's primary fire is hitscan, making it easy to hit airborne targets. Ashe often positions at long range on high ground, making it hard for Junkrat's attacks to reach."
 
 [[matchup]]
 hero = "ashe"
 vs = "juno"
-value = 75
+value = 62
 cpgg = 75
 opick = 50
+cwatch = 23
 reason = "Ashe's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "ashe"
 vs = "kiriko"
-value = -46
+value = -45
 cpgg = -50
 opick = 0
-cwatch = -35
+cwatch = -29
 reason = "Kiriko's slim hitbox lets her pressure Ashe with primary fire. Protection Suzu can cleanse Ashe's burn effect."
 
 [[matchup]]
 hero = "ashe"
 vs = "lifeweaver"
-value = -13
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -52
+cwatch = -29
 
 [[matchup]]
 hero = "ashe"
@@ -861,11 +867,11 @@ reason = "Mei's wide hitbox makes her easy to hit with Ashe's primary fire."
 [[matchup]]
 hero = "ashe"
 vs = "mercy"
-value = 34
+value = 35
 disagreement = true
 cpgg = 75
 opick = -50
-cwatch = -28
+cwatch = -26
 reason = "Ashe's primary fire is hitscan, making it easy to hit airborne targets. Mercy is often near teammates, making her likely to get hit by Dynamite along with allies."
 
 [[matchup]]
@@ -888,15 +894,16 @@ vs = "pharah"
 value = 48
 cpgg = 50
 opick = 50
-cwatch = 40
+cwatch = 42
 reason = "Ashe's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "ashe"
 vs = "ramattra"
-value = 0
+value = 6
 cpgg = 0
 opick = 50
+cwatch = 23
 
 [[matchup]]
 hero = "ashe"
@@ -1007,28 +1014,29 @@ reason = "Venture can easily close to Ashe's weak range. Even if hit by Dynamite
 [[matchup]]
 hero = "ashe"
 vs = "widowmaker"
-value = -70
+value = -66
 cpgg = -75
 opick = 50
-cwatch = -55
+cwatch = -38
 reason = "Ashe's peeking patterns tend to be predictable, making her vulnerable to Widowmaker's headshots."
 
 [[matchup]]
 hero = "ashe"
 vs = "winston"
-value = -86
+value = -71
+disagreement = true
 cpgg = -100
 opick = 0
-cwatch = -42
+cwatch = -22
 reason = "Ashe's low DPS makes it difficult to break Winston's barrier. Coach Gun has a long cooldown, so repeated Winston dives are hard to handle."
 
 [[matchup]]
 hero = "ashe"
 vs = "wrecking-ball"
-value = -47
+value = -45
 cpgg = -50
 opick = 50
-cwatch = -38
+cwatch = -31
 reason = "Ashe has difficulty dealing with Wrecking Ball's dives."
 
 [[matchup]]
@@ -1063,11 +1071,11 @@ opick = -50
 [[matchup]]
 hero = "baptiste"
 vs = "anran"
-value = 16
+value = 29
 disagreement = true
 cpgg = 50
 opick = 50
-cwatch = -55
+cwatch = -24
 reason = "Anran has difficulty destroying Baptiste's Lamp. Anran's Inferno Rush is vulnerable to hitscan attacks."
 
 [[matchup]]
@@ -1110,9 +1118,10 @@ reason = "D.Mon has difficulty accessing high ground, so Baptiste can easily cre
 [[matchup]]
 hero = "baptiste"
 vs = "doomfist"
-value = 0
+value = 7
 cpgg = 0
 opick = 0
+cwatch = 28
 
 [[matchup]]
 hero = "baptiste"
@@ -1139,10 +1148,10 @@ opick = -100
 [[matchup]]
 hero = "baptiste"
 vs = "genji"
-value = -11
+value = -3
 cpgg = 0
 opick = 0
-cwatch = -42
+cwatch = -13
 
 [[matchup]]
 hero = "baptiste"
@@ -1162,11 +1171,10 @@ opick = 50
 [[matchup]]
 hero = "baptiste"
 vs = "illari"
-value = 5
-disagreement = true
+value = 14
 cpgg = 25
 opick = -100
-cwatch = -52
+cwatch = -20
 
 [[matchup]]
 hero = "baptiste"
@@ -1229,10 +1237,10 @@ opick = -50
 [[matchup]]
 hero = "baptiste"
 vs = "mei"
-value = 10
+value = 13
 cpgg = 25
 opick = -100
-cwatch = -35
+cwatch = -24
 
 [[matchup]]
 hero = "baptiste"
@@ -1282,10 +1290,10 @@ opick = 0
 [[matchup]]
 hero = "baptiste"
 vs = "reinhardt"
-value = 6
+value = 9
 cpgg = 0
 opick = 50
-cwatch = 25
+cwatch = 37
 
 [[matchup]]
 hero = "baptiste"
@@ -1293,15 +1301,15 @@ vs = "roadhog"
 value = 33
 cpgg = 25
 opick = 100
-cwatch = 55
+cwatch = 58
 
 [[matchup]]
 hero = "baptiste"
 vs = "shion"
-value = -11
+value = -4
 cpgg = 0
 opick = -50
-cwatch = -45
+cwatch = -14
 
 [[matchup]]
 hero = "baptiste"
@@ -1320,10 +1328,10 @@ opick = 0
 [[matchup]]
 hero = "baptiste"
 vs = "sojourn"
-value = -31
+value = -23
 cpgg = -25
 opick = -50
-cwatch = -48
+cwatch = -18
 
 [[matchup]]
 hero = "baptiste"
@@ -1331,23 +1339,22 @@ vs = "soldier-76"
 value = 13
 cpgg = 25
 opick = 0
-cwatch = -25
+cwatch = -24
 
 [[matchup]]
 hero = "baptiste"
 vs = "sombra"
-value = -22
-disagreement = true
+value = -25
 cpgg = -25
 opick = 50
 
 [[matchup]]
 hero = "baptiste"
 vs = "symmetra"
-value = -10
+value = -6
 cpgg = 0
 opick = -50
-cwatch = -38
+cwatch = -24
 
 [[matchup]]
 hero = "baptiste"
@@ -1366,18 +1373,18 @@ opick = -100
 [[matchup]]
 hero = "baptiste"
 vs = "vendetta"
-value = -8
+value = -6
 cpgg = 0
 opick = 100
-cwatch = -32
+cwatch = -24
 
 [[matchup]]
 hero = "baptiste"
 vs = "venture"
-value = 12
+value = 13
 cpgg = 25
 opick = 0
-cwatch = -28
+cwatch = -24
 
 [[matchup]]
 hero = "baptiste"
@@ -1397,10 +1404,10 @@ opick = 50
 [[matchup]]
 hero = "baptiste"
 vs = "wrecking-ball"
-value = -22
-disagreement = true
+value = -10
 cpgg = -25
 opick = -50
+cwatch = 35
 
 [[matchup]]
 hero = "baptiste"
@@ -1426,18 +1433,18 @@ opick = 50
 [[matchup]]
 hero = "bastion"
 vs = "ana"
-value = -48
+value = -42
 cpgg = -50
 opick = 0
-cwatch = -42
+cwatch = -18
 reason = "Bastion's large hitbox and very slow movement in Configuration: Assault form make him vulnerable to Ana's Sleep and Nade."
 
 [[matchup]]
 hero = "bastion"
 vs = "anran"
-value = -28
+value = -26
 opick = 0
-cwatch = -28
+cwatch = -26
 
 [[matchup]]
 hero = "bastion"
@@ -1528,19 +1535,19 @@ reason = "Bastion's wide hitbox makes him easy to hit with Freja's Freja:R-CLICK
 [[matchup]]
 hero = "bastion"
 vs = "genji"
-value = -51
+value = -45
 cpgg = -50
 opick = 0
-cwatch = -55
+cwatch = -30
 reason = "Bastion struggles when Genji closes in. Bastion's attacks and abilities can be reflected by Deflect."
 
 [[matchup]]
 hero = "bastion"
 vs = "hanzo"
-value = -68
+value = -62
 cpgg = -75
 opick = 0
-cwatch = -48
+cwatch = -21
 reason = "Bastion's large hitbox makes him very easy to hit with Hanzo's primary fire."
 
 [[matchup]]
@@ -1549,7 +1556,7 @@ vs = "hazard"
 value = 25
 cpgg = 25
 opick = -50
-cwatch = 25
+cwatch = 24
 
 [[matchup]]
 hero = "bastion"
@@ -1591,10 +1598,10 @@ opick = 0
 [[matchup]]
 hero = "bastion"
 vs = "kiriko"
-value = -27
+value = -25
 cpgg = -25
 opick = 0
-cwatch = -32
+cwatch = -26
 
 [[matchup]]
 hero = "bastion"
@@ -1642,8 +1649,7 @@ opick = 50
 [[matchup]]
 hero = "bastion"
 vs = "orisa"
-value = -23
-disagreement = true
+value = -25
 cpgg = -25
 opick = 0
 
@@ -1673,9 +1679,10 @@ reason = "Bastion's wide hitbox makes him vulnerable to Reaper's spread."
 [[matchup]]
 hero = "bastion"
 vs = "reinhardt"
-value = 50
+value = 43
 cpgg = 50
 opick = 0
+cwatch = 23
 reason = "Bastion can easily break Reinhardt's Shield."
 
 [[matchup]]
@@ -1684,7 +1691,7 @@ vs = "roadhog"
 value = 29
 cpgg = 25
 opick = 0
-cwatch = 40
+cwatch = 42
 
 [[matchup]]
 hero = "bastion"
@@ -1696,10 +1703,10 @@ opick = 0
 [[matchup]]
 hero = "bastion"
 vs = "sierra"
-value = -28
+value = -26
 cpgg = -25
 opick = -50
-cwatch = -38
+cwatch = -27
 
 [[matchup]]
 hero = "bastion"
@@ -1727,10 +1734,10 @@ opick = 0
 [[matchup]]
 hero = "bastion"
 vs = "sombra"
-value = -11
+value = -5
 cpgg = 0
 opick = 0
-cwatch = -45
+cwatch = -19
 
 [[matchup]]
 hero = "bastion"
@@ -1749,10 +1756,10 @@ opick = -50
 [[matchup]]
 hero = "bastion"
 vs = "tracer"
-value = -69
+value = -63
 cpgg = -75
 opick = 50
-cwatch = -52
+cwatch = -28
 reason = "Bastion's wide hitbox makes him vulnerable to Tracer's spread."
 
 [[matchup]]
@@ -1772,19 +1779,19 @@ opick = -100
 [[matchup]]
 hero = "bastion"
 vs = "widowmaker"
-value = -46
+value = -44
 cpgg = -50
 opick = 100
-cwatch = -35
+cwatch = -27
 reason = "Bastion's wide hitbox and predictable movement make him an easy target for Widowmaker."
 
 [[matchup]]
 hero = "bastion"
 vs = "winston"
-value = 89
+value = 88
 cpgg = 100
 opick = -50
-cwatch = 55
+cwatch = 50
 reason = "Bastion's Configuration: Assault has very high DPS, easily breaking Winston's barrier. In Configuration: Assault form, Bastion is fairly tanky, making it difficult for Winston to finish him with primary fire alone."
 
 [[matchup]]
@@ -1793,6 +1800,7 @@ vs = "wrecking-ball"
 value = 25
 cpgg = 25
 opick = 50
+cwatch = 23
 
 [[matchup]]
 hero = "bastion"
@@ -1853,7 +1861,7 @@ vs = "bastion"
 value = -63
 cpgg = -75
 opick = 50
-cwatch = -28
+cwatch = -26
 reason = "Configuration: Assault's firepower makes it difficult for Brigitte to close in."
 
 [[matchup]]
@@ -1866,10 +1874,10 @@ opick = 0
 [[matchup]]
 hero = "brigitte"
 vs = "dmon"
-value = -51
+value = -46
 cpgg = -50
 opick = 0
-cwatch = -52
+cwatch = -33
 reason = "D.Mon's primary fire is a melee attack, so it pierces Brigitte's barrier. D.Mon has very high mobility, so once Brigitte is caught up to, it's hard for her to escape."
 
 [[matchup]]
@@ -1883,10 +1891,10 @@ reason = "Brigitte can use Whip Shot to create distance from Doomfist or displac
 [[matchup]]
 hero = "brigitte"
 vs = "dva"
-value = 51
+value = 49
 cpgg = 50
 opick = -50
-cwatch = 55
+cwatch = 45
 reason = "Brigitte's primary attacks and abilities are not absorbed by D.Va's DM."
 
 [[matchup]]
@@ -1900,10 +1908,10 @@ reason = "Brigitte's primary attack has very short range and cannot attack airbo
 [[matchup]]
 hero = "brigitte"
 vs = "freja"
-value = -46
+value = -45
 cpgg = -50
 opick = 50
-cwatch = -35
+cwatch = -29
 reason = "Brigitte cannot reach Freja at her flying positions."
 
 [[matchup]]
@@ -1953,10 +1961,10 @@ opick = -50
 [[matchup]]
 hero = "brigitte"
 vs = "junkrat"
-value = -49
+value = -44
 cpgg = -50
 opick = -100
-cwatch = -45
+cwatch = -27
 reason = "Brigitte has no jump abilities, making her vulnerable to Junkrat's attacks. Even when Brigitte closes in, Concussion Mine easily creates distance."
 
 [[matchup]]
@@ -2019,54 +2027,53 @@ opick = -50
 [[matchup]]
 hero = "brigitte"
 vs = "orisa"
-value = -23
-disagreement = true
+value = -25
 cpgg = -25
 opick = 50
 
 [[matchup]]
 hero = "brigitte"
 vs = "pharah"
-value = -85
+value = -82
 disagreement = true
 cpgg = -100
 opick = 50
-cwatch = -48
+cwatch = -36
 reason = "Brigitte's primary attack has very short range and cannot attack airborne targets."
 
 [[matchup]]
 hero = "brigitte"
 vs = "ramattra"
-value = -70
+value = -66
 cpgg = -75
 opick = 0
-cwatch = -55
+cwatch = -38
 reason = "Ramattra's Nemesis Form pierces shields, preventing Brigitte from fighting at close range."
 
 [[matchup]]
 hero = "brigitte"
 vs = "reaper"
-value = -21
-disagreement = true
+value = -12
 cpgg = -25
 opick = 0
+cwatch = 29
 
 [[matchup]]
 hero = "brigitte"
 vs = "reinhardt"
-value = -66
+value = -64
 cpgg = -75
 opick = 0
-cwatch = -38
+cwatch = -31
 reason = "Reinhardt's primary attack deals very high damage, making it difficult for Brigitte to get close."
 
 [[matchup]]
 hero = "brigitte"
 vs = "roadhog"
-value = -13
+value = -11
 cpgg = -25
 opick = 0
-cwatch = 25
+cwatch = 32
 
 [[matchup]]
 hero = "brigitte"
@@ -2108,10 +2115,10 @@ opick = 0
 [[matchup]]
 hero = "brigitte"
 vs = "sombra"
-value = 48
+value = 47
 cpgg = 50
 opick = 50
-cwatch = 40
+cwatch = 38
 reason = "Brigitte can interrupt Sombra's hack by facing her shield toward Sombra when she attempts to hack."
 
 [[matchup]]
@@ -2125,10 +2132,10 @@ reason = "Brigitte has difficulty destroying Symmetra's Turret turrets. Brigitte
 [[matchup]]
 hero = "brigitte"
 vs = "torbjorn"
-value = -46
+value = -45
 cpgg = -50
 opick = -50
-cwatch = -32
+cwatch = -28
 reason = "Brigitte has difficulty destroying Torbjorn's Turret."
 
 [[matchup]]
@@ -2164,11 +2171,11 @@ reason = "Brigitte cannot reach Widowmaker at her sniping positions."
 [[matchup]]
 hero = "brigitte"
 vs = "winston"
-value = 21
+value = 29
 disagreement = true
 cpgg = 50
 opick = -50
-cwatch = -42
+cwatch = -23
 reason = "Brigitte can make it difficult for Winston to dive by landing Whip Shot. When Winston dives, Brigitte can heal teammates while damaging both Winston's barrier and Winston himself."
 
 [[matchup]]
@@ -2190,9 +2197,10 @@ reason = "Wuyang can kite Brigitte with mid-range attacks."
 [[matchup]]
 hero = "brigitte"
 vs = "zarya"
-value = 25
+value = 27
 cpgg = 25
 opick = -100
+cwatch = 32
 
 [[matchup]]
 hero = "brigitte"
@@ -2249,18 +2257,18 @@ cwatch = -25
 [[matchup]]
 hero = "cassidy"
 vs = "dmon"
-value = -49
+value = -44
 cpgg = -50
 opick = 0
-cwatch = -45
+cwatch = -26
 reason = "D.Mon can easily close the distance against Cassidy. It becomes a mind game, but D.Mon can block Flashbang with the barrier."
 
 [[matchup]]
 hero = "cassidy"
 vs = "domina"
-value = -42
+value = -15
 opick = 0
-cwatch = -42
+cwatch = -15
 
 [[matchup]]
 hero = "cassidy"
@@ -2288,7 +2296,7 @@ reason = "Cassidy's hitscan shots make it easy to hit airborne targets."
 [[matchup]]
 hero = "cassidy"
 vs = "freja"
-value = -48
+value = -54
 disagreement = true
 cpgg = -75
 opick = -50
@@ -2304,10 +2312,10 @@ opick = 0
 [[matchup]]
 hero = "cassidy"
 vs = "hanzo"
-value = -50
+value = -42
 cpgg = -50
 opick = 50
-cwatch = -48
+cwatch = -19
 reason = "Cassidy is easily tracked by Hanzo's Lunge and vulnerable to headshots."
 
 [[matchup]]
@@ -2327,10 +2335,10 @@ opick = -50
 [[matchup]]
 hero = "cassidy"
 vs = "jetpack-cat"
-value = 70
+value = 68
 cpgg = 75
 opick = 0
-cwatch = 55
+cwatch = 46
 reason = "Cassidy's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
@@ -2352,9 +2360,10 @@ reason = "Cassidy's hitscan shots make it easy to hit airborne targets."
 [[matchup]]
 hero = "cassidy"
 vs = "juno"
-value = 50
+value = 42
 cpgg = 50
 opick = 0
+cwatch = 18
 reason = "Cassidy's hitscan shots make it easy to hit airborne targets."
 
 [[matchup]]
@@ -2367,10 +2376,10 @@ opick = 0
 [[matchup]]
 hero = "cassidy"
 vs = "lifeweaver"
-value = 10
+value = 12
 cpgg = 25
 opick = -50
-cwatch = -35
+cwatch = -26
 
 [[matchup]]
 hero = "cassidy"
@@ -2405,9 +2414,10 @@ reason = "Cassidy's hitscan shots make it easy to hit airborne targets."
 [[matchup]]
 hero = "cassidy"
 vs = "moira"
-value = 50
+value = 43
 cpgg = 50
 opick = 0
+cwatch = 20
 reason = "Cassidy's Flashbang makes it easy to punish Moira as she tries to escape."
 
 [[matchup]]
@@ -2420,10 +2430,10 @@ opick = -50
 [[matchup]]
 hero = "cassidy"
 vs = "pharah"
-value = 66
+value = 65
 cpgg = 75
 opick = 0
-cwatch = 40
+cwatch = 34
 reason = "Cassidy's hitscan shots make it easy to hit airborne targets."
 
 [[matchup]]
@@ -2451,10 +2461,10 @@ opick = 0
 [[matchup]]
 hero = "cassidy"
 vs = "roadhog"
-value = -45
+value = -44
 cpgg = -50
 opick = 50
-cwatch = -28
+cwatch = -25
 reason = "Cassidy often fights at mid-range, putting him within Hook range."
 
 [[matchup]]
@@ -2476,10 +2486,10 @@ reason = "In a 1v1 situation, Cassidy's higher burst damage allows him to elimin
 [[matchup]]
 hero = "cassidy"
 vs = "sigma"
-value = -46
+value = -44
 cpgg = -50
 opick = 0
-cwatch = -32
+cwatch = -25
 reason = "Cassidy often fights at mid-range, within Sigma's preferred range. Cassidy's Deadeye can be easily negated by Sigma's abilities."
 
 [[matchup]]
@@ -2522,10 +2532,10 @@ opick = -50
 [[matchup]]
 hero = "cassidy"
 vs = "tracer"
-value = 63
+value = 64
 cpgg = 75
 opick = -50
-cwatch = 25
+cwatch = 32
 reason = "Cassidy's Flashbang makes it easy to punish Tracer as she tries to escape."
 
 [[matchup]]
@@ -2547,10 +2557,10 @@ reason = "Cassidy's Flashbang makes it easy to punish Venture as they try to esc
 [[matchup]]
 hero = "cassidy"
 vs = "widowmaker"
-value = -51
+value = -44
 cpgg = -50
 opick = 0
-cwatch = -55
+cwatch = -27
 reason = "Widowmaker can engage from outside Cassidy's effective range."
 
 [[matchup]]
@@ -2572,20 +2582,19 @@ reason = "Cassidy can briefly slow Wrecking Ball's dives with Flashbang."
 [[matchup]]
 hero = "cassidy"
 vs = "wuyang"
-value = -51
+value = -43
 cpgg = -50
 opick = 0
-cwatch = -52
+cwatch = -20
 reason = "Cassidy fights at mid-range, making him vulnerable to Wuyang's poke damage."
 
 [[matchup]]
 hero = "cassidy"
 vs = "zarya"
-value = 9
-disagreement = true
+value = 15
 cpgg = 25
 opick = -50
-cwatch = -38
+cwatch = -14
 
 [[matchup]]
 hero = "cassidy"
@@ -2605,10 +2614,10 @@ reason = "Ana has little mobility, so if she fails to land Sleep when D.Mon clos
 [[matchup]]
 hero = "dmon"
 vs = "anran"
-value = 15
+value = 10
 cpgg = 0
 opick = 0
-cwatch = 58
+cwatch = 38
 
 [[matchup]]
 hero = "dmon"
@@ -2628,19 +2637,19 @@ reason = "D.Mon has difficulty accessing high ground, so Baptiste can easily cre
 [[matchup]]
 hero = "dmon"
 vs = "bastion"
-value = -51
+value = -52
 cpgg = -50
 opick = 0
-cwatch = -54
+cwatch = -58
 reason = "Bastion can easily melt D.Mon along with the barrier using Configuration: Assault. When Bastion is on the enemy team, D.Mon must always watch out for Configuration: Assault."
 
 [[matchup]]
 hero = "dmon"
 vs = "brigitte"
-value = 44
+value = 46
 cpgg = 50
 opick = 0
-cwatch = 25
+cwatch = 33
 reason = "D.Mon's primary fire is a melee attack, so it pierces Brigitte's barrier. D.Mon has very high mobility, so once Brigitte is caught up to, it's hard for her to escape."
 
 [[matchup]]
@@ -2669,15 +2678,15 @@ opick = 0
 [[matchup]]
 hero = "dmon"
 vs = "dva"
-value = -19
+value = -15
 cpgg = 0
 opick = 0
-cwatch = -76
+cwatch = -60
 
 [[matchup]]
 hero = "dmon"
 vs = "echo"
-value = -34
+value = -47
 disagreement = true
 cpgg = -50
 opick = 0
@@ -2693,10 +2702,10 @@ opick = 0
 [[matchup]]
 hero = "dmon"
 vs = "freja"
-value = -12
+value = -13
 cpgg = 0
 opick = 0
-cwatch = -47
+cwatch = -50
 
 [[matchup]]
 hero = "dmon"
@@ -2722,19 +2731,19 @@ opick = 0
 [[matchup]]
 hero = "dmon"
 vs = "illari"
-value = -2
+value = -3
 disagreement = true
 cpgg = 25
 opick = 0
-cwatch = -83
+cwatch = -100
 
 [[matchup]]
 hero = "dmon"
 vs = "jetpack-cat"
-value = -53
+value = -44
 cpgg = -50
 opick = 0
-cwatch = -61
+cwatch = -25
 reason = "Although D.Mon has Fusion Repeater, D.Mon has almost no way to deal with airborne enemies, so while Jetpack Cat is in the air D.Mon can barely do anything to it."
 
 [[matchup]]
@@ -2761,15 +2770,16 @@ opick = 0
 [[matchup]]
 hero = "dmon"
 vs = "kiriko"
-value = 25
+value = 26
 cpgg = 25
 opick = 0
+cwatch = 29
 reason = "D.Mon has very high mobility, so D.Mon can follow up on Kiriko's escape with Swift Step."
 
 [[matchup]]
 hero = "dmon"
 vs = "lifeweaver"
-value = -42
+value = -43
 disagreement = true
 cpgg = -50
 opick = 0
@@ -2778,23 +2788,22 @@ reason = "D.Mon has difficulty accessing high ground, so Lifeweaver can create d
 [[matchup]]
 hero = "dmon"
 vs = "lucio"
-value = -23
-disagreement = true
+value = -25
 cpgg = -25
 opick = 0
 
 [[matchup]]
 hero = "dmon"
 vs = "mauga"
-value = -36
+value = -28
 cpgg = -25
 opick = 0
-cwatch = -68
+cwatch = -38
 
 [[matchup]]
 hero = "dmon"
 vs = "mei"
-value = -48
+value = -56
 disagreement = true
 cpgg = -75
 opick = 0
@@ -2803,10 +2812,10 @@ reason = "D.Mon has no ability to fly and excels at diving deep into the frontli
 [[matchup]]
 hero = "dmon"
 vs = "mercy"
-value = 60
+value = 49
 cpgg = 50
 opick = 0
-cwatch = 90
+cwatch = 47
 reason = "Mercy is often near allies to boost and heal them, so she easily takes D.Mon's primary fire along with those allies. When Mercy has an airborne ally, she can also gain an advantage."
 
 [[matchup]]
@@ -2843,10 +2852,10 @@ reason = "Although D.Mon has Fusion Repeater, D.Mon has almost no way to deal wi
 [[matchup]]
 hero = "dmon"
 vs = "ramattra"
-value = -64
+value = -65
 cpgg = -75
 opick = 0
-cwatch = -32
+cwatch = -33
 reason = "Ramattra can pierce D.Mon's Barrier with Nemesis Form. Also, D.Mon excels at pressuring the enemy backline using the mobility of Propulsors, but when Ravenous Vortex is used, D.Mon struggles to attack the backline."
 
 [[matchup]]
@@ -2920,7 +2929,7 @@ reason = "Even when about to be hacked by Sombra, D.Mon can cancel the hack by d
 [[matchup]]
 hero = "dmon"
 vs = "symmetra"
-value = -39
+value = -44
 disagreement = true
 cpgg = -50
 opick = 0
@@ -2929,10 +2938,10 @@ reason = "Symmetra's turret can slow enemies' movement speed, making it easy to 
 [[matchup]]
 hero = "dmon"
 vs = "torbjorn"
-value = -79
+value = -81
 cpgg = -75
 opick = 0
-cwatch = -90
+cwatch = -100
 reason = "D.Mon has very short reach and Fusion Repeater doesn't have high DPS either, so D.Mon has a hard time destroying Torbjörn's turret."
 
 [[matchup]]
@@ -2959,9 +2968,10 @@ opick = 0
 [[matchup]]
 hero = "dmon"
 vs = "widowmaker"
-value = 25
+value = 26
 cpgg = 25
 opick = 0
+cwatch = 29
 
 [[matchup]]
 hero = "dmon"
@@ -2995,18 +3005,18 @@ reason = "D.Mon can stop attacking instantly at any time, making it hard to buil
 [[matchup]]
 hero = "dmon"
 vs = "zenyatta"
-value = 9
+value = 8
 disagreement = true
 cpgg = 25
 opick = 0
-cwatch = -39
+cwatch = -42
 
 [[matchup]]
 hero = "domina"
 vs = "ana"
-value = -52
+value = -34
 opick = 0
-cwatch = -52
+cwatch = -34
 
 [[matchup]]
 hero = "domina"
@@ -3027,18 +3037,18 @@ reason = "Bastion can easily break through Domina's Domina:R-CLICK. Domina has n
 [[matchup]]
 hero = "domina"
 vs = "dmon"
-value = -47
+value = -44
 cpgg = -50
 opick = 0
-cwatch = -39
+cwatch = -26
 reason = "D.Mon excels at taking the side, making it easy to get into the range Domina is weak at."
 
 [[matchup]]
 hero = "domina"
 vs = "doomfist"
-value = 25
+value = 31
 opick = 50
-cwatch = 25
+cwatch = 31
 
 [[matchup]]
 hero = "domina"
@@ -3046,6 +3056,13 @@ vs = "dva"
 value = -25
 cpgg = -25
 opick = 0
+
+[[matchup]]
+hero = "domina"
+vs = "hazard"
+value = 23
+opick = 0
+cwatch = 23
 
 [[matchup]]
 hero = "domina"
@@ -3065,14 +3082,14 @@ opick = 0
 [[matchup]]
 hero = "domina"
 vs = "lifeweaver"
-value = -49
+value = -29
 opick = 0
-cwatch = -49
+cwatch = -29
 
 [[matchup]]
 hero = "domina"
 vs = "lucio"
-value = -44
+value = -45
 disagreement = true
 cpgg = -50
 opick = 0
@@ -3096,19 +3113,19 @@ reason = "Domina lacks mobility and has no survivability skills besides Domina:R
 [[matchup]]
 hero = "domina"
 vs = "mercy"
-value = 20
+value = 27
 disagreement = true
 cpgg = 50
 opick = 0
-cwatch = -45
+cwatch = -26
 reason = "Domina's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "domina"
 vs = "mizuki"
-value = -35
+value = -30
 opick = -50
-cwatch = -35
+cwatch = -30
 
 [[matchup]]
 hero = "domina"
@@ -3137,10 +3154,10 @@ reason = "Domina struggles in close-range combat. Domina has no survivability sk
 [[matchup]]
 hero = "domina"
 vs = "reinhardt"
-value = -48
+value = -46
 cpgg = -50
 opick = 50
-cwatch = -42
+cwatch = -33
 reason = "Domina lacks mobility, making it difficult to deal with Reinhardt closing the distance. Domina heals by landing attacks, but Reinhardt can block them with Shield. Reinhardt can disrupt Domina's preferred formation through flanking charges."
 
 [[matchup]]
@@ -3169,10 +3186,10 @@ reason = "Sojourn can break Domina's Domina:R-CLICK very quickly by using Disrup
 [[matchup]]
 hero = "domina"
 vs = "symmetra"
-value = -70
+value = -66
 cpgg = -75
 opick = -50
-cwatch = -56
+cwatch = -40
 reason = "Domina has difficulty destroying Symmetra's Turret. Domina's Domina:R-CLICK easily becomes a charge resource for Symmetra's primary fire."
 
 [[matchup]]
@@ -3202,34 +3219,36 @@ reason = "Vendetta can quickly close the distance to a range where Domina is wea
 [[matchup]]
 hero = "domina"
 vs = "widowmaker"
-value = -50
+value = -29
+disagreement = true
 cpgg = -50
 opick = 50
+cwatch = 22
 reason = "Widowmaker can attack the enemy backline from outside Domina's range without being contested."
 
 [[matchup]]
 hero = "domina"
 vs = "winston"
-value = -26
+value = -29
 disagreement = true
 cpgg = -75
 opick = 0
-cwatch = 40
+cwatch = 34
 reason = "Domina takes a long time to break Winston's barrier. Winston excels at pushing and pulling the frontline and controlling flanks, allowing him to avoid direct damage trades with Domina who prefers head-on fights. Even if Domina uses her barrier against Winston, he can quickly reposition and contribute elsewhere."
 
 [[matchup]]
 hero = "domina"
 vs = "wrecking-ball"
-value = 56
+value = 47
 opick = 50
-cwatch = 56
+cwatch = 47
 
 [[matchup]]
 hero = "domina"
 vs = "wuyang"
-value = -28
+value = -27
 opick = 0
-cwatch = -28
+cwatch = -27
 
 [[matchup]]
 hero = "domina"
@@ -3242,9 +3261,9 @@ reason = "Domina's primary fire and abilities easily charge Zarya's barrier ener
 [[matchup]]
 hero = "domina"
 vs = "zenyatta"
-value = -32
+value = -28
 opick = -50
-cwatch = -32
+cwatch = -28
 
 [[matchup]]
 hero = "doomfist"
@@ -3276,7 +3295,7 @@ vs = "baptiste"
 value = -10
 cpgg = 0
 opick = 50
-cwatch = -41
+cwatch = -39
 
 [[matchup]]
 hero = "doomfist"
@@ -3312,9 +3331,9 @@ opick = 0
 [[matchup]]
 hero = "doomfist"
 vs = "domina"
-value = -51
+value = -48
 opick = 50
-cwatch = -51
+cwatch = -48
 
 [[matchup]]
 hero = "doomfist"
@@ -3341,9 +3360,10 @@ opick = -100
 [[matchup]]
 hero = "doomfist"
 vs = "genji"
-value = 0
+value = 7
 cpgg = 0
 opick = 0
+cwatch = 29
 
 [[matchup]]
 hero = "doomfist"
@@ -3377,10 +3397,10 @@ reason = "Doomfist has difficulty damaging airborne targets."
 [[matchup]]
 hero = "doomfist"
 vs = "junker-queen"
-value = -34
+value = -27
 cpgg = -25
 opick = -100
-cwatch = -61
+cwatch = -34
 
 [[matchup]]
 hero = "doomfist"
@@ -3408,11 +3428,11 @@ opick = 0
 [[matchup]]
 hero = "doomfist"
 vs = "lifeweaver"
-value = -19
+value = -24
 disagreement = true
 cpgg = -50
 opick = -100
-cwatch = 48
+cwatch = 34
 reason = "Lifeweaver can easily dodge Doomfist's Rocket Punch with Lift or Rejuvenating Dash."
 
 [[matchup]]
@@ -3425,10 +3445,10 @@ opick = -50
 [[matchup]]
 hero = "doomfist"
 vs = "mauga"
-value = -56
+value = -54
 cpgg = -50
 opick = -100
-cwatch = -72
+cwatch = -67
 reason = "Doomfist has no barrier, making him vulnerable to Mauga's burning effect."
 
 [[matchup]]
@@ -3442,8 +3462,7 @@ reason = "Even if Doomfist closes in, Mei can buy time with Cryo-Freeze. Since D
 [[matchup]]
 hero = "doomfist"
 vs = "mercy"
-value = -24
-disagreement = true
+value = -25
 cpgg = -25
 opick = 50
 
@@ -3458,7 +3477,7 @@ reason = "Mizuki can negate Doomfist's punch with Mizuki:E or dodge it with Mizu
 [[matchup]]
 hero = "doomfist"
 vs = "moira"
-value = -38
+value = -44
 disagreement = true
 cpgg = -50
 opick = -50
@@ -3476,10 +3495,10 @@ reason = "Orisa can cancel Doomfist during his Power Block or while charging Roc
 [[matchup]]
 hero = "doomfist"
 vs = "pharah"
-value = -70
+value = -64
 cpgg = -75
 opick = 0
-cwatch = -56
+cwatch = -32
 reason = "Doomfist has difficulty committing to airborne targets."
 
 [[matchup]]
@@ -3506,10 +3525,10 @@ opick = 50
 [[matchup]]
 hero = "doomfist"
 vs = "roadhog"
-value = -73
+value = -66
 cpgg = -75
 opick = 50
-cwatch = -67
+cwatch = -37
 reason = "Roadhog can easily land Hook on Doomfist during Power Block, while charging Rocket Punch, or right after Meteor Strike."
 
 [[matchup]]
@@ -3567,10 +3586,10 @@ opick = 50
 [[matchup]]
 hero = "doomfist"
 vs = "torbjorn"
-value = -49
+value = -45
 cpgg = -50
 opick = -50
-cwatch = -46
+cwatch = -31
 reason = "Doomfist's Hand Cannon has short range, making it difficult to destroy Torbjorn's Turret."
 
 [[matchup]]
@@ -3590,26 +3609,27 @@ opick = 0
 [[matchup]]
 hero = "doomfist"
 vs = "venture"
-value = 6
+value = 9
 cpgg = 0
 opick = -100
-cwatch = 25
+cwatch = 34
 
 [[matchup]]
 hero = "doomfist"
 vs = "widowmaker"
-value = 74
+value = 69
 cpgg = 75
 opick = 0
-cwatch = 72
+cwatch = 49
 reason = "Widowmaker has great difficulty dealing with Doomfist engages."
 
 [[matchup]]
 hero = "doomfist"
 vs = "winston"
-value = 0
+value = 9
 cpgg = 0
 opick = 0
+cwatch = 34
 
 [[matchup]]
 hero = "doomfist"
@@ -3621,7 +3641,7 @@ opick = 0
 [[matchup]]
 hero = "doomfist"
 vs = "wuyang"
-value = -41
+value = -42
 disagreement = true
 cpgg = -50
 opick = 50
@@ -3630,10 +3650,10 @@ reason = "Wuyang can deal with Doomfist's engages using Rushing Torrent or Guard
 [[matchup]]
 hero = "doomfist"
 vs = "zarya"
-value = -28
+value = -27
 cpgg = -25
 opick = 0
-cwatch = -35
+cwatch = -34
 
 [[matchup]]
 hero = "doomfist"
@@ -3676,10 +3696,10 @@ opick = 50
 [[matchup]]
 hero = "dva"
 vs = "brigitte"
-value = -52
+value = -49
 cpgg = -50
 opick = 50
-cwatch = -59
+cwatch = -45
 reason = "Brigitte's primary attacks and abilities are not absorbed by D.Va's DM."
 
 [[matchup]]
@@ -3692,10 +3712,10 @@ opick = 50
 [[matchup]]
 hero = "dva"
 vs = "dmon"
-value = 11
+value = 15
 cpgg = 0
 opick = 0
-cwatch = 42
+cwatch = 60
 
 [[matchup]]
 hero = "dva"
@@ -3722,19 +3742,20 @@ reason = "Her attacks are easily absorbed by D.Va's DM. D.Va can also commit to 
 [[matchup]]
 hero = "dva"
 vs = "emre"
-value = 24
+value = 27
 disagreement = true
 cpgg = 50
 opick = 50
-cwatch = -33
+cwatch = -29
 reason = "Emre has difficulty dealing with D.Va's dive."
 
 [[matchup]]
 hero = "dva"
 vs = "freja"
-value = 75
+value = 63
 cpgg = 75
 opick = -50
+cwatch = 25
 reason = "Her attacks are easily absorbed by D.Va's DM. Even if Freja uses Freja:E against Boosters engages, Boosters has a very short cooldown, so D.Va can close the gap again."
 
 [[matchup]]
@@ -3810,18 +3831,18 @@ reason = "D.Va can easily chase down where Kiriko teleports with Swift Step."
 [[matchup]]
 hero = "dva"
 vs = "lifeweaver"
-value = 25
+value = 29
 cpgg = 25
 opick = 50
-cwatch = 25
+cwatch = 42
 
 [[matchup]]
 hero = "dva"
 vs = "lucio"
-value = -14
+value = -8
 cpgg = 0
 opick = -50
-cwatch = -55
+cwatch = -30
 
 [[matchup]]
 hero = "dva"
@@ -3880,10 +3901,10 @@ reason = "Her attacks are easily absorbed by D.Va's DM. D.Va can also commit to 
 [[matchup]]
 hero = "dva"
 vs = "ramattra"
-value = -13
+value = -7
 cpgg = 0
 opick = 50
-cwatch = -51
+cwatch = -29
 
 [[matchup]]
 hero = "dva"
@@ -3891,16 +3912,15 @@ vs = "reaper"
 value = -7
 cpgg = 0
 opick = 0
-cwatch = -29
+cwatch = -27
 
 [[matchup]]
 hero = "dva"
 vs = "reinhardt"
-value = 10
-disagreement = true
+value = 11
 cpgg = 25
 opick = 0
-cwatch = -36
+cwatch = -32
 
 [[matchup]]
 hero = "dva"
@@ -3913,10 +3933,10 @@ reason = "Roadhog's Hook pierces through D.Va's DM."
 [[matchup]]
 hero = "dva"
 vs = "shion"
-value = 34
+value = 39
 cpgg = 25
 opick = 100
-cwatch = 59
+cwatch = 79
 
 [[matchup]]
 hero = "dva"
@@ -3929,10 +3949,10 @@ reason = "Even if Sierra lands Tracking Shot, D.Va can almost completely negate 
 [[matchup]]
 hero = "dva"
 vs = "sigma"
-value = 8
+value = 13
 cpgg = 25
 opick = 50
-cwatch = -44
+cwatch = -23
 
 [[matchup]]
 hero = "dva"
@@ -3961,10 +3981,10 @@ reason = "D.Va's Fusion Cannons has a very wide spread, making it easy to reveal
 [[matchup]]
 hero = "dva"
 vs = "symmetra"
-value = -50
+value = -45
 cpgg = -50
 opick = 50
-cwatch = -48
+cwatch = -28
 reason = "D.Va's DM cannot block beams. Since D.Va often dives, Turret is also effective."
 
 [[matchup]]
@@ -4013,9 +4033,10 @@ opick = 50
 [[matchup]]
 hero = "dva"
 vs = "wrecking-ball"
-value = 0
+value = 8
 cpgg = 0
 opick = 0
+cwatch = 30
 
 [[matchup]]
 hero = "dva"
@@ -4035,11 +4056,11 @@ reason = "Zarya's primary fire pierces through D.Va's DM. Zarya can easily gain 
 [[matchup]]
 hero = "dva"
 vs = "zenyatta"
-value = 28
+value = 31
 disagreement = true
 cpgg = 75
 opick = -50
-cwatch = -40
+cwatch = -34
 reason = "His attacks are easily absorbed by D.Va's DM. Zenyatta has great difficulty dealing with Boosters engages."
 
 [[matchup]]
@@ -4059,19 +4080,19 @@ opick = 0
 [[matchup]]
 hero = "echo"
 vs = "ashe"
-value = -46
+value = -42
 cpgg = -50
 opick = 50
-cwatch = -32
+cwatch = -19
 reason = "Ashe's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "echo"
 vs = "baptiste"
-value = -68
+value = -61
 cpgg = -75
 opick = 50
-cwatch = -45
+cwatch = -17
 reason = "Baptiste's primary fire is hitscan, making it easy to hit Echo. Echo often deals burst damage, but Baptiste can protect teammates with Lamp."
 
 [[matchup]]
@@ -4101,19 +4122,20 @@ reason = "Cassidy's hitscan shots make it easy to hit airborne targets."
 [[matchup]]
 hero = "echo"
 vs = "dmon"
-value = 16
+value = 31
 disagreement = true
 cpgg = 50
 opick = 0
-cwatch = -55
+cwatch = -19
 reason = "Although D.Mon has Fusion Repeater, D.Mon has almost no way to deal with airborne enemies, so while Echo is in the air D.Mon can barely do anything to her."
 
 [[matchup]]
 hero = "echo"
 vs = "doomfist"
-value = 75
+value = 61
 cpgg = 75
 opick = -100
+cwatch = 19
 reason = "Doomfist has difficulty committing to airborne targets."
 
 [[matchup]]
@@ -4187,10 +4209,10 @@ opick = 50
 [[matchup]]
 hero = "echo"
 vs = "juno"
-value = -45
+value = -42
 cpgg = -50
 opick = -50
-cwatch = -28
+cwatch = -19
 reason = "Juno's primary fire is hitscan, making it easy to hit airborne targets. Juno's Torpedoes has homing, making it even easier to hit agile airborne Echo."
 
 [[matchup]]
@@ -4247,10 +4269,10 @@ reason = "Mizuki's primary fire has projectile travel time, making it difficult 
 [[matchup]]
 hero = "echo"
 vs = "moira"
-value = -50
+value = -42
 cpgg = -50
 opick = 0
-cwatch = -48
+cwatch = -18
 reason = "Moira can use Fade to negate Echo's Sticky Bombs."
 
 [[matchup]]
@@ -4263,10 +4285,10 @@ opick = 0
 [[matchup]]
 hero = "echo"
 vs = "pharah"
-value = 51
+value = 48
 cpgg = 50
 opick = -50
-cwatch = 55
+cwatch = 43
 reason = "Echo's Focusing Beam is a beam, making it easier to hit Pharah in air-to-air combat. Echo also has better projectile speed than Pharah, giving Echo the advantage in aerial fights."
 
 [[matchup]]
@@ -4287,10 +4309,10 @@ reason = "Reaper has short range and struggles to reach airborne targets."
 [[matchup]]
 hero = "echo"
 vs = "reinhardt"
-value = 48
+value = 44
 cpgg = 50
 opick = -100
-cwatch = 40
+cwatch = 27
 reason = "Reinhardt is weak against airborne targets and poke heroes like Echo."
 
 [[matchup]]
@@ -4303,10 +4325,10 @@ opick = 0
 [[matchup]]
 hero = "echo"
 vs = "shion"
-value = -51
+value = -42
 cpgg = -50
 opick = 0
-cwatch = -52
+cwatch = -19
 reason = "Echo only has 225 HP, so she is easily melted by Shion's burst damage. Since Shion is hitscan, it is easy to land hits even on airborne targets."
 
 [[matchup]]
@@ -4322,47 +4344,48 @@ vs = "sigma"
 value = 25
 cpgg = 25
 opick = 0
-cwatch = 25
+cwatch = 26
 
 [[matchup]]
 hero = "echo"
 vs = "sojourn"
-value = -9
+value = -5
 cpgg = 0
 opick = 0
-cwatch = -35
+cwatch = -19
 
 [[matchup]]
 hero = "echo"
 vs = "soldier-76"
-value = -67
+value = -61
 cpgg = -75
 opick = 0
-cwatch = -42
+cwatch = -17
 reason = "Soldier: 76's primary fire is hitscan, making it easy to hit Echo. Soldier: 76 can easily secure kills on Echo with his ultimate."
 
 [[matchup]]
 hero = "echo"
 vs = "sombra"
-value = -25
+value = -24
 cpgg = -25
 opick = 100
-cwatch = -25
+cwatch = -19
 
 [[matchup]]
 hero = "echo"
 vs = "symmetra"
-value = -10
+value = -5
 cpgg = 0
 opick = 0
-cwatch = -38
+cwatch = -19
 
 [[matchup]]
 hero = "echo"
 vs = "torbjorn"
-value = 75
+value = 61
 cpgg = 75
 opick = 50
+cwatch = 19
 reason = "Echo can easily destroy Torbjorn's Turret with primary fire and Sticky Bombs. Torbjorn's primary fire has difficulty hitting airborne targets."
 
 [[matchup]]
@@ -4438,10 +4461,10 @@ opick = -50
 [[matchup]]
 hero = "emre"
 vs = "anran"
-value = -29
+value = -22
 cpgg = -25
 opick = -50
-cwatch = -42
+cwatch = -12
 reason = "Emre has difficulty dealing with Anran closing in."
 
 [[matchup]]
@@ -4462,10 +4485,11 @@ opick = 0
 [[matchup]]
 hero = "emre"
 vs = "dva"
-value = -42
+value = -30
 disagreement = true
 cpgg = -50
 opick = 0
+cwatch = 17
 reason = "Emre has difficulty dealing with D.Va's dive."
 
 [[matchup]]
@@ -4487,33 +4511,34 @@ reason = "Emre has difficulty dealing with Genji closing in."
 [[matchup]]
 hero = "emre"
 vs = "jetpack-cat"
-value = 44
+value = 43
 cpgg = 50
 opick = 0
-cwatch = 25
+cwatch = 23
 reason = "Emre's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "emre"
 vs = "junker-queen"
-value = -32
+value = -25
 opick = -50
-cwatch = -32
+cwatch = -25
 
 [[matchup]]
 hero = "emre"
 vs = "junkrat"
-value = 75
+value = 60
 cpgg = 75
 opick = -50
+cwatch = 15
 reason = "Emre's primary fire is hitscan, making it easy to hit Junkrat even when airborne."
 
 [[matchup]]
 hero = "emre"
 vs = "lifeweaver"
-value = -52
+value = -22
 opick = 100
-cwatch = -52
+cwatch = -22
 
 [[matchup]]
 hero = "emre"
@@ -4526,26 +4551,26 @@ reason = "Emre can attack from outside Mei's effective range. Mei lacks mobility
 [[matchup]]
 hero = "emre"
 vs = "mercy"
-value = -55
+value = -25
 opick = 0
-cwatch = -55
+cwatch = -25
 
 [[matchup]]
 hero = "emre"
 vs = "pharah"
-value = 66
+value = 64
 cpgg = 75
 opick = -50
-cwatch = 40
+cwatch = 29
 reason = "Emre's primary fire is hitscan, making it easy to damage airborne targets like Pharah."
 
 [[matchup]]
 hero = "emre"
 vs = "shion"
-value = -26
+value = -25
 cpgg = -25
 opick = 0
-cwatch = -28
+cwatch = -25
 
 [[matchup]]
 hero = "emre"
@@ -4557,25 +4582,25 @@ opick = 0
 [[matchup]]
 hero = "emre"
 vs = "sigma"
-value = -46
+value = -44
 cpgg = -50
 opick = 50
-cwatch = -35
+cwatch = -25
 reason = "Sigma excels at nullifying frontal attacks, making it difficult for Emre's primary fire and abilities to break through Sigma."
 
 [[matchup]]
 hero = "emre"
 vs = "soldier-76"
-value = -45
+value = -15
 opick = 0
-cwatch = -45
+cwatch = -15
 
 [[matchup]]
 hero = "emre"
 vs = "torbjorn"
-value = 55
+value = 38
 opick = 50
-cwatch = 55
+cwatch = 38
 
 [[matchup]]
 hero = "emre"
@@ -4596,10 +4621,10 @@ reason = "Emre has difficulty dealing with Venture closing in."
 [[matchup]]
 hero = "emre"
 vs = "widowmaker"
-value = -68
+value = -60
 cpgg = -75
 opick = 0
-cwatch = -48
+cwatch = -16
 reason = "Without Emre:Shift active, Emre is slow, and the 3-round burst creates predictable peeking patterns, making Emre vulnerable to Widowmaker's headshots."
 
 [[matchup]]
@@ -4622,9 +4647,9 @@ reason = "Emre has difficulty dealing with Wrecking Ball's dive."
 [[matchup]]
 hero = "emre"
 vs = "zarya"
-value = -38
+value = -25
 opick = -100
-cwatch = -38
+cwatch = -25
 
 [[matchup]]
 hero = "freja"
@@ -4637,10 +4662,10 @@ reason = "Ana has little mobility, so she easily takes damage from Freja's Freja
 [[matchup]]
 hero = "freja"
 vs = "ashe"
-value = -11
+value = -4
 cpgg = 0
 opick = -50
-cwatch = -45
+cwatch = -16
 
 [[matchup]]
 hero = "freja"
@@ -4660,19 +4685,20 @@ reason = "Bastion's wide hitbox makes him easy to hit with Freja's Freja:R-CLICK
 [[matchup]]
 hero = "freja"
 vs = "brigitte"
-value = 50
+value = 42
 cpgg = 50
 opick = -50
+cwatch = 18
 reason = "Brigitte cannot reach Freja at her flying positions."
 
 [[matchup]]
 hero = "freja"
 vs = "cassidy"
-value = 31
+value = 36
 disagreement = true
 cpgg = 75
 opick = -50
-cwatch = -35
+cwatch = -25
 reason = "Freja can engage from outside Cassidy's effective range."
 
 [[matchup]]
@@ -4692,10 +4718,10 @@ opick = 50
 [[matchup]]
 hero = "freja"
 vs = "dva"
-value = -70
+value = -63
 cpgg = -75
 opick = 50
-cwatch = -55
+cwatch = -25
 reason = "Her attacks are easily absorbed by D.Va's DM. Even if Freja uses Freja:E against Boosters engages, Boosters has a very short cooldown, so D.Va can close the gap again."
 
 [[matchup]]
@@ -4729,10 +4755,10 @@ opick = 50
 [[matchup]]
 hero = "freja"
 vs = "illari"
-value = -51
+value = -44
 cpgg = -50
 opick = -100
-cwatch = -52
+cwatch = -24
 reason = "Illari is strong against Freja's poke due to Pylon healing."
 
 [[matchup]]
@@ -4753,10 +4779,10 @@ reason = "Junkrat's projectiles are slow, making it difficult to hit flying Frej
 [[matchup]]
 hero = "freja"
 vs = "juno"
-value = -29
+value = -23
 cpgg = -25
 opick = 50
-cwatch = -42
+cwatch = -16
 
 [[matchup]]
 hero = "freja"
@@ -4783,10 +4809,10 @@ reason = "Lucio can use speed boost to make teammates harder for Freja to hit. T
 [[matchup]]
 hero = "freja"
 vs = "mauga"
-value = 25
+value = 24
 cpgg = 25
 opick = -50
-cwatch = 25
+cwatch = 22
 
 [[matchup]]
 hero = "freja"
@@ -4799,10 +4825,10 @@ reason = "Mei's wide hitbox makes her easy to hit with Freja's primary fire."
 [[matchup]]
 hero = "freja"
 vs = "mercy"
-value = -8
+value = -6
 cpgg = 0
 opick = -50
-cwatch = -32
+cwatch = -25
 
 [[matchup]]
 hero = "freja"
@@ -4822,17 +4848,18 @@ opick = 50
 [[matchup]]
 hero = "freja"
 vs = "pharah"
-value = 33
+value = 26
 cpgg = 25
 opick = 0
-cwatch = 55
+cwatch = 28
 
 [[matchup]]
 hero = "freja"
 vs = "ramattra"
-value = 25
+value = 23
 cpgg = 25
 opick = 50
+cwatch = 15
 
 [[matchup]]
 hero = "freja"
@@ -4845,10 +4872,10 @@ reason = "Freja's mobility and range allow her to kite Reaper effectively."
 [[matchup]]
 hero = "freja"
 vs = "reinhardt"
-value = 29
+value = 25
 cpgg = 25
 opick = 0
-cwatch = 40
+cwatch = 26
 
 [[matchup]]
 hero = "freja"
@@ -4889,19 +4916,18 @@ opick = 100
 [[matchup]]
 hero = "freja"
 vs = "soldier-76"
-value = 9
-disagreement = true
+value = 13
 cpgg = 25
 opick = 50
-cwatch = -38
+cwatch = -25
 
 [[matchup]]
 hero = "freja"
 vs = "sombra"
-value = -31
+value = -24
 cpgg = -25
 opick = 50
-cwatch = -48
+cwatch = -22
 
 [[matchup]]
 hero = "freja"
@@ -4973,10 +4999,10 @@ opick = 50
 [[matchup]]
 hero = "freja"
 vs = "zarya"
-value = -45
+value = -44
 cpgg = -50
 opick = 50
-cwatch = -28
+cwatch = -25
 reason = "Freja's primary fire during Freja:R-CLICK makes it very easy for Zarya to gain barrier charge."
 
 [[matchup]]
@@ -4998,10 +5024,10 @@ reason = "Ana has difficulty dealing with Genji's close-range pressure. Ana's at
 [[matchup]]
 hero = "genji"
 vs = "anran"
-value = -51
+value = -46
 cpgg = -50
 opick = 0
-cwatch = -53
+cwatch = -34
 reason = "Anran's attacks and abilities (except primary fire) pierce through Genji's Deflect."
 
 [[matchup]]
@@ -5022,10 +5048,10 @@ opick = 0
 [[matchup]]
 hero = "genji"
 vs = "bastion"
-value = 54
+value = 45
 cpgg = 50
 opick = 0
-cwatch = 67
+cwatch = 30
 reason = "Bastion struggles when Genji closes in. Bastion's attacks and abilities can be reflected by Deflect."
 
 [[matchup]]
@@ -5046,25 +5072,25 @@ opick = 0
 [[matchup]]
 hero = "genji"
 vs = "dmon"
-value = -8
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -30
+cwatch = -29
 
 [[matchup]]
 hero = "genji"
 vs = "domina"
-value = -34
+value = -33
 opick = 50
-cwatch = -34
+cwatch = -33
 
 [[matchup]]
 hero = "genji"
 vs = "doomfist"
-value = -10
+value = -9
 cpgg = 0
 opick = -50
-cwatch = -39
+cwatch = -36
 
 [[matchup]]
 hero = "genji"
@@ -5098,18 +5124,19 @@ opick = 0
 [[matchup]]
 hero = "genji"
 vs = "hanzo"
-value = 75
+value = 62
 cpgg = 75
 opick = 0
+cwatch = 23
 reason = "Hanzo's projectiles have travel time, making it difficult to hit fast targets like Genji. Genji can block Hanzo's Storm Arrows and primary fire with Deflect."
 
 [[matchup]]
 hero = "genji"
 vs = "hazard"
-value = -12
+value = -8
 cpgg = 0
 opick = -100
-cwatch = -48
+cwatch = -32
 
 [[matchup]]
 hero = "genji"
@@ -5149,10 +5176,10 @@ opick = -50
 [[matchup]]
 hero = "genji"
 vs = "kiriko"
-value = 12
+value = 7
 cpgg = 0
 opick = 0
-cwatch = 46
+cwatch = 27
 
 [[matchup]]
 hero = "genji"
@@ -5160,7 +5187,7 @@ vs = "lifeweaver"
 value = 44
 cpgg = 50
 opick = 0
-cwatch = 25
+cwatch = 26
 reason = "Lifeweaver has difficulty dealing with Genji's close-range pressure."
 
 [[matchup]]
@@ -5196,10 +5223,10 @@ opick = 0
 [[matchup]]
 hero = "genji"
 vs = "moira"
-value = -89
+value = -86
 cpgg = -100
 opick = 50
-cwatch = -57
+cwatch = -44
 reason = "Moira's primary fire requires no aim, allowing her to consistently damage Genji's fast movement. Even when in danger, Moira can escape with Fade."
 
 [[matchup]]
@@ -5258,6 +5285,7 @@ vs = "sierra"
 value = 25
 cpgg = 25
 opick = 0
+cwatch = 26
 
 [[matchup]]
 hero = "genji"
@@ -5338,20 +5366,20 @@ reason = "Widowmaker has great difficulty dealing with Genji's close-range press
 [[matchup]]
 hero = "genji"
 vs = "winston"
-value = -72
+value = -68
 cpgg = -75
 opick = 0
-cwatch = -62
+cwatch = -47
 reason = "Winston's primary fire is auto-aim, allowing him to deal continuous damage to Genji. Winston's attack goes through Genji's Deflect. Winston can chase down a low-health Genji."
 
 [[matchup]]
 hero = "genji"
 vs = "wrecking-ball"
-value = 2
+value = 3
 disagreement = true
 cpgg = 25
 opick = -50
-cwatch = -67
+cwatch = -59
 
 [[matchup]]
 hero = "genji"
@@ -5363,10 +5391,10 @@ opick = 50
 [[matchup]]
 hero = "genji"
 vs = "zarya"
-value = -67
+value = -66
 cpgg = -75
 opick = -50
-cwatch = -43
+cwatch = -40
 reason = "Beams pierce through Genji's Deflect. Zarya can protect teammates from Genji with her barrier."
 
 [[matchup]]
@@ -5388,10 +5416,10 @@ reason = "Ana lacks mobility and her peek patterns tend to be predictable, makin
 [[matchup]]
 hero = "hanzo"
 vs = "ashe"
-value = 51
+value = 44
 cpgg = 50
 opick = 0
-cwatch = 55
+cwatch = 24
 reason = "Ashe's peeking patterns tend to be predictable, making her vulnerable to Hanzo's headshots."
 
 [[matchup]]
@@ -5405,9 +5433,10 @@ reason = "Hanzo can one-shot many heroes with headshots, making it difficult for
 [[matchup]]
 hero = "hanzo"
 vs = "bastion"
-value = 75
+value = 62
 cpgg = 75
 opick = -50
+cwatch = 21
 reason = "Bastion's large hitbox makes him very easy to hit with Hanzo's primary fire."
 
 [[matchup]]
@@ -5420,9 +5449,10 @@ opick = 100
 [[matchup]]
 hero = "hanzo"
 vs = "cassidy"
-value = 50
+value = 42
 cpgg = 50
 opick = 0
+cwatch = 19
 reason = "Cassidy is easily tracked by Hanzo's Lunge and vulnerable to headshots."
 
 [[matchup]]
@@ -5435,10 +5465,10 @@ opick = 0
 [[matchup]]
 hero = "hanzo"
 vs = "doomfist"
-value = -32
+value = -25
 cpgg = -25
 opick = 0
-cwatch = -52
+cwatch = -26
 
 [[matchup]]
 hero = "hanzo"
@@ -5466,10 +5496,10 @@ opick = 0
 [[matchup]]
 hero = "hanzo"
 vs = "genji"
-value = -67
+value = -62
 cpgg = -75
 opick = 0
-cwatch = -42
+cwatch = -23
 reason = "Hanzo's projectiles have travel time, making it difficult to hit fast targets like Genji. Genji can block Hanzo's Storm Arrows and primary fire with Deflect."
 
 [[matchup]]
@@ -5505,10 +5535,10 @@ opick = 100
 [[matchup]]
 hero = "hanzo"
 vs = "juno"
-value = -45
+value = -44
 cpgg = -50
 opick = 0
-cwatch = -28
+cwatch = -25
 reason = "Hanzo's projectiles have travel time, making it difficult to hit airborne targets."
 
 [[matchup]]
@@ -5553,10 +5583,10 @@ reason = "Mei's wide hitbox makes her vulnerable to Hanzo's headshots."
 [[matchup]]
 hero = "hanzo"
 vs = "mercy"
-value = -9
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -35
+cwatch = -26
 
 [[matchup]]
 hero = "hanzo"
@@ -5626,10 +5656,10 @@ opick = 0
 [[matchup]]
 hero = "hanzo"
 vs = "sigma"
-value = -47
+value = -44
 cpgg = -50
 opick = -50
-cwatch = -38
+cwatch = -26
 reason = "Sigma excels at mid-range frontal combat. Hanzo is vulnerable to Sigma's poke damage."
 
 [[matchup]]
@@ -5664,38 +5694,38 @@ reason = "Symmetra's peeking patterns tend to be predictable, making her vulnera
 [[matchup]]
 hero = "hanzo"
 vs = "torbjorn"
-value = 44
+value = 43
 cpgg = 50
 opick = 100
-cwatch = 25
+cwatch = 22
 reason = "Torbjorn's Turret is easily destroyed by Hanzo. Torbjorn's wide hitbox makes him easy to hit with Hanzo's primary fire."
 
 [[matchup]]
 hero = "hanzo"
 vs = "tracer"
-value = -22
+value = -29
 disagreement = true
 cpgg = -50
 opick = 50
-cwatch = 40
+cwatch = 23
 reason = "Hanzo's projectiles have travel time, making it difficult to hit fast targets like Tracer."
 
 [[matchup]]
 hero = "hanzo"
 vs = "vendetta"
-value = -68
+value = -62
 cpgg = -75
 opick = 50
-cwatch = -45
+cwatch = -23
 reason = "Hanzo has great difficulty dealing with Vendetta's close-range pressure."
 
 [[matchup]]
 hero = "hanzo"
 vs = "venture"
-value = -27
+value = -25
 cpgg = -25
 opick = 0
-cwatch = -32
+cwatch = -26
 
 [[matchup]]
 hero = "hanzo"
@@ -5715,10 +5745,10 @@ reason = "Hanzo's low DPS makes it difficult to break Winston's barrier. Hanzo l
 [[matchup]]
 hero = "hanzo"
 vs = "wrecking-ball"
-value = -68
+value = -62
 cpgg = -75
 opick = 0
-cwatch = -48
+cwatch = -24
 reason = "Hanzo has difficulty dealing with Wrecking Ball's dives."
 
 [[matchup]]
@@ -5731,10 +5761,10 @@ opick = 50
 [[matchup]]
 hero = "hanzo"
 vs = "zarya"
-value = -33
+value = -26
 cpgg = -25
 opick = 50
-cwatch = -55
+cwatch = -28
 
 [[matchup]]
 hero = "hanzo"
@@ -5773,7 +5803,7 @@ vs = "bastion"
 value = -28
 cpgg = -25
 opick = 50
-cwatch = -38
+cwatch = -35
 
 [[matchup]]
 hero = "hazard"
@@ -5799,9 +5829,9 @@ opick = 0
 [[matchup]]
 hero = "hazard"
 vs = "domina"
-value = -29
+value = -28
 opick = 50
-cwatch = -29
+cwatch = -28
 
 [[matchup]]
 hero = "hazard"
@@ -5835,10 +5865,10 @@ opick = 0
 [[matchup]]
 hero = "hazard"
 vs = "genji"
-value = 16
+value = 8
 cpgg = 0
 opick = 50
-cwatch = 65
+cwatch = 32
 
 [[matchup]]
 hero = "hazard"
@@ -5893,19 +5923,18 @@ opick = -50
 [[matchup]]
 hero = "hazard"
 vs = "lucio"
-value = -13
-disagreement = true
+value = -12
 cpgg = -25
 opick = -50
-cwatch = 25
+cwatch = 26
 
 [[matchup]]
 hero = "hazard"
 vs = "mauga"
-value = -54
+value = -52
 cpgg = -50
 opick = -50
-cwatch = -65
+cwatch = -56
 reason = "Hazard has no barrier, making him constantly vulnerable to Mauga's burning effect."
 
 [[matchup]]
@@ -5925,9 +5954,9 @@ opick = 0
 [[matchup]]
 hero = "hazard"
 vs = "mizuki"
-value = -34
+value = -32
 opick = -50
-cwatch = -34
+cwatch = -32
 
 [[matchup]]
 hero = "hazard"
@@ -5939,10 +5968,10 @@ opick = 50
 [[matchup]]
 hero = "hazard"
 vs = "orisa"
-value = -69
+value = -64
 cpgg = -75
 opick = 100
-cwatch = -52
+cwatch = -31
 reason = "Orisa can easily protect her teammates from Hazard's dives."
 
 [[matchup]]
@@ -5956,10 +5985,10 @@ reason = "Pharah can create distance from Hazard's dive by flying. Hazard lacks 
 [[matchup]]
 hero = "hazard"
 vs = "ramattra"
-value = -30
+value = -29
 cpgg = -25
 opick = 100
-cwatch = -43
+cwatch = -39
 
 [[matchup]]
 hero = "hazard"
@@ -5971,10 +6000,10 @@ opick = -50
 [[matchup]]
 hero = "hazard"
 vs = "reinhardt"
-value = -14
+value = -8
 cpgg = 0
 opick = 0
-cwatch = -56
+cwatch = -32
 
 [[matchup]]
 hero = "hazard"
@@ -6002,10 +6031,10 @@ opick = 50
 [[matchup]]
 hero = "hazard"
 vs = "sigma"
-value = -53
+value = -46
 cpgg = -50
 opick = 0
-cwatch = -61
+cwatch = -34
 reason = "Hazard is easily poked down by Sigma and vulnerable to Rock."
 
 [[matchup]]
@@ -6048,8 +6077,7 @@ reason = "Hazard has difficulty destroying Torbjorn's Turret. Torbjorn can survi
 [[matchup]]
 hero = "hazard"
 vs = "tracer"
-value = -24
-disagreement = true
+value = -25
 cpgg = -25
 opick = -50
 
@@ -6063,17 +6091,18 @@ opick = -50
 [[matchup]]
 hero = "hazard"
 vs = "venture"
-value = 0
+value = 6
 cpgg = 0
 opick = 50
+cwatch = 24
 
 [[matchup]]
 hero = "hazard"
 vs = "widowmaker"
-value = 68
+value = 64
 cpgg = 75
 opick = 50
-cwatch = 45
+cwatch = 29
 reason = "Widowmaker lacks survivability, making her vulnerable to Hazard's burst damage."
 
 [[matchup]]
@@ -6086,9 +6115,10 @@ opick = 0
 [[matchup]]
 hero = "hazard"
 vs = "wrecking-ball"
-value = 0
+value = 7
 cpgg = 0
 opick = 0
+cwatch = 29
 
 [[matchup]]
 hero = "hazard"
@@ -6108,10 +6138,10 @@ reason = "Zarya can easily gain charge against Hazard's Violent Leap and Jagged 
 [[matchup]]
 hero = "hazard"
 vs = "zenyatta"
-value = -49
+value = -45
 cpgg = -50
 opick = 0
-cwatch = -47
+cwatch = -29
 reason = "Hazard has no barrier, so when he receives Discord, he melts very quickly."
 
 [[matchup]]
@@ -6124,9 +6154,9 @@ opick = 0
 [[matchup]]
 hero = "illari"
 vs = "anran"
-value = -55
+value = -28
 opick = 50
-cwatch = -55
+cwatch = -28
 
 [[matchup]]
 hero = "illari"
@@ -6139,8 +6169,7 @@ reason = "Since Ashe typically attacks from long range, Illari's Pylon is hard f
 [[matchup]]
 hero = "illari"
 vs = "baptiste"
-value = -22
-disagreement = true
+value = -25
 cpgg = -25
 opick = 100
 
@@ -6168,18 +6197,18 @@ opick = 0
 [[matchup]]
 hero = "illari"
 vs = "dmon"
-value = -4
+value = 3
 disagreement = true
 cpgg = -25
 opick = 0
-cwatch = 55
+cwatch = 100
 
 [[matchup]]
 hero = "illari"
 vs = "domina"
-value = -45
+value = -14
 opick = 100
-cwatch = -45
+cwatch = -14
 
 [[matchup]]
 hero = "illari"
@@ -6206,9 +6235,10 @@ opick = 50
 [[matchup]]
 hero = "illari"
 vs = "freja"
-value = 50
+value = 44
 cpgg = 50
 opick = 0
+cwatch = 24
 reason = "Illari is strong against Freja's poke due to Pylon healing."
 
 [[matchup]]
@@ -6229,10 +6259,10 @@ reason = "Hanzo can one-shot many heroes with headshots, making it difficult for
 [[matchup]]
 hero = "illari"
 vs = "hazard"
-value = -28
+value = -25
 cpgg = -25
 opick = -50
-cwatch = -38
+cwatch = -26
 
 [[matchup]]
 hero = "illari"
@@ -6272,10 +6302,10 @@ opick = 50
 [[matchup]]
 hero = "illari"
 vs = "lucio"
-value = -8
+value = -7
 cpgg = 0
 opick = 50
-cwatch = -32
+cwatch = -26
 
 [[matchup]]
 hero = "illari"
@@ -6287,10 +6317,10 @@ opick = 50
 [[matchup]]
 hero = "illari"
 vs = "mei"
-value = -7
+value = -6
 cpgg = 0
 opick = 0
-cwatch = -28
+cwatch = -25
 
 [[matchup]]
 hero = "illari"
@@ -6311,19 +6341,18 @@ cwatch = -25
 [[matchup]]
 hero = "illari"
 vs = "orisa"
-value = 8
-disagreement = true
+value = 15
 cpgg = 25
 opick = 0
-cwatch = -42
+cwatch = -15
 
 [[matchup]]
 hero = "illari"
 vs = "pharah"
-value = 66
+value = 64
 cpgg = 75
 opick = -50
-cwatch = 40
+cwatch = 31
 reason = "Illari's hitscan shots can easily hit Pharah."
 
 [[matchup]]
@@ -6351,9 +6380,10 @@ opick = 50
 [[matchup]]
 hero = "illari"
 vs = "roadhog"
-value = 25
+value = 26
 cpgg = 25
 opick = -50
+cwatch = 29
 
 [[matchup]]
 hero = "illari"
@@ -6411,10 +6441,10 @@ opick = -50
 [[matchup]]
 hero = "illari"
 vs = "torbjorn"
-value = 25
+value = 26
 cpgg = 25
 opick = 0
-cwatch = 25
+cwatch = 28
 
 [[matchup]]
 hero = "illari"
@@ -6434,11 +6464,10 @@ opick = -50
 [[matchup]]
 hero = "illari"
 vs = "venture"
-value = 5
-disagreement = true
+value = 14
 cpgg = 25
 opick = -100
-cwatch = -52
+cwatch = -20
 
 [[matchup]]
 hero = "illari"
@@ -6451,10 +6480,10 @@ reason = "Widowmaker can one-shot with headshots, making Illari's Pylon timing c
 [[matchup]]
 hero = "illari"
 vs = "winston"
-value = -50
+value = -42
 cpgg = -50
 opick = 0
-cwatch = -48
+cwatch = -16
 reason = "Winston excels at taking space, making it easy to destroy Illari's Pylon. Illari's low DPS makes it difficult to break Winston's barrier."
 
 [[matchup]]
@@ -6467,10 +6496,10 @@ opick = 0
 [[matchup]]
 hero = "illari"
 vs = "wuyang"
-value = -28
+value = -25
 cpgg = -25
 opick = -100
-cwatch = -35
+cwatch = -26
 
 [[matchup]]
 hero = "illari"
@@ -6497,19 +6526,19 @@ reason = "Anran's abilities and primary fire have difficulty hitting airborne ta
 [[matchup]]
 hero = "jetpack-cat"
 vs = "ashe"
-value = -72
+value = -69
 cpgg = -75
 opick = 0
-cwatch = -61
+cwatch = -49
 reason = "Ashe's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "jetpack-cat"
 vs = "baptiste"
-value = -46
+value = -45
 cpgg = -50
 opick = 0
-cwatch = -33
+cwatch = -30
 reason = "Baptiste's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
@@ -6531,10 +6560,10 @@ reason = "Brigitte's primary fire has very short range, making it impossible to 
 [[matchup]]
 hero = "jetpack-cat"
 vs = "cassidy"
-value = -71
+value = -68
 cpgg = -75
 opick = 50
-cwatch = -57
+cwatch = -46
 reason = "Cassidy's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
@@ -6565,34 +6594,34 @@ reason = "Doomfist has difficulty damaging airborne targets."
 [[matchup]]
 hero = "jetpack-cat"
 vs = "dva"
-value = -49
+value = -47
 cpgg = -50
 opick = -50
-cwatch = -45
+cwatch = -38
 reason = "D.Va can easily damage airborne targets with Boosters."
 
 [[matchup]]
 hero = "jetpack-cat"
 vs = "emre"
-value = -48
+value = -43
 cpgg = -50
 opick = 0
-cwatch = -41
+cwatch = -23
 reason = "Emre's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "jetpack-cat"
 vs = "hazard"
-value = -37
+value = -33
 opick = -50
-cwatch = -37
+cwatch = -33
 
 [[matchup]]
 hero = "jetpack-cat"
 vs = "illari"
-value = -29
+value = -28
 opick = 50
-cwatch = -29
+cwatch = -28
 
 [[matchup]]
 hero = "jetpack-cat"
@@ -6652,10 +6681,10 @@ cwatch = -25
 [[matchup]]
 hero = "jetpack-cat"
 vs = "pharah"
-value = 53
+value = 47
 cpgg = 50
 opick = 50
-cwatch = 61
+cwatch = 36
 reason = "Jetpack Cat has faster projectile speed than Pharah, giving Jetpack Cat the advantage in aerial combat."
 
 [[matchup]]
@@ -6669,10 +6698,10 @@ reason = "Reaper's primary fire has short range, making it difficult to damage a
 [[matchup]]
 hero = "jetpack-cat"
 vs = "reinhardt"
-value = 67
+value = 64
 cpgg = 75
 opick = 50
-cwatch = 43
+cwatch = 30
 reason = "Reinhardt is very weak against airborne targets."
 
 [[matchup]]
@@ -6707,10 +6736,10 @@ reason = "Sojourn's primary fire is not hitscan, but has fast projectile speed, 
 [[matchup]]
 hero = "jetpack-cat"
 vs = "soldier-76"
-value = -70
+value = -65
 cpgg = -75
 opick = 0
-cwatch = -53
+cwatch = -35
 reason = "Soldier: 76's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
@@ -6755,9 +6784,9 @@ reason = "Widowmaker is hitscan, making it easy to hit airborne targets."
 [[matchup]]
 hero = "jetpack-cat"
 vs = "winston"
-value = -49
+value = -26
 opick = 50
-cwatch = -49
+cwatch = -26
 
 [[matchup]]
 hero = "jetpack-cat"
@@ -6770,9 +6799,17 @@ reason = "Wrecking Ball has difficulty landing Piledriver on Jetpack Cat."
 [[matchup]]
 hero = "jetpack-cat"
 vs = "wuyang"
-value = 25
+value = 24
 cpgg = 25
 opick = 100
+cwatch = 22
+
+[[matchup]]
+hero = "jetpack-cat"
+vs = "zenyatta"
+value = 24
+opick = -100
+cwatch = 24
 
 [[matchup]]
 hero = "junker-queen"
@@ -6835,10 +6872,10 @@ opick = -100
 [[matchup]]
 hero = "junker-queen"
 vs = "doomfist"
-value = 25
+value = 27
 cpgg = 25
 opick = 0
-cwatch = 25
+cwatch = 34
 
 [[matchup]]
 hero = "junker-queen"
@@ -6873,9 +6910,10 @@ opick = -100
 [[matchup]]
 hero = "junker-queen"
 vs = "hanzo"
-value = 25
+value = 22
 cpgg = 25
 opick = 50
+cwatch = 13
 
 [[matchup]]
 hero = "junker-queen"
@@ -6903,10 +6941,10 @@ reason = "Junker Queen is weak against airborne targets."
 [[matchup]]
 hero = "junker-queen"
 vs = "junkrat"
-value = -48
+value = -43
 cpgg = -50
 opick = -50
-cwatch = -42
+cwatch = -20
 reason = "Junker Queen is weak against airborne targets."
 
 [[matchup]]
@@ -6919,10 +6957,10 @@ opick = 0
 [[matchup]]
 hero = "junker-queen"
 vs = "kiriko"
-value = -65
+value = -63
 cpgg = -75
 opick = 0
-cwatch = -35
+cwatch = -25
 reason = "Kiriko can cleanse the anti-heal from Rampage with Protection Suzu."
 
 [[matchup]]
@@ -6943,18 +6981,18 @@ reason = "Lucio's speed boost and Boop make it difficult for Junker Queen to get
 [[matchup]]
 hero = "junker-queen"
 vs = "mauga"
-value = -28
+value = -25
 cpgg = -25
 opick = 0
-cwatch = -38
+cwatch = -25
 
 [[matchup]]
 hero = "junker-queen"
 vs = "mei"
-value = -30
+value = -24
 cpgg = -25
 opick = 0
-cwatch = -45
+cwatch = -20
 
 [[matchup]]
 hero = "junker-queen"
@@ -6975,10 +7013,10 @@ reason = "Even when Junker Queen closes in, Mizuki can easily create distance wi
 [[matchup]]
 hero = "junker-queen"
 vs = "moira"
-value = -32
+value = -25
 cpgg = -25
 opick = 50
-cwatch = -52
+cwatch = -24
 
 [[matchup]]
 hero = "junker-queen"
@@ -7006,10 +7044,10 @@ opick = -50
 [[matchup]]
 hero = "junker-queen"
 vs = "reaper"
-value = -8
+value = -6
 cpgg = 0
 opick = -50
-cwatch = -32
+cwatch = -25
 
 [[matchup]]
 hero = "junker-queen"
@@ -7035,10 +7073,10 @@ opick = -50
 [[matchup]]
 hero = "junker-queen"
 vs = "sierra"
-value = -33
+value = -25
 cpgg = -25
 opick = 50
-cwatch = -55
+cwatch = -25
 
 [[matchup]]
 hero = "junker-queen"
@@ -7071,18 +7109,18 @@ opick = 0
 [[matchup]]
 hero = "junker-queen"
 vs = "symmetra"
-value = 12
+value = 13
 cpgg = 25
 opick = -50
-cwatch = -28
+cwatch = -25
 
 [[matchup]]
 hero = "junker-queen"
 vs = "torbjorn"
-value = -12
+value = -5
 cpgg = 0
 opick = -50
-cwatch = -48
+cwatch = -21
 
 [[matchup]]
 hero = "junker-queen"
@@ -7108,27 +7146,29 @@ opick = -50
 [[matchup]]
 hero = "junker-queen"
 vs = "widowmaker"
-value = -50
+value = -33
+disagreement = true
 cpgg = -50
 opick = 50
+cwatch = 15
 reason = "Widowmaker can deal damage continuously without ever entering Junker Queen's effective range."
 
 [[matchup]]
 hero = "junker-queen"
 vs = "winston"
-value = 70
+value = 67
 cpgg = 75
 opick = -100
-cwatch = 55
+cwatch = 42
 reason = "Junker Queen can apply Knife to an engaging Winston, then recall it when he tries to retreat, creating kill pressure."
 
 [[matchup]]
 hero = "junker-queen"
 vs = "wrecking-ball"
-value = 29
+value = 28
 cpgg = 25
 opick = 50
-cwatch = 40
+cwatch = 35
 
 [[matchup]]
 hero = "junker-queen"
@@ -7162,26 +7202,26 @@ opick = 0
 [[matchup]]
 hero = "junkrat"
 vs = "anran"
-value = 40
+value = 28
 opick = 50
-cwatch = 40
+cwatch = 28
 
 [[matchup]]
 hero = "junkrat"
 vs = "ashe"
-value = -50
+value = -44
 cpgg = -50
 opick = -50
-cwatch = -48
+cwatch = -24
 reason = "Ashe's primary fire is hitscan, making it easy to hit airborne targets. Ashe often positions at long range on high ground, making it hard for Junkrat's attacks to reach."
 
 [[matchup]]
 hero = "junkrat"
 vs = "baptiste"
-value = -45
+value = -44
 cpgg = -50
 opick = 50
-cwatch = -28
+cwatch = -25
 reason = "Junkrat in the air has almost no control, making him weak against hitscan. Baptiste can use Regenerative Burst to avoid Junkrat's attacks and easily reposition. Baptiste can counter Junkrat's ultimate with Lamp."
 
 [[matchup]]
@@ -7194,9 +7234,10 @@ opick = -50
 [[matchup]]
 hero = "junkrat"
 vs = "brigitte"
-value = 50
+value = 44
 cpgg = 50
 opick = 50
+cwatch = 27
 reason = "Brigitte has no jump abilities, making her vulnerable to Junkrat's attacks. Even when Brigitte closes in, Concussion Mine easily creates distance."
 
 [[matchup]]
@@ -7233,10 +7274,10 @@ reason = "D.Va can absorb Junkrat's attacks and even his Concussion Mine, making
 [[matchup]]
 hero = "junkrat"
 vs = "echo"
-value = -27
+value = -25
 cpgg = -25
 opick = 0
-cwatch = -32
+cwatch = -26
 
 [[matchup]]
 hero = "junkrat"
@@ -7279,18 +7320,18 @@ opick = 50
 [[matchup]]
 hero = "junkrat"
 vs = "illari"
-value = -11
+value = -7
 cpgg = 0
 opick = -50
-cwatch = -42
+cwatch = -27
 
 [[matchup]]
 hero = "junkrat"
 vs = "jetpack-cat"
-value = -68
+value = -61
 cpgg = -75
 opick = 50
-cwatch = -45
+cwatch = -19
 reason = "Junkrat's attacks have slow projectile speed, making it very difficult to hit airborne targets."
 
 [[matchup]]
@@ -7304,10 +7345,10 @@ reason = "Junker Queen is weak against airborne targets."
 [[matchup]]
 hero = "junkrat"
 vs = "juno"
-value = -66
+value = -61
 cpgg = -75
 opick = -50
-cwatch = -38
+cwatch = -18
 reason = "Junkrat's projectiles are slow, making it very difficult to hit airborne targets. Juno's primary fire is hitscan, making it easy to hit Junkrat in the air."
 
 [[matchup]]
@@ -7371,10 +7412,11 @@ opick = 50
 [[matchup]]
 hero = "junkrat"
 vs = "pharah"
-value = -89
+value = -76
+disagreement = true
 cpgg = -100
 opick = 50
-cwatch = -55
+cwatch = -29
 reason = "Junkrat's projectiles are slow, making it very difficult to hit airborne targets."
 
 [[matchup]]
@@ -7394,9 +7436,10 @@ opick = 50
 [[matchup]]
 hero = "junkrat"
 vs = "reinhardt"
-value = 50
+value = 43
 cpgg = 50
 opick = -50
+cwatch = 20
 reason = "Reinhardt often stays grounded, making him easy to hit with Junkrat's primary fire and Trap. Junkrat can easily create distance from Reinhardt with Concussion Mine."
 
 [[matchup]]
@@ -7467,18 +7510,18 @@ opick = -50
 [[matchup]]
 hero = "junkrat"
 vs = "tracer"
-value = 14
+value = 9
 cpgg = 0
 opick = 50
-cwatch = 55
+cwatch = 36
 
 [[matchup]]
 hero = "junkrat"
 vs = "vendetta"
-value = 6
+value = 7
 cpgg = 0
 opick = -50
-cwatch = 25
+cwatch = 28
 
 [[matchup]]
 hero = "junkrat"
@@ -7490,10 +7533,11 @@ opick = 50
 [[matchup]]
 hero = "junkrat"
 vs = "widowmaker"
-value = -88
+value = -74
+disagreement = true
 cpgg = -100
 opick = -50
-cwatch = -52
+cwatch = -26
 reason = "Widowmaker's primary fire is hitscan, making it easy to hit Junkrat launched in the air. Junkrat in the air has almost no control over his movement, making him an easy target for Widowmaker."
 
 [[matchup]]
@@ -7528,10 +7572,10 @@ reason = "Junkrat's abilities and primary fire make it easy for Zarya to gain ba
 [[matchup]]
 hero = "junkrat"
 vs = "zenyatta"
-value = 10
+value = 12
 cpgg = 25
 opick = -50
-cwatch = -35
+cwatch = -26
 
 [[matchup]]
 hero = "juno"
@@ -7543,20 +7587,20 @@ opick = 0
 [[matchup]]
 hero = "juno"
 vs = "anran"
-value = 24
+value = 27
 disagreement = true
 cpgg = 50
 opick = 50
-cwatch = -36
+cwatch = -31
 reason = "Anran has difficulty attacking airborne targets."
 
 [[matchup]]
 hero = "juno"
 vs = "ashe"
-value = -67
+value = -62
 cpgg = -75
 opick = 0
-cwatch = -43
+cwatch = -23
 reason = "Ashe's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
@@ -7727,10 +7771,10 @@ reason = "Juno's primary fire is hitscan, making it easy to hit airborne Mercy."
 [[matchup]]
 hero = "juno"
 vs = "moira"
-value = -46
+value = -45
 cpgg = -50
 opick = 50
-cwatch = -32
+cwatch = -29
 reason = "Moira's primary fire requires no aim, making it easy to damage fast-moving Juno."
 
 [[matchup]]
@@ -7743,10 +7787,10 @@ opick = 50
 [[matchup]]
 hero = "juno"
 vs = "pharah"
-value = 90
+value = 88
 cpgg = 100
 opick = 0
-cwatch = 58
+cwatch = 50
 reason = "Pharah's projectiles are slow, making it hard to hit airborne Juno. Juno's attacks are hitscan, making it easy to hit Pharah, and Juno's Torpedoes is homing, so it lands easily on Pharah."
 
 [[matchup]]
@@ -7769,16 +7813,16 @@ vs = "reinhardt"
 value = 44
 cpgg = 50
 opick = -50
-cwatch = 25
+cwatch = 27
 reason = "Reinhardt is weak against airborne targets, and Juno's Hyper Ring makes it difficult for Reinhardt to get into his effective range."
 
 [[matchup]]
 hero = "juno"
 vs = "roadhog"
-value = 10
+value = 7
 cpgg = 0
 opick = 0
-cwatch = 41
+cwatch = 28
 
 [[matchup]]
 hero = "juno"
@@ -7786,7 +7830,7 @@ vs = "shion"
 value = -7
 cpgg = 0
 opick = 50
-cwatch = -29
+cwatch = -27
 
 [[matchup]]
 hero = "juno"
@@ -7812,19 +7856,19 @@ opick = -50
 [[matchup]]
 hero = "juno"
 vs = "soldier-76"
-value = -51
+value = -45
 cpgg = -50
 opick = 0
-cwatch = -54
+cwatch = -29
 reason = "Soldier: 76's hitscan shots make it easy to hit Juno."
 
 [[matchup]]
 hero = "juno"
 vs = "sombra"
-value = -52
+value = -49
 cpgg = -50
 opick = -50
-cwatch = -58
+cwatch = -44
 reason = "Sombra can hack airborne Juno to bring her down to the ground. Sombra's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
@@ -7844,10 +7888,10 @@ opick = 50
 [[matchup]]
 hero = "juno"
 vs = "tracer"
-value = -31
+value = -26
 cpgg = -25
 opick = -50
-cwatch = -50
+cwatch = -30
 
 [[matchup]]
 hero = "juno"
@@ -7866,19 +7910,19 @@ opick = -50
 [[matchup]]
 hero = "juno"
 vs = "widowmaker"
-value = -48
+value = -46
 cpgg = -50
 opick = 0
-cwatch = -40
+cwatch = -33
 reason = "Widowmaker's hitscan shots make it easy to hit airborne Juno."
 
 [[matchup]]
 hero = "juno"
 vs = "winston"
-value = -68
+value = -63
 cpgg = -75
 opick = -50
-cwatch = -47
+cwatch = -27
 reason = "Winston's auto-aim primary fire allows him to deal continuous damage to Juno."
 
 [[matchup]]
@@ -7891,9 +7935,10 @@ opick = 0
 [[matchup]]
 hero = "juno"
 vs = "wuyang"
-value = 0
+value = 5
 cpgg = 0
 opick = -50
+cwatch = 21
 
 [[matchup]]
 hero = "juno"
@@ -7906,9 +7951,10 @@ reason = "Juno's Torpedoes makes it easy for Zarya to gain barrier charge."
 [[matchup]]
 hero = "juno"
 vs = "zenyatta"
-value = 50
+value = 44
 cpgg = 50
 opick = 0
+cwatch = 25
 reason = "Juno's mobility makes her difficult for Zenyatta to hit."
 
 [[matchup]]
@@ -7922,11 +7968,11 @@ reason = "Kiriko can cleanse Nade anti-heal with Protection Suzu."
 [[matchup]]
 hero = "kiriko"
 vs = "anran"
-value = 34
+value = 35
 disagreement = true
 cpgg = 75
 opick = -50
-cwatch = -28
+cwatch = -26
 reason = "Kiriko can cleanse Anran's burning effect, the main source of Anran's damage, with Swift Step or Protection Suzu."
 
 [[matchup]]
@@ -7968,19 +8014,19 @@ opick = 0
 [[matchup]]
 hero = "kiriko"
 vs = "dmon"
-value = -32
+value = -26
 cpgg = -25
 opick = 0
-cwatch = -52
+cwatch = -29
 reason = "D.Mon has very high mobility, so D.Mon can follow up on Kiriko's escape with Swift Step."
 
 [[matchup]]
 hero = "kiriko"
 vs = "doomfist"
-value = -8
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -32
+cwatch = -26
 
 [[matchup]]
 hero = "kiriko"
@@ -8007,10 +8053,10 @@ opick = 0
 [[matchup]]
 hero = "kiriko"
 vs = "genji"
-value = -11
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -45
+cwatch = -27
 
 [[matchup]]
 hero = "kiriko"
@@ -8072,10 +8118,10 @@ opick = -100
 [[matchup]]
 hero = "kiriko"
 vs = "mauga"
-value = 33
+value = 26
 cpgg = 25
 opick = -50
-cwatch = 55
+cwatch = 30
 
 [[matchup]]
 hero = "kiriko"
@@ -8138,18 +8184,18 @@ opick = 0
 [[matchup]]
 hero = "kiriko"
 vs = "roadhog"
-value = 6
+value = 7
 cpgg = 0
 opick = 0
-cwatch = 25
+cwatch = 26
 
 [[matchup]]
 hero = "kiriko"
 vs = "shion"
-value = -9
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -35
+cwatch = -27
 
 [[matchup]]
 hero = "kiriko"
@@ -8198,9 +8244,10 @@ opick = 50
 [[matchup]]
 hero = "kiriko"
 vs = "torbjorn"
-value = 0
+value = 6
 cpgg = 0
 opick = -50
+cwatch = 24
 
 [[matchup]]
 hero = "kiriko"
@@ -8212,44 +8259,45 @@ opick = 0
 [[matchup]]
 hero = "kiriko"
 vs = "vendetta"
-value = -14
+value = -8
 cpgg = 0
 opick = 0
-cwatch = -55
+cwatch = -31
 
 [[matchup]]
 hero = "kiriko"
 vs = "venture"
-value = 18
+value = 27
 disagreement = true
 cpgg = 50
 opick = -50
-cwatch = -48
+cwatch = -28
 reason = "Kiriko can prevent Venture's one-shot combo by timing Protection Suzu well against Burrow or Drill Dash."
 
 [[matchup]]
 hero = "kiriko"
 vs = "widowmaker"
-value = 50
+value = 44
 cpgg = 50
 opick = 0
+cwatch = 24
 reason = "Kiriko's slim hitbox lets her pressure Widowmaker with primary fire. With Swift Step, Kiriko can pressure Widowmaker from a different angle than her teammates."
 
 [[matchup]]
 hero = "kiriko"
 vs = "winston"
-value = -29
+value = -25
 cpgg = -25
 opick = 50
-cwatch = -42
+cwatch = -26
 
 [[matchup]]
 hero = "kiriko"
 vs = "wrecking-ball"
-value = -28
+value = -26
 cpgg = -25
 opick = 50
-cwatch = -38
+cwatch = -28
 
 [[matchup]]
 hero = "kiriko"
@@ -8268,10 +8316,10 @@ opick = 0
 [[matchup]]
 hero = "kiriko"
 vs = "zenyatta"
-value = 10
+value = 7
 cpgg = 0
 opick = -50
-cwatch = 40
+cwatch = 26
 
 [[matchup]]
 hero = "lifeweaver"
@@ -8290,10 +8338,10 @@ cwatch = -25
 [[matchup]]
 hero = "lifeweaver"
 vs = "ashe"
-value = 10
+value = 7
 cpgg = 0
 opick = -50
-cwatch = 41
+cwatch = 29
 
 [[matchup]]
 hero = "lifeweaver"
@@ -8326,37 +8374,37 @@ opick = -50
 [[matchup]]
 hero = "lifeweaver"
 vs = "dmon"
-value = 25
+value = 26
 disagreement = true
 cpgg = 50
 opick = 0
-cwatch = -32
+cwatch = -29
 reason = "D.Mon has difficulty accessing high ground, so Lifeweaver can create distance from D.Mon's approach with Petal."
 
 [[matchup]]
 hero = "lifeweaver"
 vs = "domina"
-value = 25
+value = 29
 opick = 50
-cwatch = 25
+cwatch = 29
 
 [[matchup]]
 hero = "lifeweaver"
 vs = "doomfist"
-value = 20
+value = 24
 disagreement = true
 cpgg = 50
 opick = 50
-cwatch = -43
+cwatch = -34
 reason = "Lifeweaver can easily dodge Doomfist's Rocket Punch with Lift or Rejuvenating Dash."
 
 [[matchup]]
 hero = "lifeweaver"
 vs = "dva"
-value = -32
+value = -29
 cpgg = -25
 opick = -100
-cwatch = -54
+cwatch = -42
 
 [[matchup]]
 hero = "lifeweaver"
@@ -8375,10 +8423,10 @@ opick = -50
 [[matchup]]
 hero = "lifeweaver"
 vs = "genji"
-value = -47
+value = -46
 cpgg = -50
 opick = 0
-cwatch = -36
+cwatch = -32
 reason = "Lifeweaver has difficulty dealing with Genji's close-range pressure."
 
 [[matchup]]
@@ -8394,7 +8442,7 @@ vs = "hazard"
 value = -26
 cpgg = -25
 opick = 50
-cwatch = -29
+cwatch = -27
 
 [[matchup]]
 hero = "lifeweaver"
@@ -8528,15 +8576,15 @@ opick = -50
 [[matchup]]
 hero = "lifeweaver"
 vs = "sigma"
-value = 0
+value = 7
 cpgg = 0
 opick = -50
+cwatch = 28
 
 [[matchup]]
 hero = "lifeweaver"
 vs = "sojourn"
-value = -22
-disagreement = true
+value = -25
 cpgg = -25
 opick = -50
 
@@ -8572,18 +8620,18 @@ opick = -50
 [[matchup]]
 hero = "lifeweaver"
 vs = "tracer"
-value = -29
+value = -27
 cpgg = -25
 opick = -100
-cwatch = -40
+cwatch = -34
 
 [[matchup]]
 hero = "lifeweaver"
 vs = "vendetta"
-value = -69
+value = -66
 cpgg = -75
 opick = 50
-cwatch = -50
+cwatch = -37
 reason = "Lifeweaver has difficulty dealing with Vendetta's close-range pressure. Even if he escapes with Lift, Projected Edge can quickly catch up."
 
 [[matchup]]
@@ -8597,28 +8645,28 @@ reason = "Lifeweaver has difficulty dealing with Venture's close-range pressure.
 [[matchup]]
 hero = "lifeweaver"
 vs = "widowmaker"
-value = -3
+value = -9
 disagreement = true
 cpgg = -25
 opick = -50
-cwatch = 58
+cwatch = 38
 
 [[matchup]]
 hero = "lifeweaver"
 vs = "winston"
-value = -68
+value = -65
 cpgg = -75
 opick = -50
-cwatch = -47
+cwatch = -36
 reason = "Lifeweaver has difficulty dealing with Winston's dives."
 
 [[matchup]]
 hero = "lifeweaver"
 vs = "wrecking-ball"
-value = -33
+value = -30
 cpgg = -25
 opick = -50
-cwatch = -58
+cwatch = -45
 
 [[matchup]]
 hero = "lifeweaver"
@@ -8630,9 +8678,10 @@ opick = 50
 [[matchup]]
 hero = "lifeweaver"
 vs = "zarya"
-value = 75
+value = 63
 cpgg = 75
 opick = -100
+cwatch = 25
 reason = "Lifeweaver rarely attacks Zarya directly, making it difficult for Zarya to gain barrier charge. Lifeweaver can save teammates caught in Zarya's ultimate by pulling them or lifting them with Life Grip."
 
 [[matchup]]
@@ -8690,37 +8739,36 @@ reason = "Cassidy's Flashbang can stop Lucio's wall riding."
 [[matchup]]
 hero = "lucio"
 vs = "dmon"
-value = 7
-disagreement = true
+value = 12
 cpgg = 25
 opick = 0
-cwatch = -45
+cwatch = -28
 
 [[matchup]]
 hero = "lucio"
 vs = "domina"
-value = 27
+value = 28
 disagreement = true
 cpgg = 50
 opick = 50
-cwatch = -28
+cwatch = -25
 reason = "Lucio can speed boost allies to force close-range fights that Domina struggles with. Domina has less time to fight at her preferred range."
 
 [[matchup]]
 hero = "lucio"
 vs = "doomfist"
-value = 10
+value = 13
 cpgg = 25
 opick = -50
-cwatch = -35
+cwatch = -25
 
 [[matchup]]
 hero = "lucio"
 vs = "dva"
-value = 10
+value = 8
 cpgg = 0
 opick = 0
-cwatch = 40
+cwatch = 30
 
 [[matchup]]
 hero = "lucio"
@@ -8756,11 +8804,10 @@ reason = "Hanzo's projectiles have travel time, making it difficult to hit fast 
 [[matchup]]
 hero = "lucio"
 vs = "hazard"
-value = 5
-disagreement = true
+value = 12
 cpgg = 25
 opick = 0
-cwatch = -55
+cwatch = -26
 
 [[matchup]]
 hero = "lucio"
@@ -8808,10 +8855,11 @@ opick = -50
 [[matchup]]
 hero = "lucio"
 vs = "mauga"
-value = -42
+value = -27
 disagreement = true
 cpgg = -50
 opick = -100
+cwatch = 26
 reason = "Mauga's hitscan weapons make it easy to hit Lucio."
 
 [[matchup]]
@@ -8846,10 +8894,10 @@ opick = 50
 [[matchup]]
 hero = "lucio"
 vs = "pharah"
-value = -12
+value = -6
 cpgg = 0
 opick = 100
-cwatch = -48
+cwatch = -24
 
 [[matchup]]
 hero = "lucio"
@@ -8877,10 +8925,10 @@ reason = "Lucio's speed boost and Boop make it difficult for Reinhardt to get in
 [[matchup]]
 hero = "lucio"
 vs = "roadhog"
-value = 14
+value = 10
 cpgg = 0
 opick = 0
-cwatch = 55
+cwatch = 38
 
 [[matchup]]
 hero = "lucio"
@@ -8936,9 +8984,10 @@ opick = 50
 [[matchup]]
 hero = "lucio"
 vs = "torbjorn"
-value = -25
+value = -13
 cpgg = -25
 opick = -50
+cwatch = 25
 
 [[matchup]]
 hero = "lucio"
@@ -8950,20 +8999,18 @@ opick = 0
 [[matchup]]
 hero = "lucio"
 vs = "vendetta"
-value = 8
-disagreement = true
+value = 14
 cpgg = 25
 opick = 0
-cwatch = -42
+cwatch = -20
 
 [[matchup]]
 hero = "lucio"
 vs = "venture"
-value = 9
-disagreement = true
+value = 13
 cpgg = 25
 opick = -50
-cwatch = -38
+cwatch = -25
 
 [[matchup]]
 hero = "lucio"
@@ -8976,19 +9023,18 @@ reason = "Lucio can use speed boost to make teammates harder for Widowmaker to h
 [[matchup]]
 hero = "lucio"
 vs = "winston"
-value = 5
-disagreement = true
+value = 13
 cpgg = 25
 opick = 50
-cwatch = -52
+cwatch = -24
 
 [[matchup]]
 hero = "lucio"
 vs = "wrecking-ball"
-value = -8
+value = -6
 cpgg = 0
 opick = -50
-cwatch = -32
+cwatch = -25
 
 [[matchup]]
 hero = "lucio"
@@ -9007,10 +9053,10 @@ opick = -50
 [[matchup]]
 hero = "lucio"
 vs = "zenyatta"
-value = 44
+value = 45
 cpgg = 50
 opick = 0
-cwatch = 25
+cwatch = 30
 reason = "Lucio can use speed boost to help teammates close in on Zenyatta."
 
 [[matchup]]
@@ -9060,9 +9106,10 @@ opick = 0
 [[matchup]]
 hero = "mauga"
 vs = "dmon"
-value = 25
+value = 28
 cpgg = 25
 opick = 0
+cwatch = 38
 
 [[matchup]]
 hero = "mauga"
@@ -9074,10 +9121,10 @@ opick = 0
 [[matchup]]
 hero = "mauga"
 vs = "doomfist"
-value = 44
+value = 54
 cpgg = 50
 opick = -100
-cwatch = 25
+cwatch = 67
 reason = "Doomfist has no barrier, making him vulnerable to Mauga's burning effect."
 
 [[matchup]]
@@ -9119,9 +9166,10 @@ reason = "Hanzo's Storm Arrows deals very high damage against Mauga. Hanzo's pee
 [[matchup]]
 hero = "mauga"
 vs = "hazard"
-value = 50
+value = 52
 cpgg = 50
 opick = 0
+cwatch = 56
 reason = "Hazard has no barrier, making him constantly vulnerable to Mauga's burning effect."
 
 [[matchup]]
@@ -9165,10 +9213,10 @@ reason = "Mauga's hitscan weapons make him strong against airborne targets, maki
 [[matchup]]
 hero = "mauga"
 vs = "kiriko"
-value = -29
+value = -28
 cpgg = -25
 opick = 0
-cwatch = -41
+cwatch = -36
 
 [[matchup]]
 hero = "mauga"
@@ -9181,11 +9229,11 @@ reason = "If the tank continuously takes damage from Mauga, Lifeweaver's healing
 [[matchup]]
 hero = "mauga"
 vs = "lucio"
-value = 24
+value = 26
 disagreement = true
 cpgg = 50
 opick = 50
-cwatch = -33
+cwatch = -31
 reason = "Mauga's hitscan weapons make it easy to hit Lucio."
 
 [[matchup]]
@@ -9207,9 +9255,9 @@ reason = "Mauga's hitscan weapons make him strong against airborne targets, maki
 [[matchup]]
 hero = "mauga"
 vs = "mizuki"
-value = -49
+value = -32
 opick = 0
-cwatch = -49
+cwatch = -32
 
 [[matchup]]
 hero = "mauga"
@@ -9221,8 +9269,7 @@ opick = 0
 [[matchup]]
 hero = "mauga"
 vs = "orisa"
-value = -24
-disagreement = true
+value = -25
 cpgg = -25
 opick = 50
 
@@ -9274,10 +9321,10 @@ opick = 0
 [[matchup]]
 hero = "mauga"
 vs = "sierra"
-value = -14
+value = -12
 cpgg = 0
 opick = -50
-cwatch = -57
+cwatch = -47
 
 [[matchup]]
 hero = "mauga"
@@ -9290,10 +9337,10 @@ reason = "Sigma can interrupt Mauga's healing by using any of his abilities agai
 [[matchup]]
 hero = "mauga"
 vs = "sojourn"
-value = -51
+value = -46
 cpgg = -50
 opick = 50
-cwatch = -53
+cwatch = -34
 reason = "Mauga's large hitbox makes him an easy charge resource for Sojourn."
 
 [[matchup]]
@@ -9306,28 +9353,26 @@ opick = 0
 [[matchup]]
 hero = "mauga"
 vs = "sombra"
-value = 10
-disagreement = true
+value = 11
 cpgg = 25
 opick = 50
-cwatch = -37
+cwatch = -33
 
 [[matchup]]
 hero = "mauga"
 vs = "symmetra"
-value = -15
+value = -13
 cpgg = 0
 opick = -100
-cwatch = -61
+cwatch = -50
 
 [[matchup]]
 hero = "mauga"
 vs = "torbjorn"
-value = 7
-disagreement = true
+value = 11
 cpgg = 25
 opick = 50
-cwatch = -45
+cwatch = -31
 
 [[matchup]]
 hero = "mauga"
@@ -9361,19 +9406,19 @@ opick = -50
 [[matchup]]
 hero = "mauga"
 vs = "winston"
-value = 67
+value = 75
 cpgg = 75
 opick = 0
-cwatch = 43
+cwatch = 76
 reason = "Mauga's dual-fire can quickly break Winston's barrier, and the continuous burning effect makes it difficult for Winston to dive."
 
 [[matchup]]
 hero = "mauga"
 vs = "wrecking-ball"
-value = 53
+value = 60
 cpgg = 50
 opick = -100
-cwatch = 61
+cwatch = 89
 reason = "Mauga's hitscan weapons make it easy to hit Wrecking Ball."
 
 [[matchup]]
@@ -9396,7 +9441,7 @@ vs = "zenyatta"
 value = -45
 cpgg = -50
 opick = 0
-cwatch = -29
+cwatch = -28
 reason = "Mauga lacks defensive options, making him very vulnerable when marked with Zenyatta's Discord."
 
 [[matchup]]
@@ -9453,11 +9498,11 @@ opick = -50
 [[matchup]]
 hero = "mei"
 vs = "dmon"
-value = 31
+value = 38
 disagreement = true
 cpgg = 75
 opick = 0
-cwatch = -35
+cwatch = -21
 reason = "D.Mon has no ability to fly and excels at diving deep into the frontline, so D.Mon is easily cut off from allies by Mei's Wall."
 
 [[matchup]]
@@ -9503,10 +9548,10 @@ reason = "Emre can attack from outside Mei's effective range. Mei lacks mobility
 [[matchup]]
 hero = "mei"
 vs = "freja"
-value = -44
+value = -43
 cpgg = -50
 opick = 0
-cwatch = -25
+cwatch = -20
 reason = "Mei's wide hitbox makes her easy to hit with Freja's primary fire."
 
 [[matchup]]
@@ -9542,35 +9587,35 @@ opick = -50
 [[matchup]]
 hero = "mei"
 vs = "jetpack-cat"
-value = -51
+value = -43
 cpgg = -50
 opick = -50
-cwatch = -52
+cwatch = -20
 reason = "Mei's primary fire has projectile travel time, making it very difficult to hit airborne targets."
 
 [[matchup]]
 hero = "mei"
 vs = "junker-queen"
-value = 29
+value = 24
 cpgg = 25
 opick = 0
-cwatch = 40
+cwatch = 20
 
 [[matchup]]
 hero = "mei"
 vs = "junkrat"
-value = -29
+value = -24
 cpgg = -25
 opick = 50
-cwatch = -42
+cwatch = -20
 
 [[matchup]]
 hero = "mei"
 vs = "juno"
-value = -49
+value = -42
 cpgg = -50
 opick = 50
-cwatch = -45
+cwatch = -17
 reason = "Mei's primary fire has travel time, making it very difficult to hit airborne targets."
 
 [[matchup]]
@@ -9583,10 +9628,10 @@ opick = 50
 [[matchup]]
 hero = "mei"
 vs = "lifeweaver"
-value = -10
+value = -5
 cpgg = 0
 opick = -50
-cwatch = -38
+cwatch = -20
 
 [[matchup]]
 hero = "mei"
@@ -9598,10 +9643,10 @@ opick = 0
 [[matchup]]
 hero = "mei"
 vs = "mauga"
-value = 33
+value = 24
 cpgg = 25
 opick = 50
-cwatch = 55
+cwatch = 22
 
 [[matchup]]
 hero = "mei"
@@ -9629,10 +9674,10 @@ reason = "Mei's Wall can isolate tanks like Orisa. Cryo-Freeze can also negate O
 [[matchup]]
 hero = "mei"
 vs = "pharah"
-value = -70
+value = -61
 cpgg = -75
 opick = 50
-cwatch = -55
+cwatch = -20
 reason = "Mei's primary fire has travel time, making it very difficult to hit airborne targets."
 
 [[matchup]]
@@ -9652,10 +9697,10 @@ opick = 0
 [[matchup]]
 hero = "mei"
 vs = "reinhardt"
-value = 12
+value = 14
 cpgg = 25
 opick = -50
-cwatch = -28
+cwatch = -20
 
 [[matchup]]
 hero = "mei"
@@ -9681,9 +9726,10 @@ opick = 0
 [[matchup]]
 hero = "mei"
 vs = "sigma"
-value = -25
+value = -14
 cpgg = -25
 opick = -50
+cwatch = 18
 
 [[matchup]]
 hero = "mei"
@@ -9702,10 +9748,10 @@ opick = 0
 [[matchup]]
 hero = "mei"
 vs = "sombra"
-value = 44
+value = 43
 cpgg = 50
 opick = 100
-cwatch = 25
+cwatch = 20
 reason = "Even if Sombra ambushes Mei, Mei can easily shrug it off by becoming invulnerable with Cryo-Freeze."
 
 [[matchup]]
@@ -9749,10 +9795,10 @@ reason = "Mei can endure Venture's burst damage with Cryo-Freeze. Against Ventur
 [[matchup]]
 hero = "mei"
 vs = "widowmaker"
-value = -50
+value = -42
 cpgg = -50
 opick = 0
-cwatch = -48
+cwatch = -17
 reason = "Mei lacks mobility, so she easily takes Widowmaker's headshots. Once headshot by Widowmaker, even Mei's Cryo-Freeze becomes meaningless."
 
 [[matchup]]
@@ -9772,18 +9818,19 @@ opick = -50
 [[matchup]]
 hero = "mei"
 vs = "wuyang"
-value = -46
+value = -43
 cpgg = -50
 opick = -100
-cwatch = -32
+cwatch = -20
 reason = "Mei's wide hitbox makes her easy to hit with Wuyang's poke damage."
 
 [[matchup]]
 hero = "mei"
 vs = "zarya"
-value = 50
+value = 42
 cpgg = 50
 opick = 0
+cwatch = 19
 reason = "Zarya lacks mobility and sustain, making her vulnerable to being isolated by Mei's Wall."
 
 [[matchup]]
@@ -9796,7 +9843,7 @@ opick = -50
 [[matchup]]
 hero = "mercy"
 vs = "ana"
-value = -47
+value = -52
 disagreement = true
 cpgg = -75
 opick = 0
@@ -9813,7 +9860,7 @@ reason = "Anran has difficulty attacking airborne targets."
 [[matchup]]
 hero = "mercy"
 vs = "ashe"
-value = -52
+value = -53
 disagreement = true
 cpgg = -75
 opick = 0
@@ -9853,30 +9900,29 @@ reason = "Cassidy's hitscan shots make it easy to hit airborne targets."
 [[matchup]]
 hero = "mercy"
 vs = "dmon"
-value = -53
+value = -49
 cpgg = -50
 opick = 0
-cwatch = -60
+cwatch = -47
 reason = "Mercy is often near allies to boost and heal them, so she easily takes D.Mon's primary fire along with those allies. When Mercy has an airborne ally, she can also gain an advantage."
 
 [[matchup]]
 hero = "mercy"
 vs = "domina"
-value = -20
+value = -27
 disagreement = true
 cpgg = -50
 opick = -50
-cwatch = 45
+cwatch = 26
 reason = "Domina's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "mercy"
 vs = "doomfist"
-value = 9
-disagreement = true
+value = 10
 cpgg = 25
 opick = -50
-cwatch = -38
+cwatch = -35
 
 [[matchup]]
 hero = "mercy"
@@ -9884,7 +9930,7 @@ vs = "dva"
 value = -45
 cpgg = -50
 opick = 0
-cwatch = -29
+cwatch = -28
 reason = "D.Va can commit to airborne targets."
 
 [[matchup]]
@@ -9918,9 +9964,10 @@ opick = 0
 [[matchup]]
 hero = "mercy"
 vs = "hanzo"
-value = 0
+value = 6
 cpgg = 0
 opick = 50
+cwatch = 22
 
 [[matchup]]
 hero = "mercy"
@@ -9985,10 +10032,10 @@ opick = 50
 [[matchup]]
 hero = "mercy"
 vs = "mauga"
-value = -48
+value = -47
 cpgg = -50
 opick = 0
-cwatch = -42
+cwatch = -38
 reason = "Mauga's hitscan weapons make him strong against airborne targets, making it easy to hit Mercy."
 
 [[matchup]]
@@ -10030,11 +10077,11 @@ opick = 0
 [[matchup]]
 hero = "mercy"
 vs = "reaper"
-value = 18
+value = 28
 disagreement = true
 cpgg = 50
 opick = -50
-cwatch = -47
+cwatch = -25
 reason = "Reaper's attacks have short range, making it difficult to damage airborne targets."
 
 [[matchup]]
@@ -10092,10 +10139,10 @@ reason = "Soldier: 76's hitscan shots make it easy to hit airborne Mercy."
 [[matchup]]
 hero = "mercy"
 vs = "sombra"
-value = -51
+value = -47
 cpgg = -50
 opick = 50
-cwatch = -55
+cwatch = -36
 reason = "Sombra's hack disables Guardian Angel, making Mercy vulnerable."
 
 [[matchup]]
@@ -10115,20 +10162,20 @@ opick = 0
 [[matchup]]
 hero = "mercy"
 vs = "tracer"
-value = 24
+value = 26
 disagreement = true
 cpgg = 50
 opick = 0
-cwatch = -34
+cwatch = -31
 reason = "Tracer's primary fire has short range, making it difficult to damage airborne targets."
 
 [[matchup]]
 hero = "mercy"
 vs = "vendetta"
-value = -32
+value = -26
 cpgg = -25
 opick = 0
-cwatch = -51
+cwatch = -28
 
 [[matchup]]
 hero = "mercy"
@@ -10155,18 +10202,19 @@ opick = 0
 [[matchup]]
 hero = "mercy"
 vs = "wrecking-ball"
-value = 3
+value = 4
 disagreement = true
 cpgg = 25
 opick = 50
-cwatch = -64
+cwatch = -54
 
 [[matchup]]
 hero = "mercy"
 vs = "wuyang"
-value = 25
+value = 24
 cpgg = 25
 opick = 50
+cwatch = 20
 
 [[matchup]]
 hero = "mercy"
@@ -10178,25 +10226,25 @@ opick = -50
 [[matchup]]
 hero = "mercy"
 vs = "zenyatta"
-value = 35
+value = 26
 cpgg = 25
 opick = -50
-cwatch = 64
+cwatch = 28
 
 [[matchup]]
 hero = "mizuki"
 vs = "dmon"
-value = -9
+value = -6
 cpgg = 0
 opick = 0
-cwatch = -35
+cwatch = -22
 
 [[matchup]]
 hero = "mizuki"
 vs = "domina"
-value = 25
+value = 20
 opick = 50
-cwatch = 25
+cwatch = 20
 
 [[matchup]]
 hero = "mizuki"
@@ -10225,31 +10273,31 @@ reason = "Mizuki's primary fire has projectile travel time, making it difficult 
 [[matchup]]
 hero = "mizuki"
 vs = "genji"
-value = -55
+value = -22
 opick = 0
-cwatch = -55
+cwatch = -22
 
 [[matchup]]
 hero = "mizuki"
 vs = "hanzo"
-value = -48
+value = -18
 opick = -50
-cwatch = -48
+cwatch = -18
 
 [[matchup]]
 hero = "mizuki"
 vs = "hazard"
-value = 40
+value = 24
 opick = 50
-cwatch = 40
+cwatch = 24
 
 [[matchup]]
 hero = "mizuki"
 vs = "jetpack-cat"
-value = -51
+value = -43
 cpgg = -50
 opick = 100
-cwatch = -52
+cwatch = -22
 reason = "Mizuki's primary fire has projectile travel time, making it difficult to hit airborne targets."
 
 [[matchup]]
@@ -10263,45 +10311,45 @@ reason = "Even when Junker Queen closes in, Mizuki can easily create distance wi
 [[matchup]]
 hero = "mizuki"
 vs = "juno"
-value = -32
+value = -22
 opick = 0
-cwatch = -32
+cwatch = -22
 
 [[matchup]]
 hero = "mizuki"
 vs = "lifeweaver"
-value = -28
+value = -22
 opick = 100
-cwatch = -28
+cwatch = -22
 
 [[matchup]]
 hero = "mizuki"
 vs = "lucio"
-value = -42
+value = -22
 opick = 0
-cwatch = -42
+cwatch = -22
 
 [[matchup]]
 hero = "mizuki"
 vs = "mauga"
-value = 55
+value = 32
 opick = 0
-cwatch = 55
+cwatch = 32
 
 [[matchup]]
 hero = "mizuki"
 vs = "mercy"
-value = -38
+value = -13
 opick = 0
-cwatch = -38
+cwatch = -13
 
 [[matchup]]
 hero = "mizuki"
 vs = "pharah"
-value = -49
+value = -42
 cpgg = -50
 opick = 100
-cwatch = -45
+cwatch = -18
 reason = "Mizuki's primary fire has projectile travel time, making it difficult to hit airborne targets."
 
 [[matchup]]
@@ -10328,6 +10376,13 @@ opick = 50
 
 [[matchup]]
 hero = "mizuki"
+vs = "tracer"
+value = 18
+opick = 50
+cwatch = 18
+
+[[matchup]]
+hero = "mizuki"
 vs = "vendetta"
 value = 50
 cpgg = 50
@@ -10337,9 +10392,16 @@ reason = "Even when Vendetta closes in, Mizuki can easily create distance with M
 [[matchup]]
 hero = "mizuki"
 vs = "widowmaker"
-value = -25
+value = -22
 opick = 50
-cwatch = -25
+cwatch = -22
+
+[[matchup]]
+hero = "mizuki"
+vs = "wrecking-ball"
+value = 14
+opick = -100
+cwatch = 14
 
 [[matchup]]
 hero = "moira"
@@ -10351,10 +10413,10 @@ opick = 50
 [[matchup]]
 hero = "moira"
 vs = "anran"
-value = 66
+value = 64
 cpgg = 75
 opick = 0
-cwatch = 40
+cwatch = 32
 reason = "Moira can easily cleanse Anran's burning effect with Fade. Moira is generally favored in 1v1s against flankers."
 
 [[matchup]]
@@ -10388,29 +10450,29 @@ opick = 50
 [[matchup]]
 hero = "moira"
 vs = "cassidy"
-value = -47
+value = -45
 cpgg = -50
 opick = 0
-cwatch = -38
+cwatch = -29
 reason = "Cassidy's Flashbang makes it easy to punish Moira as she tries to escape."
 
 [[matchup]]
 hero = "moira"
 vs = "dmon"
-value = -27
+value = -26
 cpgg = -25
 opick = 0
-cwatch = -32
+cwatch = -27
 reason = "D.Mon has very high mobility, so D.Mon can follow up on Moira's escape with Fade."
 
 [[matchup]]
 hero = "moira"
 vs = "doomfist"
-value = 20
+value = 27
 disagreement = true
 cpgg = 50
 opick = 0
-cwatch = -45
+cwatch = -28
 reason = "Moira can easily dodge Doomfist's Rocket Punch or Meteor Strike with Fade."
 
 [[matchup]]
@@ -10438,10 +10500,10 @@ opick = 50
 [[matchup]]
 hero = "moira"
 vs = "genji"
-value = 89
+value = 86
 cpgg = 100
 opick = 0
-cwatch = 55
+cwatch = 44
 reason = "Moira's primary fire requires no aim, allowing her to consistently damage Genji's fast movement. Even when in danger, Moira can escape with Fade."
 
 [[matchup]]
@@ -10471,14 +10533,15 @@ vs = "junker-queen"
 value = 25
 cpgg = 25
 opick = 0
+cwatch = 24
 
 [[matchup]]
 hero = "moira"
 vs = "junkrat"
-value = 10
+value = 12
 cpgg = 25
 opick = -50
-cwatch = -35
+cwatch = -28
 
 [[matchup]]
 hero = "moira"
@@ -10558,24 +10621,23 @@ vs = "reaper"
 value = 12
 cpgg = 25
 opick = 50
-cwatch = -28
+cwatch = -26
 
 [[matchup]]
 hero = "moira"
 vs = "reinhardt"
-value = 8
-disagreement = true
+value = 13
 cpgg = 25
 opick = 50
-cwatch = -42
+cwatch = -25
 
 [[matchup]]
 hero = "moira"
 vs = "roadhog"
-value = -51
+value = -46
 cpgg = -50
 opick = 0
-cwatch = -55
+cwatch = -35
 reason = "Moira often fights at mid-range, making her easy to catch with Hook. Roadhog can also interrupt Moira's ultimate with Hook."
 
 [[matchup]]
@@ -10598,9 +10660,10 @@ reason = "Sierra's Tracking Shot can be cleansed by Moira's Fade. Moira can also
 [[matchup]]
 hero = "moira"
 vs = "sigma"
-value = 50
+value = 43
 cpgg = 50
 opick = -50
+cwatch = 22
 reason = "Moira can pressure the backline by getting behind Sigma."
 
 [[matchup]]
@@ -10628,7 +10691,7 @@ reason = "Moira's primary fire can easily reveal stealthed Sombra. Sombra's hack
 [[matchup]]
 hero = "moira"
 vs = "symmetra"
-value = -41
+value = -55
 disagreement = true
 cpgg = -75
 opick = 0
@@ -10637,10 +10700,10 @@ reason = "Symmetra can handle Moira's engage with Turret turrets and primary fir
 [[matchup]]
 hero = "moira"
 vs = "torbjorn"
-value = -51
+value = -45
 cpgg = -50
 opick = -50
-cwatch = -52
+cwatch = -30
 reason = "Moira has difficulty destroying Torbjorn's Turret."
 
 [[matchup]]
@@ -10683,11 +10746,11 @@ cwatch = -25
 [[matchup]]
 hero = "moira"
 vs = "wrecking-ball"
-value = 19
+value = 26
 disagreement = true
 cpgg = 50
 opick = 0
-cwatch = -48
+cwatch = -30
 reason = "Moira can easily deal with Wrecking Ball's dives using Fade. Moira's auto-aim attack makes it easy to damage Wrecking Ball."
 
 [[matchup]]
@@ -10743,20 +10806,18 @@ opick = 0
 [[matchup]]
 hero = "orisa"
 vs = "bastion"
-value = 7
-disagreement = true
+value = 15
 cpgg = 25
 opick = 0
-cwatch = -45
+cwatch = -17
 
 [[matchup]]
 hero = "orisa"
 vs = "brigitte"
-value = 6
-disagreement = true
+value = 14
 cpgg = 25
 opick = 50
-cwatch = -48
+cwatch = -18
 
 [[matchup]]
 hero = "orisa"
@@ -10775,10 +10836,10 @@ opick = 0
 [[matchup]]
 hero = "orisa"
 vs = "doomfist"
-value = 66
+value = 63
 cpgg = 75
 opick = -50
-cwatch = 40
+cwatch = 26
 reason = "Orisa can cancel Doomfist during his Power Block or while charging Rocket Punch with Javelin. She can also negate the knockback from Rocket Punch by using Fortify."
 
 [[matchup]]
@@ -10819,19 +10880,19 @@ opick = 0
 [[matchup]]
 hero = "orisa"
 vs = "hazard"
-value = 70
+value = 64
 cpgg = 75
 opick = -50
-cwatch = 55
+cwatch = 31
 reason = "Orisa can easily protect her teammates from Hazard's dives."
 
 [[matchup]]
 hero = "orisa"
 vs = "illari"
-value = -24
-disagreement = true
+value = -15
 cpgg = -25
 opick = 50
+cwatch = 15
 
 [[matchup]]
 hero = "orisa"
@@ -10858,10 +10919,10 @@ opick = -50
 [[matchup]]
 hero = "orisa"
 vs = "kiriko"
-value = -28
+value = -26
 cpgg = -25
 opick = 50
-cwatch = -35
+cwatch = -29
 
 [[matchup]]
 hero = "orisa"
@@ -10873,19 +10934,18 @@ opick = 50
 [[matchup]]
 hero = "orisa"
 vs = "lucio"
-value = -13
+value = -6
 cpgg = 0
 opick = 0
-cwatch = -52
+cwatch = -24
 
 [[matchup]]
 hero = "orisa"
 vs = "mauga"
-value = 9
-disagreement = true
+value = 11
 cpgg = 25
 opick = 50
-cwatch = -38
+cwatch = -30
 
 [[matchup]]
 hero = "orisa"
@@ -10905,9 +10965,9 @@ opick = 0
 [[matchup]]
 hero = "orisa"
 vs = "mizuki"
-value = -32
+value = -27
 opick = -50
-cwatch = -32
+cwatch = -27
 
 [[matchup]]
 hero = "orisa"
@@ -10922,7 +10982,7 @@ vs = "pharah"
 value = -7
 cpgg = 0
 opick = 0
-cwatch = -28
+cwatch = -26
 
 [[matchup]]
 hero = "orisa"
@@ -11002,10 +11062,10 @@ opick = -50
 [[matchup]]
 hero = "orisa"
 vs = "symmetra"
-value = -33
+value = -28
 cpgg = -25
 opick = -50
-cwatch = -55
+cwatch = -36
 
 [[matchup]]
 hero = "orisa"
@@ -11043,14 +11103,15 @@ vs = "widowmaker"
 value = 25
 cpgg = 25
 opick = 0
-cwatch = 25
+cwatch = 24
 
 [[matchup]]
 hero = "orisa"
 vs = "winston"
-value = 50
+value = 42
 cpgg = 50
 opick = 50
+cwatch = 18
 reason = "Orisa can easily protect her teammates from Winston's dives with her abilities."
 
 [[matchup]]
@@ -11079,10 +11140,10 @@ reason = "Orisa's attacks are easily absorbed by Zarya's Particle Barrier."
 [[matchup]]
 hero = "orisa"
 vs = "zenyatta"
-value = -67
+value = -61
 cpgg = -75
 opick = -50
-cwatch = -42
+cwatch = -17
 reason = "Orisa has difficulty shaking off Zenyatta's Discord. Even while using Fortify, she becomes vulnerable when marked with Discord."
 
 [[matchup]]
@@ -11103,19 +11164,19 @@ reason = "Anran has difficulty attacking airborne targets. Pharah can land attac
 [[matchup]]
 hero = "pharah"
 vs = "ashe"
-value = -51
+value = -48
 cpgg = -50
 opick = 0
-cwatch = -53
+cwatch = -42
 reason = "Ashe's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "pharah"
 vs = "baptiste"
-value = -50
+value = -48
 cpgg = -50
 opick = 50
-cwatch = -49
+cwatch = -40
 reason = "Baptiste's hitscan shots make it easy to hit Pharah. Against Pharah's ult, Baptiste can protect allies with Lamp."
 
 [[matchup]]
@@ -11129,20 +11190,20 @@ reason = "Pharah struggles greatly against Bastion in Configuration: Assault for
 [[matchup]]
 hero = "pharah"
 vs = "brigitte"
-value = 79
+value = 82
 disagreement = true
 cpgg = 100
 opick = 0
-cwatch = 25
+cwatch = 36
 reason = "Brigitte's primary attack has very short range and cannot attack airborne targets."
 
 [[matchup]]
 hero = "pharah"
 vs = "cassidy"
-value = -67
+value = -65
 cpgg = -75
 opick = 100
-cwatch = -41
+cwatch = -36
 reason = "Cassidy's hitscan shots make it easy to hit airborne targets."
 
 [[matchup]]
@@ -11164,9 +11225,10 @@ reason = "Domina's primary fire is hitscan, making it easy to hit airborne targe
 [[matchup]]
 hero = "pharah"
 vs = "doomfist"
-value = 75
+value = 64
 cpgg = 75
 opick = -50
+cwatch = 32
 reason = "Doomfist has difficulty committing to airborne targets."
 
 [[matchup]]
@@ -11180,10 +11242,10 @@ reason = "Her attacks are easily absorbed by D.Va's DM. D.Va can also commit to 
 [[matchup]]
 hero = "pharah"
 vs = "echo"
-value = -52
+value = -48
 cpgg = -50
 opick = 50
-cwatch = -57
+cwatch = -43
 reason = "Echo's Focusing Beam is a beam, making it easier to hit Pharah in air-to-air combat. Echo also has better projectile speed than Pharah, giving Echo the advantage in aerial fights."
 
 [[matchup]]
@@ -11229,19 +11291,19 @@ reason = "Pharah can create distance from Hazard's dive by flying. Hazard lacks 
 [[matchup]]
 hero = "pharah"
 vs = "illari"
-value = -66
+value = -65
 cpgg = -75
 opick = 50
-cwatch = -37
+cwatch = -33
 reason = "Illari's hitscan shots can easily hit Pharah."
 
 [[matchup]]
 hero = "pharah"
 vs = "jetpack-cat"
-value = -49
+value = -47
 cpgg = -50
 opick = -100
-cwatch = -45
+cwatch = -36
 reason = "Jetpack Cat has faster projectile speed than Pharah, giving Jetpack Cat the advantage in aerial combat."
 
 [[matchup]]
@@ -11255,7 +11317,8 @@ reason = "Junker Queen is weak against airborne targets."
 [[matchup]]
 hero = "pharah"
 vs = "junkrat"
-value = 100
+value = 92
+disagreement = true
 cpgg = 100
 opick = -50
 reason = "Junkrat's projectiles are slow, making it very difficult to hit airborne targets."
@@ -11263,10 +11326,10 @@ reason = "Junkrat's projectiles are slow, making it very difficult to hit airbor
 [[matchup]]
 hero = "pharah"
 vs = "juno"
-value = -90
+value = -88
 cpgg = -100
 opick = 50
-cwatch = -61
+cwatch = -50
 reason = "Pharah's projectiles are slow, making it hard to hit airborne Juno. Juno's attacks are hitscan, making it easy to hit Pharah, and Juno's Torpedoes is homing, so it lands easily on Pharah."
 
 [[matchup]]
@@ -11355,10 +11418,10 @@ reason = "Reaper has short range and cannot reach airborne targets."
 [[matchup]]
 hero = "pharah"
 vs = "reinhardt"
-value = 90
+value = 86
 cpgg = 100
 opick = 0
-cwatch = 61
+cwatch = 45
 reason = "Reinhardt is very weak against airborne targets."
 
 [[matchup]]
@@ -11400,10 +11463,10 @@ opick = -50
 [[matchup]]
 hero = "pharah"
 vs = "soldier-76"
-value = -65
+value = -64
 cpgg = -75
 opick = 50
-cwatch = -33
+cwatch = -31
 reason = "Soldier: 76's primary fire is hitscan, making it easy to hit Pharah. Soldier: 76 can also use his ult to easily finish off Pharah."
 
 [[matchup]]
@@ -11441,18 +11504,19 @@ reason = "Tracer has no way to reach airborne targets."
 [[matchup]]
 hero = "pharah"
 vs = "vendetta"
-value = 75
+value = 65
 cpgg = 75
 opick = -50
+cwatch = 34
 reason = "Vendetta has limited options against airborne targets."
 
 [[matchup]]
 hero = "pharah"
 vs = "venture"
-value = 67
+value = 66
 cpgg = 75
 opick = -50
-cwatch = 43
+cwatch = 37
 reason = "Venture cannot reach airborne targets."
 
 [[matchup]]
@@ -11478,7 +11542,7 @@ value = 34
 disagreement = true
 cpgg = 75
 opick = -100
-cwatch = -29
+cwatch = -28
 reason = "Pharah spends a lot of time airborne, making her much less vulnerable to Wrecking Ball's dives."
 
 [[matchup]]
@@ -11507,19 +11571,19 @@ reason = "Zenyatta's primary fire has slow projectile speed, making it difficult
 [[matchup]]
 hero = "ramattra"
 vs = "ana"
-value = -49
+value = -44
 cpgg = -50
 opick = 0
-cwatch = -46
+cwatch = -24
 reason = "Ana can gain the advantage against Ramattra's Nemesis Form by using Sleep or Nade."
 
 [[matchup]]
 hero = "ramattra"
 vs = "ashe"
-value = -11
+value = -6
 cpgg = 0
 opick = 0
-cwatch = -43
+cwatch = -23
 
 [[matchup]]
 hero = "ramattra"
@@ -11531,18 +11595,18 @@ opick = 50
 [[matchup]]
 hero = "ramattra"
 vs = "bastion"
-value = 11
+value = 12
 cpgg = 25
 opick = 50
-cwatch = -32
+cwatch = -29
 
 [[matchup]]
 hero = "ramattra"
 vs = "brigitte"
-value = 67
+value = 66
 cpgg = 75
 opick = 50
-cwatch = 41
+cwatch = 38
 reason = "Ramattra's Nemesis Form pierces shields, preventing Brigitte from fighting at close range."
 
 [[matchup]]
@@ -11578,10 +11642,10 @@ opick = 0
 [[matchup]]
 hero = "ramattra"
 vs = "dva"
-value = 6
+value = 7
 cpgg = 0
 opick = 0
-cwatch = 25
+cwatch = 29
 
 [[matchup]]
 hero = "ramattra"
@@ -11589,7 +11653,7 @@ vs = "echo"
 value = -7
 cpgg = 0
 opick = -50
-cwatch = -29
+cwatch = -27
 
 [[matchup]]
 hero = "ramattra"
@@ -11619,6 +11683,7 @@ vs = "hazard"
 value = 25
 cpgg = 25
 opick = 0
+cwatch = 26
 
 [[matchup]]
 hero = "ramattra"
@@ -11651,10 +11716,10 @@ opick = 0
 [[matchup]]
 hero = "ramattra"
 vs = "kiriko"
-value = -9
+value = -8
 cpgg = 0
 opick = 0
-cwatch = -36
+cwatch = -31
 
 [[matchup]]
 hero = "ramattra"
@@ -11673,10 +11738,10 @@ opick = -50
 [[matchup]]
 hero = "ramattra"
 vs = "mauga"
-value = -31
+value = -25
 cpgg = -25
 opick = 50
-cwatch = -50
+cwatch = -25
 
 [[matchup]]
 hero = "ramattra"
@@ -11710,10 +11775,10 @@ reason = "Orisa can create distance from Ramattra's Nemesis Form with Javelin."
 [[matchup]]
 hero = "ramattra"
 vs = "pharah"
-value = -32
+value = -25
 cpgg = -25
 opick = 0
-cwatch = -53
+cwatch = -25
 
 [[matchup]]
 hero = "ramattra"
@@ -11725,9 +11790,10 @@ opick = -50
 [[matchup]]
 hero = "ramattra"
 vs = "reinhardt"
-value = 75
+value = 61
 cpgg = 75
 opick = 0
+cwatch = 20
 reason = "Ramattra's attacks in Nemesis Form form pierce through Reinhardt's Shield."
 
 [[matchup]]
@@ -11782,10 +11848,10 @@ opick = 50
 [[matchup]]
 hero = "ramattra"
 vs = "symmetra"
-value = -29
+value = -27
 cpgg = -25
 opick = -50
-cwatch = -39
+cwatch = -33
 
 [[matchup]]
 hero = "ramattra"
@@ -11826,10 +11892,10 @@ opick = 100
 [[matchup]]
 hero = "ramattra"
 vs = "winston"
-value = 52
+value = 47
 cpgg = 50
 opick = 50
-cwatch = 57
+cwatch = 39
 reason = "Ramattra can use Ravenous Vortex against Winston's dives, making it difficult for Winston to retreat. In Nemesis Form form, Ramattra can break the barrier while dealing damage."
 
 [[matchup]]
@@ -11857,10 +11923,10 @@ opick = 0
 [[matchup]]
 hero = "ramattra"
 vs = "zenyatta"
-value = -52
+value = -48
 cpgg = -50
 opick = 0
-cwatch = -57
+cwatch = -42
 reason = "Ramattra becomes very vulnerable when marked with Zenyatta's Discord while in Nemesis Form form."
 
 [[matchup]]
@@ -11903,19 +11969,18 @@ reason = "Bastion's wide hitbox makes him vulnerable to Reaper's spread."
 [[matchup]]
 hero = "reaper"
 vs = "brigitte"
-value = 4
-disagreement = true
+value = 12
 cpgg = 25
 opick = 50
-cwatch = -55
+cwatch = -29
 
 [[matchup]]
 hero = "reaper"
 vs = "cassidy"
-value = -45
+value = -44
 cpgg = -50
 opick = 0
-cwatch = -28
+cwatch = -25
 reason = "Cassidy's Flashbang makes it easy to punish Reaper as he tries to escape."
 
 [[matchup]]
@@ -11944,9 +12009,10 @@ opick = -50
 [[matchup]]
 hero = "reaper"
 vs = "dva"
-value = 0
+value = 4
 cpgg = 0
 opick = 0
+cwatch = 17
 
 [[matchup]]
 hero = "reaper"
@@ -11967,18 +12033,18 @@ reason = "Freja's mobility and range allow her to kite Reaper effectively."
 [[matchup]]
 hero = "reaper"
 vs = "genji"
-value = -11
+value = -5
 cpgg = 0
 opick = 0
-cwatch = -42
+cwatch = -18
 
 [[matchup]]
 hero = "reaper"
 vs = "hanzo"
-value = -8
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -32
+cwatch = -26
 
 [[matchup]]
 hero = "reaper"
@@ -12021,9 +12087,10 @@ opick = 0
 [[matchup]]
 hero = "reaper"
 vs = "juno"
-value = -25
+value = -15
 cpgg = -25
 opick = 0
+cwatch = 17
 
 [[matchup]]
 hero = "reaper"
@@ -12065,11 +12132,11 @@ opick = 0
 [[matchup]]
 hero = "reaper"
 vs = "mercy"
-value = -17
+value = -28
 disagreement = true
 cpgg = -50
 opick = 50
-cwatch = 55
+cwatch = 25
 reason = "Reaper's attacks have short range, making it difficult to damage airborne targets."
 
 [[matchup]]
@@ -12111,21 +12178,20 @@ opick = 50
 [[matchup]]
 hero = "reaper"
 vs = "roadhog"
-value = 29
+value = 35
 disagreement = true
 cpgg = 75
 opick = 50
-cwatch = -38
+cwatch = -27
 reason = "Roadhog's large hitbox makes him vulnerable to Reaper's primary fire."
 
 [[matchup]]
 hero = "reaper"
 vs = "shion"
-value = -12
-disagreement = true
+value = -7
 cpgg = 0
 opick = 50
-cwatch = -48
+cwatch = -26
 
 [[matchup]]
 hero = "reaper"
@@ -12144,10 +12210,10 @@ opick = -50
 [[matchup]]
 hero = "reaper"
 vs = "sojourn"
-value = -11
+value = -6
 cpgg = 0
 opick = 50
-cwatch = -45
+cwatch = -23
 
 [[matchup]]
 hero = "reaper"
@@ -12190,10 +12256,10 @@ opick = 0
 [[matchup]]
 hero = "reaper"
 vs = "vendetta"
-value = -9
+value = -7
 cpgg = 0
 opick = -50
-cwatch = -35
+cwatch = -26
 
 [[matchup]]
 hero = "reaper"
@@ -12205,28 +12271,27 @@ opick = -50
 [[matchup]]
 hero = "reaper"
 vs = "widowmaker"
-value = 5
-disagreement = true
+value = 12
 cpgg = 25
 opick = -50
-cwatch = -52
+cwatch = -26
 
 [[matchup]]
 hero = "reaper"
 vs = "winston"
-value = 66
+value = 62
 cpgg = 75
 opick = -100
-cwatch = 40
+cwatch = 24
 reason = "Reaper's high DPS primary fire can break Winston's barrier. Even if targeted by Winston, Reaper can return with Wraith Form."
 
 [[matchup]]
 hero = "reaper"
 vs = "wrecking-ball"
-value = 25
+value = 24
 cpgg = 25
 opick = -50
-cwatch = 25
+cwatch = 22
 
 [[matchup]]
 hero = "reaper"
@@ -12253,17 +12318,17 @@ reason = "Zenyatta's wide hitbox makes him vulnerable to Reaper's spread. Zenyat
 [[matchup]]
 hero = "reinhardt"
 vs = "ana"
-value = -8
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -32
+cwatch = -29
 
 [[matchup]]
 hero = "reinhardt"
 vs = "anran"
-value = 41
+value = 30
 opick = 50
-cwatch = 41
+cwatch = 30
 
 [[matchup]]
 hero = "reinhardt"
@@ -12275,10 +12340,10 @@ opick = 0
 [[matchup]]
 hero = "reinhardt"
 vs = "baptiste"
-value = -12
+value = -9
 cpgg = 0
 opick = 0
-cwatch = -47
+cwatch = -37
 
 [[matchup]]
 hero = "reinhardt"
@@ -12330,7 +12395,6 @@ opick = -50
 hero = "reinhardt"
 vs = "dva"
 value = -25
-disagreement = true
 cpgg = -25
 opick = 50
 
@@ -12367,10 +12431,10 @@ opick = -50
 [[matchup]]
 hero = "reinhardt"
 vs = "hazard"
-value = 15
+value = 8
 cpgg = 0
 opick = 0
-cwatch = 58
+cwatch = 32
 
 [[matchup]]
 hero = "reinhardt"
@@ -12382,10 +12446,10 @@ opick = 0
 [[matchup]]
 hero = "reinhardt"
 vs = "jetpack-cat"
-value = -67
+value = -64
 cpgg = -75
 opick = -50
-cwatch = -43
+cwatch = -30
 reason = "Reinhardt is very weak against airborne targets."
 
 [[matchup]]
@@ -12406,10 +12470,10 @@ reason = "Reinhardt often stays grounded, making him easy to hit with Junkrat's 
 [[matchup]]
 hero = "reinhardt"
 vs = "juno"
-value = -45
+value = -44
 cpgg = -50
 opick = 0
-cwatch = -29
+cwatch = -27
 reason = "Reinhardt is weak against airborne targets, and Juno's Hyper Ring makes it difficult for Reinhardt to get into his effective range."
 
 [[matchup]]
@@ -12437,10 +12501,10 @@ reason = "Lucio's speed boost and Boop make it difficult for Reinhardt to get in
 [[matchup]]
 hero = "reinhardt"
 vs = "mauga"
-value = -48
+value = -46
 cpgg = -50
 opick = 50
-cwatch = -40
+cwatch = -34
 reason = "Mauga's dual-fire can quickly break Reinhardt's Shield."
 
 [[matchup]]
@@ -12468,10 +12532,10 @@ reason = "Even when Reinhardt closes in, Mizuki can easily create distance with 
 [[matchup]]
 hero = "reinhardt"
 vs = "moira"
-value = -24
-disagreement = true
+value = -13
 cpgg = -25
 opick = -50
+cwatch = 25
 
 [[matchup]]
 hero = "reinhardt"
@@ -12484,10 +12548,10 @@ reason = "Orisa can stop Reinhardt's Charge with Fortify or Javelin."
 [[matchup]]
 hero = "reinhardt"
 vs = "pharah"
-value = -90
+value = -86
 cpgg = -100
 opick = 50
-cwatch = -58
+cwatch = -45
 reason = "Reinhardt is very weak against airborne targets."
 
 [[matchup]]
@@ -12508,10 +12572,10 @@ opick = 0
 [[matchup]]
 hero = "reinhardt"
 vs = "roadhog"
-value = -28
+value = -27
 cpgg = -25
 opick = 50
-cwatch = -36
+cwatch = -32
 
 [[matchup]]
 hero = "reinhardt"
@@ -12567,10 +12631,10 @@ reason = "Reinhardt's shield is an easy charge resource for Symmetra's primary f
 [[matchup]]
 hero = "reinhardt"
 vs = "torbjorn"
-value = -70
+value = -67
 cpgg = -75
 opick = -100
-cwatch = -54
+cwatch = -43
 reason = "Reinhardt has difficulty destroying Torbjorn's Turret. Reinhardt's Shield is easily broken by Torbjorn's primary fire."
 
 [[matchup]]
@@ -12590,9 +12654,10 @@ opick = 0
 [[matchup]]
 hero = "reinhardt"
 vs = "venture"
-value = 0
+value = 7
 cpgg = 0
 opick = 0
+cwatch = 28
 
 [[matchup]]
 hero = "reinhardt"
@@ -12612,10 +12677,10 @@ opick = 100
 [[matchup]]
 hero = "reinhardt"
 vs = "wrecking-ball"
-value = 6
+value = 7
 cpgg = 0
 opick = -100
-cwatch = 25
+cwatch = 28
 
 [[matchup]]
 hero = "reinhardt"
@@ -12636,18 +12701,19 @@ reason = "Reinhardt can endure beams with Shield, and in close combat, Reinhardt
 [[matchup]]
 hero = "reinhardt"
 vs = "zenyatta"
-value = -31
+value = -28
 cpgg = -25
 opick = 0
-cwatch = -50
+cwatch = -37
 
 [[matchup]]
 hero = "roadhog"
 vs = "ana"
-value = -87
+value = -82
+disagreement = true
 cpgg = -100
 opick = 0
-cwatch = -48
+cwatch = -37
 reason = "Ana's Nade anti-heal can negate Roadhog's sustain from Take a Breather."
 
 [[matchup]]
@@ -12669,26 +12735,26 @@ reason = "Ashe's long range allows her to position out of Hook range. Roadhog's 
 [[matchup]]
 hero = "roadhog"
 vs = "baptiste"
-value = -35
+value = -33
 cpgg = -25
 opick = 50
-cwatch = -66
+cwatch = -58
 
 [[matchup]]
 hero = "roadhog"
 vs = "bastion"
-value = -34
+value = -29
 cpgg = -25
 opick = -50
-cwatch = -61
+cwatch = -42
 
 [[matchup]]
 hero = "roadhog"
 vs = "brigitte"
-value = 9
+value = 10
 cpgg = 25
 opick = 50
-cwatch = -39
+cwatch = -36
 
 [[matchup]]
 hero = "roadhog"
@@ -12708,9 +12774,10 @@ opick = 0
 [[matchup]]
 hero = "roadhog"
 vs = "doomfist"
-value = 75
+value = 66
 cpgg = 75
 opick = -50
+cwatch = 37
 reason = "Roadhog can easily land Hook on Doomfist during Power Block, while charging Rocket Punch, or right after Meteor Strike."
 
 [[matchup]]
@@ -12765,7 +12832,7 @@ vs = "illari"
 value = -27
 cpgg = -25
 opick = 50
-cwatch = -34
+cwatch = -32
 
 [[matchup]]
 hero = "roadhog"
@@ -12784,10 +12851,10 @@ opick = 50
 [[matchup]]
 hero = "roadhog"
 vs = "juno"
-value = -8
+value = -7
 cpgg = 0
 opick = -50
-cwatch = -30
+cwatch = -29
 
 [[matchup]]
 hero = "roadhog"
@@ -12806,10 +12873,10 @@ opick = 50
 [[matchup]]
 hero = "roadhog"
 vs = "lucio"
-value = -13
+value = -10
 cpgg = 0
 opick = -50
-cwatch = -52
+cwatch = -38
 
 [[matchup]]
 hero = "roadhog"
@@ -12835,9 +12902,10 @@ opick = -100
 [[matchup]]
 hero = "roadhog"
 vs = "moira"
-value = 50
+value = 46
 cpgg = 50
 opick = 0
+cwatch = 35
 reason = "Moira often fights at mid-range, making her easy to catch with Hook. Roadhog can also interrupt Moira's ultimate with Hook."
 
 [[matchup]]
@@ -12866,7 +12934,7 @@ opick = -100
 [[matchup]]
 hero = "roadhog"
 vs = "reaper"
-value = -47
+value = -53
 disagreement = true
 cpgg = -75
 opick = -50
@@ -12934,10 +13002,10 @@ reason = "Symmetra often fights at mid-range, making her easy to catch with Hook
 [[matchup]]
 hero = "roadhog"
 vs = "torbjorn"
-value = -14
+value = -10
 cpgg = 0
 opick = 100
-cwatch = -57
+cwatch = -40
 
 [[matchup]]
 hero = "roadhog"
@@ -12964,28 +13032,28 @@ opick = -50
 [[matchup]]
 hero = "roadhog"
 vs = "widowmaker"
-value = -13
+value = -10
 disagreement = true
 cpgg = -25
 opick = 0
-cwatch = 25
+cwatch = 37
 
 [[matchup]]
 hero = "roadhog"
 vs = "winston"
-value = 54
+value = 57
 cpgg = 50
 opick = 0
-cwatch = 66
+cwatch = 78
 reason = "Roadhog's close-range damage is very high and can quickly break barriers. Landing Hook before Winston retreats creates kill opportunities."
 
 [[matchup]]
 hero = "roadhog"
 vs = "wrecking-ball"
-value = 49
+value = 47
 cpgg = 50
 opick = 0
-cwatch = 46
+cwatch = 39
 reason = "Roadhog can protect teammates from diving Wrecking Ball by landing Hook."
 
 [[matchup]]
@@ -13005,10 +13073,10 @@ opick = 0
 [[matchup]]
 hero = "roadhog"
 vs = "zenyatta"
-value = -67
+value = -66
 cpgg = -75
 opick = 50
-cwatch = -43
+cwatch = -40
 reason = "Roadhog has no barrier, making him very vulnerable when marked with Zenyatta's Discord. Zenyatta rarely enters Roadhog's range, allowing him to deal continuous damage."
 
 [[matchup]]
@@ -13021,11 +13089,10 @@ opick = -50
 [[matchup]]
 hero = "shion"
 vs = "anran"
-value = -16
-disagreement = true
+value = -5
 cpgg = 0
 opick = 50
-cwatch = -66
+cwatch = -18
 
 [[matchup]]
 hero = "shion"
@@ -13067,10 +13134,10 @@ reason = "Cassidy can stop Shion's Evade with Flashbang. Against Shion's Executi
 [[matchup]]
 hero = "shion"
 vs = "dmon"
-value = -53
+value = -43
 cpgg = -50
 opick = 0
-cwatch = -60
+cwatch = -20
 reason = "D.Mon can easily chase down Shion while Evade is unavailable, making it easy to apply kill pressure."
 
 [[matchup]]
@@ -13091,10 +13158,10 @@ cwatch = -25
 [[matchup]]
 hero = "shion"
 vs = "dva"
-value = -38
+value = -39
 cpgg = -25
 opick = -100
-cwatch = -78
+cwatch = -79
 
 [[matchup]]
 hero = "shion"
@@ -13181,9 +13248,10 @@ opick = -50
 [[matchup]]
 hero = "shion"
 vs = "kiriko"
-value = 0
+value = 5
 cpgg = 0
 opick = 0
+cwatch = 20
 
 [[matchup]]
 hero = "shion"
@@ -13216,10 +13284,10 @@ opick = 50
 [[matchup]]
 hero = "shion"
 vs = "mercy"
-value = 44
+value = 43
 cpgg = 50
 opick = 0
-cwatch = 25
+cwatch = 22
 reason = "Shion's primary fire and Execution are hitscan, making it easy to hit Mercy. Shion can also flank to the side easily, creating more chances to target Mercy than a hero firing hitscan from the front."
 
 [[matchup]]
@@ -13247,9 +13315,10 @@ opick = -100
 [[matchup]]
 hero = "shion"
 vs = "pharah"
-value = 75
+value = 61
 cpgg = 75
 opick = 100
+cwatch = 20
 reason = "Since Shion is hitscan, it is easy to land hits even on airborne targets. Pharah has a large hitbox, so she is easily melted by Joyride."
 
 [[matchup]]
@@ -13262,11 +13331,10 @@ opick = -50
 [[matchup]]
 hero = "shion"
 vs = "reaper"
-value = 20
-disagreement = true
+value = 7
 cpgg = 0
 opick = 0
-cwatch = 78
+cwatch = 26
 
 [[matchup]]
 hero = "shion"
@@ -13334,35 +13402,34 @@ vs = "torbjorn"
 value = -51
 cpgg = -50
 opick = 100
-cwatch = -54
+cwatch = -55
 reason = "Torbjörn has higher health than other damage-role heroes, so he is not easily melted by Shion's burst damage. Also, Torbjörn's turret makes it harder for Shion to engage."
 
 [[matchup]]
 hero = "shion"
 vs = "tracer"
-value = -18
+value = -27
 disagreement = true
 cpgg = -50
 opick = -50
-cwatch = 51
+cwatch = 26
 reason = "Shion's abilities have a wind-up, so Tracer can easily dodge Shion's attacks with Blink."
 
 [[matchup]]
 hero = "shion"
 vs = "vendetta"
-value = -16
-disagreement = true
+value = -6
 cpgg = 0
 opick = 0
-cwatch = -72
+cwatch = -25
 
 [[matchup]]
 hero = "shion"
 vs = "venture"
-value = -31
+value = -23
 cpgg = -25
 opick = -100
-cwatch = -48
+cwatch = -16
 
 [[matchup]]
 hero = "shion"
@@ -13421,10 +13488,10 @@ opick = 0
 [[matchup]]
 hero = "sierra"
 vs = "anran"
-value = -28
+value = -25
 cpgg = -25
 opick = 50
-cwatch = -35
+cwatch = -25
 
 [[matchup]]
 hero = "sierra"
@@ -13451,10 +13518,10 @@ opick = 50
 [[matchup]]
 hero = "sierra"
 vs = "brigitte"
-value = -28
+value = -25
 cpgg = -25
 opick = 50
-cwatch = -38
+cwatch = -25
 
 [[matchup]]
 hero = "sierra"
@@ -13467,17 +13534,18 @@ reason = "In a 1v1 situation, Cassidy's higher burst damage allows him to elimin
 [[matchup]]
 hero = "sierra"
 vs = "dmon"
-value = -13
+value = -5
 cpgg = 0
 opick = 0
-cwatch = -52
+cwatch = -21
 
 [[matchup]]
 hero = "sierra"
 vs = "domina"
-value = -25
+value = -14
 cpgg = -25
 opick = 0
+cwatch = 18
 
 [[matchup]]
 hero = "sierra"
@@ -13519,18 +13587,18 @@ opick = 0
 [[matchup]]
 hero = "sierra"
 vs = "genji"
-value = -33
+value = -25
 cpgg = -25
 opick = 50
-cwatch = -55
+cwatch = -26
 
 [[matchup]]
 hero = "sierra"
 vs = "hanzo"
-value = -27
+value = -25
 cpgg = -25
 opick = 50
-cwatch = -32
+cwatch = -25
 
 [[matchup]]
 hero = "sierra"
@@ -13556,10 +13624,10 @@ opick = 0
 [[matchup]]
 hero = "sierra"
 vs = "junker-queen"
-value = 29
+value = 25
 cpgg = 25
 opick = -100
-cwatch = 40
+cwatch = 25
 
 [[matchup]]
 hero = "sierra"
@@ -13600,10 +13668,10 @@ opick = 100
 [[matchup]]
 hero = "sierra"
 vs = "mauga"
-value = 14
+value = 12
 cpgg = 0
 opick = 50
-cwatch = 55
+cwatch = 47
 
 [[matchup]]
 hero = "sierra"
@@ -13629,10 +13697,10 @@ opick = 0
 [[matchup]]
 hero = "sierra"
 vs = "moira"
-value = -68
+value = -63
 cpgg = -75
 opick = 50
-cwatch = -48
+cwatch = -25
 reason = "Sierra's Tracking Shot can be cleansed by Moira's Fade. Moira can also easily dodge Sierra's ultimate."
 
 [[matchup]]
@@ -13725,9 +13793,10 @@ opick = 50
 [[matchup]]
 hero = "sierra"
 vs = "torbjorn"
-value = 25
+value = 23
 cpgg = 25
 opick = 0
+cwatch = 17
 
 [[matchup]]
 hero = "sierra"
@@ -13754,18 +13823,18 @@ opick = -50
 [[matchup]]
 hero = "sierra"
 vs = "widowmaker"
-value = -30
+value = -24
 cpgg = -25
 opick = 50
-cwatch = -45
+cwatch = -20
 
 [[matchup]]
 hero = "sierra"
 vs = "winston"
-value = -48
+value = -42
 cpgg = -50
 opick = 100
-cwatch = -42
+cwatch = -19
 reason = "Sierra lacks burst damage, so she can't quickly destroy Winston's Barrier Projector. While Sierra can escape with Anchor Drone, she is forced into a defensive position and tends to lose map control."
 
 [[matchup]]
@@ -13778,19 +13847,19 @@ opick = 50
 [[matchup]]
 hero = "sierra"
 vs = "wuyang"
-value = -26
+value = -25
 cpgg = -25
 opick = -50
-cwatch = -28
+cwatch = -25
 
 [[matchup]]
 hero = "sierra"
 vs = "zarya"
-value = -24
+value = -29
 disagreement = true
 cpgg = -50
 opick = -50
-cwatch = 25
+cwatch = 24
 reason = "Even if Sierra lands Tracking Shot on an ally, Zarya can negate it with Particle Barrier or protect teammates with Projected Barrier."
 
 [[matchup]]
@@ -13841,10 +13910,10 @@ reason = "Sigma can almost completely negate Bastion's Configuration: Assault wi
 [[matchup]]
 hero = "sigma"
 vs = "brigitte"
-value = -53
+value = -45
 cpgg = -50
 opick = 0
-cwatch = -60
+cwatch = -29
 reason = "Brigitte can block Sigma's Rock with Shield. Brigitte can force close-range combat, which Sigma struggles with."
 
 [[matchup]]
@@ -13866,10 +13935,10 @@ reason = "D.Mon can easily take the side using high mobility, making it easy to 
 [[matchup]]
 hero = "sigma"
 vs = "doomfist"
-value = 11
+value = 6
 cpgg = 0
 opick = 0
-cwatch = 45
+cwatch = 24
 
 [[matchup]]
 hero = "sigma"
@@ -13877,15 +13946,15 @@ vs = "dva"
 value = -13
 cpgg = -25
 opick = -50
-cwatch = 25
+cwatch = 23
 
 [[matchup]]
 hero = "sigma"
 vs = "echo"
-value = -32
+value = -25
 cpgg = -25
 opick = -50
-cwatch = -52
+cwatch = -26
 
 [[matchup]]
 hero = "sigma"
@@ -13913,18 +13982,19 @@ reason = "Sigma is weak against dives. Genji's fast movement makes it difficult 
 [[matchup]]
 hero = "sigma"
 vs = "hanzo"
-value = 50
+value = 43
 cpgg = 50
 opick = 50
+cwatch = 23
 reason = "Sigma excels at mid-range frontal combat. Hanzo is vulnerable to Sigma's poke damage."
 
 [[matchup]]
 hero = "sigma"
 vs = "hazard"
-value = 54
+value = 46
 cpgg = 50
 opick = 0
-cwatch = 65
+cwatch = 34
 reason = "Hazard is easily poked down by Sigma and vulnerable to Rock."
 
 [[matchup]]
@@ -13973,10 +14043,10 @@ opick = 0
 [[matchup]]
 hero = "sigma"
 vs = "lifeweaver"
-value = -14
+value = -7
 cpgg = 0
 opick = 100
-cwatch = -56
+cwatch = -28
 
 [[matchup]]
 hero = "sigma"
@@ -14000,7 +14070,7 @@ vs = "mei"
 value = 12
 cpgg = 25
 opick = 50
-cwatch = -29
+cwatch = -28
 
 [[matchup]]
 hero = "sigma"
@@ -14012,10 +14082,10 @@ opick = 0
 [[matchup]]
 hero = "sigma"
 vs = "moira"
-value = -49
+value = -43
 cpgg = -50
 opick = 50
-cwatch = -47
+cwatch = -22
 reason = "Moira can pressure the backline by getting behind Sigma."
 
 [[matchup]]
@@ -14050,10 +14120,10 @@ opick = 50
 [[matchup]]
 hero = "sigma"
 vs = "reinhardt"
-value = -48
+value = -47
 cpgg = -50
 opick = 0
-cwatch = -43
+cwatch = -39
 reason = "Sigma is weak in close combat. Reinhardt can block Rock with Shield."
 
 [[matchup]]
@@ -14105,10 +14175,10 @@ reason = "Sombra can hack and interrupt Sigma's abilities and ultimate. Sigma is
 [[matchup]]
 hero = "sigma"
 vs = "symmetra"
-value = -54
+value = -52
 cpgg = -50
 opick = 0
-cwatch = -65
+cwatch = -56
 reason = "Sigma's barrier is an easy charge resource for Symmetra's primary fire, and Kinetic Grasp cannot block it. Symmetra can teleport teammates close to or behind Sigma with Turret."
 
 [[matchup]]
@@ -14161,9 +14231,10 @@ reason = "Sigma has difficulty dealing with Winston's space control. Sigma strug
 [[matchup]]
 hero = "sigma"
 vs = "wrecking-ball"
-value = 0
+value = 6
 cpgg = 0
 opick = 100
+cwatch = 24
 
 [[matchup]]
 hero = "sigma"
@@ -14176,21 +14247,21 @@ reason = "In poke battles that Wuyang excels at, Sigma can gain the advantage wi
 [[matchup]]
 hero = "sigma"
 vs = "zarya"
-value = -80
+value = -78
 disagreement = true
 cpgg = -100
 opick = 50
-cwatch = -34
+cwatch = -32
 reason = "Zarya can block Sigma's Rock with Particle Barrier. Zarya's primary fire pierces through Kinetic Grasp."
 
 [[matchup]]
 hero = "sigma"
 vs = "zenyatta"
-value = 22
+value = 24
 disagreement = true
 cpgg = 50
 opick = -50
-cwatch = -38
+cwatch = -35
 reason = "Zenyatta is vulnerable to Sigma's poke. Sigma's many defensive options make him hard to kill even when marked with Discord."
 
 [[matchup]]
@@ -14210,9 +14281,10 @@ opick = 0
 [[matchup]]
 hero = "sojourn"
 vs = "baptiste"
-value = 25
+value = 23
 cpgg = 25
 opick = 0
+cwatch = 18
 
 [[matchup]]
 hero = "sojourn"
@@ -14254,10 +14326,10 @@ reason = "Sojourn can break Domina's Domina:R-CLICK very quickly by using Disrup
 [[matchup]]
 hero = "sojourn"
 vs = "doomfist"
-value = -7
+value = -5
 cpgg = 0
 opick = -50
-cwatch = -28
+cwatch = -19
 
 [[matchup]]
 hero = "sojourn"
@@ -14284,19 +14356,19 @@ opick = -50
 [[matchup]]
 hero = "sojourn"
 vs = "genji"
-value = -48
+value = -41
 cpgg = -50
 opick = 0
-cwatch = -42
+cwatch = -15
 reason = "Sojourn's attacks are easily reflected by Genji's Deflect, which can result in significant punishment when reflected."
 
 [[matchup]]
 hero = "sojourn"
 vs = "hanzo"
-value = -25
+value = -24
 cpgg = -25
 opick = 0
-cwatch = -25
+cwatch = -19
 
 [[matchup]]
 hero = "sojourn"
@@ -14352,11 +14424,10 @@ opick = 0
 [[matchup]]
 hero = "sojourn"
 vs = "lifeweaver"
-value = 5
-disagreement = true
+value = 14
 cpgg = 25
 opick = 100
-cwatch = -52
+cwatch = -18
 
 [[matchup]]
 hero = "sojourn"
@@ -14368,10 +14439,10 @@ opick = 50
 [[matchup]]
 hero = "sojourn"
 vs = "mauga"
-value = 51
+value = 46
 cpgg = 50
 opick = 0
-cwatch = 55
+cwatch = 34
 reason = "Mauga's large hitbox makes him an easy charge resource for Sojourn."
 
 [[matchup]]
@@ -14384,10 +14455,10 @@ opick = 0
 [[matchup]]
 hero = "sojourn"
 vs = "mercy"
-value = -14
+value = -5
 cpgg = 0
 opick = 0
-cwatch = -55
+cwatch = -19
 
 [[matchup]]
 hero = "sojourn"
@@ -14423,7 +14494,7 @@ vs = "reaper"
 value = 6
 cpgg = 0
 opick = -50
-cwatch = 25
+cwatch = 23
 
 [[matchup]]
 hero = "sojourn"
@@ -14435,9 +14506,10 @@ opick = 50
 [[matchup]]
 hero = "sojourn"
 vs = "roadhog"
-value = 50
+value = 43
 cpgg = 50
 opick = 0
+cwatch = 20
 reason = "Roadhog's large hitbox makes him an easy charge resource for Sojourn."
 
 [[matchup]]
@@ -14485,10 +14557,10 @@ opick = 0
 [[matchup]]
 hero = "sojourn"
 vs = "torbjorn"
-value = 48
+value = 45
 cpgg = 50
 opick = 0
-cwatch = 40
+cwatch = 28
 reason = "Sojourn can easily destroy turret from range."
 
 [[matchup]]
@@ -14501,18 +14573,18 @@ opick = 0
 [[matchup]]
 hero = "sojourn"
 vs = "vendetta"
-value = -28
+value = -24
 cpgg = -25
 opick = -100
-cwatch = -35
+cwatch = -19
 
 [[matchup]]
 hero = "sojourn"
 vs = "venture"
-value = -27
+value = -24
 cpgg = -25
 opick = 0
-cwatch = -32
+cwatch = -19
 
 [[matchup]]
 hero = "sojourn"
@@ -14524,26 +14596,26 @@ opick = -50
 [[matchup]]
 hero = "sojourn"
 vs = "winston"
-value = -30
+value = -23
 cpgg = -25
 opick = 50
-cwatch = -45
+cwatch = -15
 
 [[matchup]]
 hero = "sojourn"
 vs = "wrecking-ball"
-value = -31
+value = -23
 cpgg = -25
 opick = -50
-cwatch = -48
+cwatch = -17
 
 [[matchup]]
 hero = "sojourn"
 vs = "wuyang"
-value = -10
+value = -5
 cpgg = 0
 opick = 50
-cwatch = -38
+cwatch = -19
 
 [[matchup]]
 hero = "sojourn"
@@ -14570,9 +14642,9 @@ opick = 50
 [[matchup]]
 hero = "soldier-76"
 vs = "anran"
-value = -42
+value = -19
 opick = 0
-cwatch = -42
+cwatch = -19
 
 [[matchup]]
 hero = "soldier-76"
@@ -14598,10 +14670,10 @@ opick = 0
 [[matchup]]
 hero = "soldier-76"
 vs = "brigitte"
-value = -10
+value = -6
 cpgg = 0
 opick = 0
-cwatch = -38
+cwatch = -25
 
 [[matchup]]
 hero = "soldier-76"
@@ -14613,18 +14685,18 @@ opick = 50
 [[matchup]]
 hero = "soldier-76"
 vs = "dmon"
-value = -31
+value = -24
 cpgg = -25
 opick = 0
-cwatch = -48
+cwatch = -21
 
 [[matchup]]
 hero = "soldier-76"
 vs = "doomfist"
-value = -33
+value = -25
 cpgg = -25
 opick = -50
-cwatch = -55
+cwatch = -26
 
 [[matchup]]
 hero = "soldier-76"
@@ -14637,43 +14709,43 @@ reason = "His attacks are easily absorbed by D.Va's DM. Soldier: 76 has difficul
 [[matchup]]
 hero = "soldier-76"
 vs = "echo"
-value = 75
+value = 61
 cpgg = 75
 opick = 50
+cwatch = 17
 reason = "Soldier: 76's primary fire is hitscan, making it easy to hit Echo. Soldier: 76 can easily secure kills on Echo with his ultimate."
 
 [[matchup]]
 hero = "soldier-76"
 vs = "freja"
-value = -24
-disagreement = true
+value = -25
 cpgg = -25
 opick = -100
 
 [[matchup]]
 hero = "soldier-76"
 vs = "genji"
-value = -49
+value = -43
 cpgg = -50
 opick = -50
-cwatch = -45
+cwatch = -20
 reason = "Soldier: 76 has difficulty dealing with Genji's close-range pressure."
 
 [[matchup]]
 hero = "soldier-76"
 vs = "hanzo"
-value = -26
+value = -25
 cpgg = -25
 opick = 0
-cwatch = -28
+cwatch = -25
 
 [[matchup]]
 hero = "soldier-76"
 vs = "hazard"
-value = -27
+value = -25
 cpgg = -25
 opick = 0
-cwatch = -32
+cwatch = -25
 
 [[matchup]]
 hero = "soldier-76"
@@ -14685,10 +14757,10 @@ opick = 0
 [[matchup]]
 hero = "soldier-76"
 vs = "jetpack-cat"
-value = 70
+value = 65
 cpgg = 75
 opick = 0
-cwatch = 55
+cwatch = 35
 reason = "Soldier: 76's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
@@ -14709,10 +14781,10 @@ reason = "Soldier: 76's primary fire is hitscan, making it easy to hit Junkrat l
 [[matchup]]
 hero = "soldier-76"
 vs = "juno"
-value = 44
+value = 45
 cpgg = 50
 opick = 0
-cwatch = 25
+cwatch = 29
 reason = "Soldier: 76's hitscan shots make it easy to hit Juno."
 
 [[matchup]]
@@ -14775,10 +14847,10 @@ opick = 50
 [[matchup]]
 hero = "soldier-76"
 vs = "pharah"
-value = 66
+value = 64
 cpgg = 75
 opick = 0
-cwatch = 40
+cwatch = 30
 reason = "Soldier: 76's primary fire is hitscan, making it easy to hit Pharah. Soldier: 76 can also use his ult to easily finish off Pharah."
 
 [[matchup]]
@@ -14855,9 +14927,10 @@ opick = 0
 [[matchup]]
 hero = "soldier-76"
 vs = "torbjorn"
-value = 25
+value = 24
 cpgg = 25
 opick = 0
+cwatch = 21
 
 [[matchup]]
 hero = "soldier-76"
@@ -14869,10 +14942,10 @@ opick = -50
 [[matchup]]
 hero = "soldier-76"
 vs = "vendetta"
-value = -69
+value = -62
 cpgg = -75
 opick = -50
-cwatch = -52
+cwatch = -22
 reason = "Vendetta can easily close in on Soldier: 76."
 
 [[matchup]]
@@ -14886,10 +14959,10 @@ reason = "Venture can easily close in on Soldier: 76."
 [[matchup]]
 hero = "soldier-76"
 vs = "widowmaker"
-value = -28
+value = -25
 cpgg = -25
 opick = 50
-cwatch = -35
+cwatch = -25
 
 [[matchup]]
 hero = "soldier-76"
@@ -14955,11 +15028,10 @@ reason = "Sombra can easily flank Ashe and force close-range engagements where A
 [[matchup]]
 hero = "sombra"
 vs = "baptiste"
-value = 5
-disagreement = true
+value = 12
 cpgg = 25
 opick = 50
-cwatch = -52
+cwatch = -27
 
 [[matchup]]
 hero = "sombra"
@@ -14971,10 +15043,10 @@ opick = 50
 [[matchup]]
 hero = "sombra"
 vs = "brigitte"
-value = -51
+value = -47
 cpgg = -50
 opick = 50
-cwatch = -55
+cwatch = -38
 reason = "Brigitte can interrupt Sombra's hack by facing her shield toward Sombra when she attempts to hack."
 
 [[matchup]]
@@ -14988,10 +15060,10 @@ reason = "Cassidy's Flashbang makes it easy to punish Sombra as she tries to esc
 [[matchup]]
 hero = "sombra"
 vs = "dmon"
-value = -49
+value = -46
 cpgg = -50
 opick = 0
-cwatch = -45
+cwatch = -34
 reason = "Even when about to be hacked by Sombra, D.Mon can cancel the hack by deploying the barrier."
 
 [[matchup]]
@@ -15020,9 +15092,10 @@ opick = -100
 [[matchup]]
 hero = "sombra"
 vs = "freja"
-value = 25
+value = 24
 cpgg = 25
 opick = -50
+cwatch = 22
 
 [[matchup]]
 hero = "sombra"
@@ -15079,10 +15152,10 @@ reason = "Sombra's primary fire is hitscan, making it easy to hit Junkrat launch
 [[matchup]]
 hero = "sombra"
 vs = "juno"
-value = 51
+value = 49
 cpgg = 50
 opick = 0
-cwatch = 55
+cwatch = 44
 reason = "Sombra can hack airborne Juno to bring her down to the ground. Sombra's primary fire is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
@@ -15112,27 +15185,27 @@ reason = "Sombra can temporarily disable Lucio's wall riding by hacking him."
 [[matchup]]
 hero = "sombra"
 vs = "mauga"
-value = -25
-disagreement = true
+value = -12
 cpgg = -25
 opick = -50
+cwatch = 26
 
 [[matchup]]
 hero = "sombra"
 vs = "mei"
-value = -46
+value = -45
 cpgg = -50
 opick = -50
-cwatch = -35
+cwatch = -29
 reason = "Even if Sombra ambushes Mei, Mei can easily shrug it off by becoming invulnerable with Cryo-Freeze."
 
 [[matchup]]
 hero = "sombra"
 vs = "mercy"
-value = 48
+value = 47
 cpgg = 50
 opick = 0
-cwatch = 40
+cwatch = 36
 reason = "Sombra's hack disables Guardian Angel, making Mercy vulnerable."
 
 [[matchup]]
@@ -15218,7 +15291,7 @@ vs = "sojourn"
 value = 12
 cpgg = 25
 opick = 0
-cwatch = -28
+cwatch = -26
 
 [[matchup]]
 hero = "sombra"
@@ -15230,10 +15303,10 @@ opick = -50
 [[matchup]]
 hero = "sombra"
 vs = "symmetra"
-value = -64
+value = -63
 cpgg = -75
 opick = 0
-cwatch = -32
+cwatch = -28
 reason = "Symmetra can prepare for Sombra's flanks by placing Turret turrets."
 
 [[matchup]]
@@ -15254,18 +15327,18 @@ opick = 0
 [[matchup]]
 hero = "sombra"
 vs = "vendetta"
-value = -11
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -42
+cwatch = -27
 
 [[matchup]]
 hero = "sombra"
 vs = "venture"
-value = -10
+value = -6
 cpgg = 0
 opick = 0
-cwatch = -38
+cwatch = -23
 
 [[matchup]]
 hero = "sombra"
@@ -15278,18 +15351,18 @@ reason = "Sombra can easily flank and pressure Widowmaker in close range."
 [[matchup]]
 hero = "sombra"
 vs = "winston"
-value = -12
+value = -7
 cpgg = 0
 opick = -50
-cwatch = -48
+cwatch = -28
 
 [[matchup]]
 hero = "sombra"
 vs = "wrecking-ball"
-value = 63
+value = 65
 cpgg = 75
 opick = 50
-cwatch = 25
+cwatch = 34
 reason = "Sombra's hack can force Wrecking Ball out of Roll form. The hack reveals his position for a while, making flanking difficult."
 
 [[matchup]]
@@ -15318,10 +15391,10 @@ reason = "Zenyatta is very vulnerable to Sombra's flanks and hack."
 [[matchup]]
 hero = "symmetra"
 vs = "ana"
-value = -9
+value = -7
 cpgg = 0
 opick = -50
-cwatch = -35
+cwatch = -29
 
 [[matchup]]
 hero = "symmetra"
@@ -15334,10 +15407,10 @@ reason = "Anran has difficulty destroying Symmetra's Turret."
 [[matchup]]
 hero = "symmetra"
 vs = "ashe"
-value = -11
+value = -6
 cpgg = 0
 opick = -50
-cwatch = -45
+cwatch = -22
 
 [[matchup]]
 hero = "symmetra"
@@ -15372,19 +15445,20 @@ reason = "Symmetra fights at mid-range, but before her beam charges up, Cassidy'
 [[matchup]]
 hero = "symmetra"
 vs = "dmon"
-value = 21
+value = 27
 disagreement = true
 cpgg = 50
 opick = 0
-cwatch = -42
+cwatch = -28
 reason = "Symmetra's turret can slow enemies' movement speed, making it easy to shut down D.Mon's mobility. D.Mon has a hard time destroying Symmetra's turret."
 
 [[matchup]]
 hero = "symmetra"
 vs = "domina"
-value = 75
+value = 66
 cpgg = 75
 opick = 0
+cwatch = 40
 reason = "Domina has difficulty destroying Symmetra's Turret. Domina's Domina:R-CLICK easily becomes a charge resource for Symmetra's primary fire."
 
 [[matchup]]
@@ -15500,10 +15574,10 @@ opick = -50
 [[matchup]]
 hero = "symmetra"
 vs = "mauga"
-value = 6
+value = 13
 cpgg = 0
 opick = 50
-cwatch = 25
+cwatch = 50
 
 [[matchup]]
 hero = "symmetra"
@@ -15515,27 +15589,28 @@ opick = 50
 [[matchup]]
 hero = "symmetra"
 vs = "mercy"
-value = -10
+value = -8
 cpgg = 0
 opick = 50
-cwatch = -38
+cwatch = -30
 
 [[matchup]]
 hero = "symmetra"
 vs = "moira"
-value = 24
+value = 38
 disagreement = true
 cpgg = 75
 opick = -50
-cwatch = -48
+cwatch = -22
 reason = "Symmetra can handle Moira's engage with Turret turrets and primary fire."
 
 [[matchup]]
 hero = "symmetra"
 vs = "orisa"
-value = 25
+value = 28
 cpgg = 25
 opick = 0
+cwatch = 36
 
 [[matchup]]
 hero = "symmetra"
@@ -15590,24 +15665,24 @@ vs = "sierra"
 value = 12
 cpgg = 25
 opick = 50
-cwatch = -28
+cwatch = -26
 
 [[matchup]]
 hero = "symmetra"
 vs = "sigma"
-value = 48
+value = 52
 cpgg = 50
 opick = -50
-cwatch = 40
+cwatch = 56
 reason = "Sigma's barrier is an easy charge resource for Symmetra's primary fire, and Kinetic Grasp cannot block it. Symmetra can teleport teammates close to or behind Sigma with Turret."
 
 [[matchup]]
 hero = "symmetra"
 vs = "sojourn"
-value = -27
+value = -26
 cpgg = -25
 opick = -50
-cwatch = -32
+cwatch = -27
 
 [[matchup]]
 hero = "symmetra"
@@ -15660,10 +15735,10 @@ reason = "Symmetra can prepare for Venture's flanks by placing Turret turrets."
 [[matchup]]
 hero = "symmetra"
 vs = "widowmaker"
-value = -14
+value = -9
 cpgg = 0
 opick = 50
-cwatch = -55
+cwatch = -36
 
 [[matchup]]
 hero = "symmetra"
@@ -15682,20 +15757,20 @@ opick = -100
 [[matchup]]
 hero = "symmetra"
 vs = "wuyang"
-value = -69
+value = -62
 cpgg = -75
 opick = 0
-cwatch = -52
+cwatch = -22
 reason = "Wuyang can poke from outside Symmetra's effective range, and can easily destroy Symmetra's Turret."
 
 [[matchup]]
 hero = "symmetra"
 vs = "zarya"
-value = -19
+value = -18
 disagreement = true
 cpgg = -75
 opick = 0
-cwatch = 55
+cwatch = 62
 reason = "Symmetra's Turret makes it easy for Zarya to gain barrier charge. Symmetra, who fights at mid-range, often enters Zarya's effective range."
 
 [[matchup]]
@@ -15759,10 +15834,10 @@ opick = 0
 [[matchup]]
 hero = "torbjorn"
 vs = "dmon"
-value = 70
+value = 81
 cpgg = 75
 opick = 0
-cwatch = 55
+cwatch = 100
 reason = "D.Mon has very short reach and Fusion Repeater doesn't have high DPS either, so D.Mon has a hard time destroying Torbjörn's turret."
 
 [[matchup]]
@@ -15776,9 +15851,10 @@ reason = "Domina can easily destroy Torbjorn's Turret with her abilities and pri
 [[matchup]]
 hero = "torbjorn"
 vs = "doomfist"
-value = 50
+value = 45
 cpgg = 50
 opick = 0
+cwatch = 31
 reason = "Doomfist's Hand Cannon has short range, making it difficult to destroy Torbjorn's Turret."
 
 [[matchup]]
@@ -15799,9 +15875,9 @@ reason = "Echo can easily destroy Torbjorn's Turret with primary fire and Sticky
 [[matchup]]
 hero = "torbjorn"
 vs = "emre"
-value = -55
+value = -38
 opick = -50
-cwatch = -55
+cwatch = -38
 
 [[matchup]]
 hero = "torbjorn"
@@ -15822,10 +15898,10 @@ reason = "Torbjorn has high HP and Overload armor, making him hard for Genji to 
 [[matchup]]
 hero = "torbjorn"
 vs = "hanzo"
-value = -45
+value = -44
 cpgg = -50
 opick = -50
-cwatch = -28
+cwatch = -26
 reason = "Torbjorn's Turret is easily destroyed by Hanzo. Torbjorn's wide hitbox makes him easy to hit with Hanzo's primary fire."
 
 [[matchup]]
@@ -15839,10 +15915,10 @@ reason = "Hazard has difficulty destroying Torbjorn's Turret. Torbjorn can survi
 [[matchup]]
 hero = "torbjorn"
 vs = "illari"
-value = -31
+value = -26
 cpgg = -25
 opick = 0
-cwatch = -48
+cwatch = -28
 
 [[matchup]]
 hero = "torbjorn"
@@ -15868,10 +15944,10 @@ opick = 0
 [[matchup]]
 hero = "torbjorn"
 vs = "kiriko"
-value = -11
+value = -8
 cpgg = 0
 opick = 50
-cwatch = -42
+cwatch = -32
 
 [[matchup]]
 hero = "torbjorn"
@@ -15883,16 +15959,15 @@ opick = 100
 [[matchup]]
 hero = "torbjorn"
 vs = "lucio"
-value = 10
+value = 12
 cpgg = 25
 opick = -50
-cwatch = -35
+cwatch = -29
 
 [[matchup]]
 hero = "torbjorn"
 vs = "mauga"
-value = -23
-disagreement = true
+value = -25
 cpgg = -25
 opick = 0
 
@@ -15929,10 +16004,10 @@ reason = "Torbjorn's Turret is easily destroyed by Orisa's primary fire."
 [[matchup]]
 hero = "torbjorn"
 vs = "pharah"
-value = -47
+value = -44
 cpgg = -50
 opick = 100
-cwatch = -38
+cwatch = -26
 reason = "Torbjorn's Turret is easily destroyed by Pharah. Torbjorn's primary fire has travel time, making it hard to hit airborne targets."
 
 [[matchup]]
@@ -15954,19 +16029,19 @@ reason = "Torbjorn can place Turret to deal with approaching Reaper."
 [[matchup]]
 hero = "torbjorn"
 vs = "reinhardt"
-value = 66
+value = 67
 cpgg = 75
 opick = 50
-cwatch = 40
+cwatch = 43
 reason = "Reinhardt has difficulty destroying Torbjorn's Turret. Reinhardt's Shield is easily broken by Torbjorn's primary fire."
 
 [[matchup]]
 hero = "torbjorn"
 vs = "roadhog"
-value = 6
+value = 10
 cpgg = 0
 opick = -50
-cwatch = 25
+cwatch = 40
 
 [[matchup]]
 hero = "torbjorn"
@@ -15994,10 +16069,10 @@ reason = "Sigma can easily destroy Torbjorn's Turret. Sigma can stop Torbjorn's 
 [[matchup]]
 hero = "torbjorn"
 vs = "sojourn"
-value = -49
+value = -45
 cpgg = -50
 opick = 50
-cwatch = -45
+cwatch = -28
 reason = "Sojourn can easily destroy turret from range."
 
 [[matchup]]
@@ -16056,10 +16131,11 @@ opick = 0
 [[matchup]]
 hero = "torbjorn"
 vs = "winston"
-value = 98
+value = 80
 disagreement = true
 cpgg = 100
 opick = -50
+cwatch = 32
 reason = "Winston has difficulty destroying Torbjorn's Turret. Torbjorn's high DPS can easily break Winston's barrier. Torbjorn can survive Winston's dives with Overload."
 
 [[matchup]]
@@ -16073,10 +16149,10 @@ reason = "Torbjorn's presence forces Wrecking Ball to watch out for Turret, prev
 [[matchup]]
 hero = "torbjorn"
 vs = "wuyang"
-value = -51
+value = -46
 cpgg = -50
 opick = 100
-cwatch = -52
+cwatch = -32
 reason = "Wuyang can destroy turret from mid-range."
 
 [[matchup]]
@@ -16090,17 +16166,18 @@ reason = "Torbjorn's primary fire and Turret make it easy for Zarya to gain barr
 [[matchup]]
 hero = "torbjorn"
 vs = "zenyatta"
-value = -27
+value = -26
 cpgg = -25
 opick = 0
-cwatch = -32
+cwatch = -28
 
 [[matchup]]
 hero = "tracer"
 vs = "ana"
-value = 75
+value = 60
 cpgg = 75
 opick = 0
+cwatch = 16
 reason = "Ana has difficulty dealing with Tracer when she engages at close range."
 
 [[matchup]]
@@ -16124,7 +16201,7 @@ vs = "bastion"
 value = 63
 cpgg = 75
 opick = -50
-cwatch = 25
+cwatch = 28
 reason = "Bastion's wide hitbox makes him vulnerable to Tracer's spread."
 
 [[matchup]]
@@ -16138,10 +16215,10 @@ reason = "Brigitte's attacks require no aim, making it easy to hit and deal with
 [[matchup]]
 hero = "tracer"
 vs = "cassidy"
-value = -69
+value = -64
 cpgg = -75
 opick = 0
-cwatch = -52
+cwatch = -32
 reason = "Cassidy's Flashbang makes it easy to punish Tracer as she tries to escape."
 
 [[matchup]]
@@ -16199,21 +16276,20 @@ opick = -50
 [[matchup]]
 hero = "tracer"
 vs = "hanzo"
-value = 20
+value = 29
 disagreement = true
 cpgg = 50
 opick = 0
-cwatch = -45
+cwatch = -23
 reason = "Hanzo's projectiles have travel time, making it difficult to hit fast targets like Tracer."
 
 [[matchup]]
 hero = "tracer"
 vs = "hazard"
-value = 9
-disagreement = true
+value = 11
 cpgg = 25
 opick = -50
-cwatch = -38
+cwatch = -30
 
 [[matchup]]
 hero = "tracer"
@@ -16233,18 +16309,18 @@ opick = -50
 [[matchup]]
 hero = "tracer"
 vs = "junkrat"
-value = -14
+value = -9
 cpgg = 0
 opick = -50
-cwatch = -55
+cwatch = -36
 
 [[matchup]]
 hero = "tracer"
 vs = "juno"
-value = 29
+value = 26
 cpgg = 25
 opick = 0
-cwatch = 40
+cwatch = 30
 
 [[matchup]]
 hero = "tracer"
@@ -16256,10 +16332,10 @@ opick = 50
 [[matchup]]
 hero = "tracer"
 vs = "lifeweaver"
-value = 33
+value = 26
 cpgg = 25
 opick = 50
-cwatch = 55
+cwatch = 30
 
 [[matchup]]
 hero = "tracer"
@@ -16286,18 +16362,19 @@ reason = "Mei's Endothermic Blaster beam is hard for Tracer to deal with. Mei ca
 [[matchup]]
 hero = "tracer"
 vs = "mercy"
-value = -41
+value = -28
 disagreement = true
 cpgg = -50
 opick = -50
+cwatch = 22
 reason = "Tracer's primary fire has short range, making it difficult to damage airborne targets."
 
 [[matchup]]
 hero = "tracer"
 vs = "mizuki"
-value = -32
+value = -27
 opick = 0
-cwatch = -32
+cwatch = -27
 
 [[matchup]]
 hero = "tracer"
@@ -16346,19 +16423,19 @@ opick = 50
 [[matchup]]
 hero = "tracer"
 vs = "roadhog"
-value = -11
+value = -6
 cpgg = 0
 opick = -50
-cwatch = -42
+cwatch = -22
 
 [[matchup]]
 hero = "tracer"
 vs = "shion"
-value = 19
+value = 27
 disagreement = true
 cpgg = 50
 opick = 50
-cwatch = -48
+cwatch = -26
 reason = "Shion's abilities have a wind-up, so Tracer can easily dodge Shion's attacks with Blink."
 
 [[matchup]]
@@ -16382,7 +16459,7 @@ vs = "sojourn"
 value = -7
 cpgg = 0
 opick = 0
-cwatch = -28
+cwatch = -26
 
 [[matchup]]
 hero = "tracer"
@@ -16446,10 +16523,10 @@ opick = 100
 [[matchup]]
 hero = "tracer"
 vs = "wrecking-ball"
-value = 10
+value = 12
 cpgg = 25
 opick = -100
-cwatch = -35
+cwatch = -29
 
 [[matchup]]
 hero = "tracer"
@@ -16521,10 +16598,10 @@ reason = "Cassidy's Flashbang can stop Vendetta's mobility."
 [[matchup]]
 hero = "vendetta"
 vs = "dmon"
-value = -9
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -35
+cwatch = -28
 
 [[matchup]]
 hero = "vendetta"
@@ -16537,10 +16614,10 @@ reason = "Vendetta can quickly close the distance to a range where Domina is wea
 [[matchup]]
 hero = "vendetta"
 vs = "doomfist"
-value = -11
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -45
+cwatch = -29
 
 [[matchup]]
 hero = "vendetta"
@@ -16590,10 +16667,10 @@ reason = "Hanzo has great difficulty dealing with Vendetta's close-range pressur
 [[matchup]]
 hero = "vendetta"
 vs = "hazard"
-value = -8
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -32
+cwatch = -27
 
 [[matchup]]
 hero = "vendetta"
@@ -16620,10 +16697,10 @@ opick = 0
 [[matchup]]
 hero = "vendetta"
 vs = "junkrat"
-value = -10
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -38
+cwatch = -28
 
 [[matchup]]
 hero = "vendetta"
@@ -16635,25 +16712,24 @@ opick = 0
 [[matchup]]
 hero = "vendetta"
 vs = "kiriko"
-value = 10
+value = 8
 cpgg = 0
 opick = 0
-cwatch = 40
+cwatch = 31
 
 [[matchup]]
 hero = "vendetta"
 vs = "lifeweaver"
-value = 70
+value = 66
 cpgg = 75
 opick = -50
-cwatch = 55
+cwatch = 37
 reason = "Lifeweaver has difficulty dealing with Vendetta's close-range pressure. Even if he escapes with Lift, Projected Edge can quickly catch up."
 
 [[matchup]]
 hero = "vendetta"
 vs = "lucio"
-value = -24
-disagreement = true
+value = -25
 cpgg = -25
 opick = -50
 
@@ -16675,9 +16751,10 @@ reason = "Mei can buy time against Vendetta's engage with Cryo-Freeze. Endotherm
 [[matchup]]
 hero = "vendetta"
 vs = "mercy"
-value = 25
+value = 26
 cpgg = 25
 opick = 0
+cwatch = 28
 
 [[matchup]]
 hero = "vendetta"
@@ -16705,10 +16782,10 @@ reason = "Orisa can easily protect her teammates from Vendetta with Javelin and 
 [[matchup]]
 hero = "vendetta"
 vs = "pharah"
-value = -70
+value = -65
 cpgg = -75
 opick = 50
-cwatch = -55
+cwatch = -34
 reason = "Vendetta has limited options against airborne targets."
 
 [[matchup]]
@@ -16731,7 +16808,7 @@ vs = "reinhardt"
 value = -7
 cpgg = 0
 opick = -50
-cwatch = -28
+cwatch = -26
 
 [[matchup]]
 hero = "vendetta"
@@ -16745,7 +16822,6 @@ reason = "Roadhog can protect teammates from Vendetta's dives with Hook."
 hero = "vendetta"
 vs = "shion"
 value = 0
-disagreement = true
 cpgg = 0
 opick = 0
 
@@ -16782,9 +16858,10 @@ reason = "Vendetta can easily close in on Soldier: 76."
 [[matchup]]
 hero = "vendetta"
 vs = "sombra"
-value = 0
+value = 7
 cpgg = 0
 opick = 0
+cwatch = 27
 
 [[matchup]]
 hero = "vendetta"
@@ -16797,10 +16874,10 @@ reason = "Symmetra can prepare for Vendetta's flanks by placing Turret turrets."
 [[matchup]]
 hero = "vendetta"
 vs = "torbjorn"
-value = -29
+value = -26
 cpgg = -25
 opick = 50
-cwatch = -42
+cwatch = -30
 
 [[matchup]]
 hero = "vendetta"
@@ -16819,29 +16896,27 @@ opick = 0
 [[matchup]]
 hero = "vendetta"
 vs = "widowmaker"
-value = 44
+value = 45
 cpgg = 50
 opick = -100
-cwatch = 25
+cwatch = 29
 reason = "Vendetta can close in quickly and pressure Widowmaker."
 
 [[matchup]]
 hero = "vendetta"
 vs = "winston"
-value = 5
-disagreement = true
+value = 11
 cpgg = 25
 opick = 100
-cwatch = -52
+cwatch = -31
 
 [[matchup]]
 hero = "vendetta"
 vs = "wrecking-ball"
-value = 6
-disagreement = true
+value = 11
 cpgg = 25
 opick = 50
-cwatch = -48
+cwatch = -30
 
 [[matchup]]
 hero = "vendetta"
@@ -16878,9 +16953,9 @@ reason = "Ana has difficulty dealing with Venture's dive."
 [[matchup]]
 hero = "venture"
 vs = "anran"
-value = 40
+value = 27
 opick = 50
-cwatch = 40
+cwatch = 27
 
 [[matchup]]
 hero = "venture"
@@ -16923,18 +16998,18 @@ reason = "Cassidy's Flashbang makes it easy to punish Venture as they try to esc
 [[matchup]]
 hero = "venture"
 vs = "dmon"
-value = -10
+value = -7
 cpgg = 0
 opick = 0
-cwatch = -38
+cwatch = -28
 
 [[matchup]]
 hero = "venture"
 vs = "doomfist"
-value = -13
+value = -9
 cpgg = 0
 opick = 50
-cwatch = -52
+cwatch = -34
 
 [[matchup]]
 hero = "venture"
@@ -16977,33 +17052,33 @@ opick = -100
 [[matchup]]
 hero = "venture"
 vs = "hanzo"
-value = 25
+value = 24
 cpgg = 25
 opick = 0
+cwatch = 21
 
 [[matchup]]
 hero = "venture"
 vs = "hazard"
-value = -9
+value = -7
 cpgg = 0
 opick = -50
-cwatch = -35
+cwatch = -29
 
 [[matchup]]
 hero = "venture"
 vs = "illari"
-value = -22
-disagreement = true
+value = -25
 cpgg = -25
 opick = 50
 
 [[matchup]]
 hero = "venture"
 vs = "jetpack-cat"
-value = -26
+value = -25
 cpgg = -25
 opick = -100
-cwatch = -28
+cwatch = -26
 
 [[matchup]]
 hero = "venture"
@@ -17029,11 +17104,11 @@ opick = 50
 [[matchup]]
 hero = "venture"
 vs = "kiriko"
-value = -17
+value = -27
 disagreement = true
 cpgg = -50
 opick = -50
-cwatch = 55
+cwatch = 28
 reason = "Kiriko can prevent Venture's one-shot combo by timing Protection Suzu well against Burrow or Drill Dash."
 
 [[matchup]]
@@ -17047,8 +17122,7 @@ reason = "Lifeweaver has difficulty dealing with Venture's close-range pressure.
 [[matchup]]
 hero = "venture"
 vs = "lucio"
-value = -24
-disagreement = true
+value = -25
 cpgg = -25
 opick = -50
 
@@ -17091,10 +17165,10 @@ opick = 50
 [[matchup]]
 hero = "venture"
 vs = "pharah"
-value = -70
+value = -66
 cpgg = -75
 opick = 0
-cwatch = -55
+cwatch = -37
 reason = "Venture cannot reach airborne targets."
 
 [[matchup]]
@@ -17114,18 +17188,18 @@ opick = 50
 [[matchup]]
 hero = "venture"
 vs = "reinhardt"
-value = -11
+value = -8
 cpgg = 0
 opick = -50
-cwatch = -42
+cwatch = -32
 
 [[matchup]]
 hero = "venture"
 vs = "roadhog"
-value = -27
+value = -26
 cpgg = -25
 opick = -50
-cwatch = -32
+cwatch = -28
 
 [[matchup]]
 hero = "venture"
@@ -17167,9 +17241,10 @@ reason = "Venture can easily close in on Soldier: 76."
 [[matchup]]
 hero = "venture"
 vs = "sombra"
-value = 0
+value = 6
 cpgg = 0
 opick = 50
+cwatch = 23
 
 [[matchup]]
 hero = "venture"
@@ -17208,25 +17283,24 @@ vs = "widowmaker"
 value = 44
 cpgg = 50
 opick = 50
-cwatch = 25
+cwatch = 26
 reason = "Venture can burrow to close the gap and pressure Widowmaker."
 
 [[matchup]]
 hero = "venture"
 vs = "winston"
-value = -11
+value = -8
 cpgg = 0
 opick = 0
-cwatch = -45
+cwatch = -31
 
 [[matchup]]
 hero = "venture"
 vs = "wrecking-ball"
-value = 6
-disagreement = true
+value = 11
 cpgg = 25
 opick = -50
-cwatch = -48
+cwatch = -31
 
 [[matchup]]
 hero = "venture"
@@ -17269,10 +17343,10 @@ reason = "Anran has high mobility, making it difficult for Widowmaker to land he
 [[matchup]]
 hero = "widowmaker"
 vs = "ashe"
-value = 74
+value = 66
 cpgg = 75
 opick = -50
-cwatch = 70
+cwatch = 38
 reason = "Ashe's peeking patterns tend to be predictable, making her vulnerable to Widowmaker's headshots."
 
 [[matchup]]
@@ -17302,9 +17376,10 @@ reason = "Brigitte cannot reach Widowmaker at her sniping positions."
 [[matchup]]
 hero = "widowmaker"
 vs = "cassidy"
-value = 50
+value = 44
 cpgg = 50
 opick = 50
+cwatch = 27
 reason = "Widowmaker can engage from outside Cassidy's effective range."
 
 [[matchup]]
@@ -17318,7 +17393,8 @@ cwatch = -25
 [[matchup]]
 hero = "widowmaker"
 vs = "domina"
-value = 50
+value = 46
+disagreement = true
 cpgg = 50
 opick = -50
 reason = "Widowmaker can attack the enemy backline from outside Domina's range without being contested."
@@ -17326,10 +17402,10 @@ reason = "Widowmaker can attack the enemy backline from outside Domina's range w
 [[matchup]]
 hero = "widowmaker"
 vs = "doomfist"
-value = -71
+value = -69
 cpgg = -75
 opick = -50
-cwatch = -60
+cwatch = -49
 reason = "Widowmaker has great difficulty dealing with Doomfist engages."
 
 [[matchup]]
@@ -17384,7 +17460,7 @@ vs = "hazard"
 value = -65
 cpgg = -75
 opick = -50
-cwatch = -35
+cwatch = -34
 reason = "Widowmaker lacks survivability, making her vulnerable to Hazard's burst damage."
 
 [[matchup]]
@@ -17406,7 +17482,8 @@ reason = "Widowmaker is hitscan, making it easy to hit airborne targets."
 [[matchup]]
 hero = "widowmaker"
 vs = "junker-queen"
-value = 50
+value = 48
+disagreement = true
 cpgg = 50
 opick = -50
 reason = "Widowmaker can deal damage continuously without ever entering Junker Queen's effective range."
@@ -17414,9 +17491,11 @@ reason = "Widowmaker can deal damage continuously without ever entering Junker Q
 [[matchup]]
 hero = "widowmaker"
 vs = "junkrat"
-value = 100
+value = 74
+disagreement = true
 cpgg = 100
 opick = 50
+cwatch = 26
 reason = "Widowmaker's primary fire is hitscan, making it easy to hit Junkrat launched in the air. Junkrat in the air has almost no control over his movement, making him an easy target for Widowmaker."
 
 [[matchup]]
@@ -17438,11 +17517,11 @@ reason = "Kiriko's slim hitbox lets her pressure Widowmaker with primary fire. W
 [[matchup]]
 hero = "widowmaker"
 vs = "lifeweaver"
-value = 5
+value = 9
 disagreement = true
 cpgg = 25
 opick = 50
-cwatch = -50
+cwatch = -38
 
 [[matchup]]
 hero = "widowmaker"
@@ -17459,7 +17538,7 @@ value = 9
 disagreement = true
 cpgg = 25
 opick = 100
-cwatch = -40
+cwatch = -38
 
 [[matchup]]
 hero = "widowmaker"
@@ -17497,7 +17576,7 @@ vs = "pharah"
 value = 63
 cpgg = 75
 opick = 0
-cwatch = 25
+cwatch = 28
 reason = "Widowmaker's hitscan shots can easily hit Pharah. Pharah's aerial positioning often gives Widowmaker clear sightlines."
 
 [[matchup]]
@@ -17510,8 +17589,7 @@ opick = -50
 [[matchup]]
 hero = "widowmaker"
 vs = "reaper"
-value = -22
-disagreement = true
+value = -25
 cpgg = -25
 opick = 0
 
@@ -17526,11 +17604,11 @@ reason = "Widowmaker can deal damage continuously without ever entering Reinhard
 [[matchup]]
 hero = "widowmaker"
 vs = "roadhog"
-value = 5
+value = 10
 disagreement = true
 cpgg = 25
 opick = 50
-cwatch = -55
+cwatch = -37
 
 [[matchup]]
 hero = "widowmaker"
@@ -17579,10 +17657,10 @@ reason = "Sombra can easily flank and pressure Widowmaker in close range."
 [[matchup]]
 hero = "widowmaker"
 vs = "symmetra"
-value = 12
+value = 9
 cpgg = 0
 opick = -100
-cwatch = 48
+cwatch = 36
 
 [[matchup]]
 hero = "widowmaker"
@@ -17605,7 +17683,7 @@ vs = "vendetta"
 value = -45
 cpgg = -50
 opick = 50
-cwatch = -30
+cwatch = -29
 reason = "Vendetta can close in quickly and pressure Widowmaker."
 
 [[matchup]]
@@ -17619,19 +17697,19 @@ reason = "Venture can burrow to close the gap and pressure Widowmaker."
 [[matchup]]
 hero = "widowmaker"
 vs = "winston"
-value = -93
+value = -91
 cpgg = -100
 opick = -50
-cwatch = -70
+cwatch = -64
 reason = "Widowmaker lacks options to counter Winston's dives. Grappling Hook has a long cooldown, so repeated dives are hard to handle."
 
 [[matchup]]
 hero = "widowmaker"
 vs = "wrecking-ball"
-value = -73
+value = -72
 cpgg = -75
 opick = 50
-cwatch = -65
+cwatch = -63
 reason = "Widowmaker has difficulty dealing with Wrecking Ball's dives."
 
 [[matchup]]
@@ -17644,11 +17722,11 @@ opick = 50
 [[matchup]]
 hero = "widowmaker"
 vs = "zarya"
-value = 22
+value = 29
 disagreement = true
 cpgg = 75
 opick = 0
-cwatch = -45
+cwatch = -42
 reason = "Widowmaker deals damage from afar, staying out of Zarya's effective range. Widowmaker can immediately stop attacking when she sees Zarya's barrier. Zarya's low mobility makes her vulnerable to Widowmaker's headshots."
 
 [[matchup]]
@@ -17662,7 +17740,8 @@ reason = "Zenyatta's large hitbox and no mobility make him an easy target."
 [[matchup]]
 hero = "winston"
 vs = "ana"
-value = 100
+value = 87
+disagreement = true
 cpgg = 100
 opick = 0
 reason = "Ana has no escape ability, and Winston's barrier blocks her abilities during dives, making it very difficult to deal with."
@@ -17670,14 +17749,15 @@ reason = "Ana has no escape ability, and Winston's barrier blocks her abilities 
 [[matchup]]
 hero = "winston"
 vs = "anran"
-value = 25
+value = 41
 opick = -50
-cwatch = 25
+cwatch = 41
 
 [[matchup]]
 hero = "winston"
 vs = "ashe"
-value = 100
+value = 87
+disagreement = true
 cpgg = 100
 opick = 0
 reason = "Ashe's low DPS makes it difficult to break Winston's barrier. Coach Gun has a long cooldown, so repeated Winston dives are hard to handle."
@@ -17692,16 +17772,16 @@ opick = -50
 [[matchup]]
 hero = "winston"
 vs = "bastion"
-value = -92
+value = -88
 cpgg = -100
 opick = 50
-cwatch = -67
+cwatch = -50
 reason = "Bastion's Configuration: Assault has very high DPS, easily breaking Winston's barrier. In Configuration: Assault form, Bastion is fairly tanky, making it difficult for Winston to finish him with primary fire alone."
 
 [[matchup]]
 hero = "winston"
 vs = "brigitte"
-value = -39
+value = -45
 disagreement = true
 cpgg = -50
 opick = 50
@@ -17726,7 +17806,7 @@ cwatch = -31
 [[matchup]]
 hero = "winston"
 vs = "domina"
-value = 25
+value = 26
 disagreement = true
 cpgg = 75
 opick = 0
@@ -17774,10 +17854,10 @@ reason = "Freja's low DPS makes her weak against Winston's barrier-assisted dive
 [[matchup]]
 hero = "winston"
 vs = "genji"
-value = 69
+value = 68
 cpgg = 75
 opick = 0
-cwatch = 52
+cwatch = 47
 reason = "Winston's primary fire is auto-aim, allowing him to deal continuous damage to Genji. Winston's attack goes through Genji's Deflect. Winston can chase down a low-health Genji."
 
 [[matchup]]
@@ -17806,10 +17886,10 @@ reason = "Winston excels at taking space, making it easy to destroy Illari's Pyl
 [[matchup]]
 hero = "winston"
 vs = "junker-queen"
-value = -72
+value = -67
 cpgg = -75
 opick = 0
-cwatch = -61
+cwatch = -42
 reason = "Junker Queen can apply Knife to an engaging Winston, then recall it when he tries to retreat, creating kill pressure."
 
 [[matchup]]
@@ -17837,16 +17917,16 @@ opick = -50
 [[matchup]]
 hero = "winston"
 vs = "lifeweaver"
-value = 75
+value = 65
 cpgg = 75
 opick = 0
+cwatch = 36
 reason = "Lifeweaver has difficulty dealing with Winston's dives."
 
 [[matchup]]
 hero = "winston"
 vs = "lucio"
-value = -22
-disagreement = true
+value = -25
 cpgg = -25
 opick = -50
 
@@ -17856,7 +17936,7 @@ vs = "mauga"
 value = -75
 cpgg = -75
 opick = 50
-cwatch = -73
+cwatch = -76
 reason = "Mauga's dual-fire can quickly break Winston's barrier, and the continuous burning effect makes it difficult for Winston to dive."
 
 [[matchup]]
@@ -17899,10 +17979,10 @@ reason = "Pharah can evade Winston's dives with Jump Jet or Concussive Blast."
 [[matchup]]
 hero = "winston"
 vs = "ramattra"
-value = -51
+value = -47
 cpgg = -50
 opick = 0
-cwatch = -55
+cwatch = -39
 reason = "Ramattra can use Ravenous Vortex against Winston's dives, making it difficult for Winston to retreat. In Nemesis Form form, Ramattra can break the barrier while dealing damage."
 
 [[matchup]]
@@ -17926,7 +18006,7 @@ vs = "roadhog"
 value = -57
 cpgg = -50
 opick = 0
-cwatch = -79
+cwatch = -78
 reason = "Roadhog's close-range damage is very high and can quickly break barriers. Landing Hook before Winston retreats creates kill opportunities."
 
 [[matchup]]
@@ -17985,7 +18065,7 @@ opick = 0
 [[matchup]]
 hero = "winston"
 vs = "torbjorn"
-value = -82
+value = -81
 disagreement = true
 cpgg = -100
 opick = 50
@@ -18002,10 +18082,10 @@ opick = -100
 [[matchup]]
 hero = "winston"
 vs = "vendetta"
-value = -22
-disagreement = true
+value = -11
 cpgg = -25
 opick = -50
+cwatch = 31
 
 [[matchup]]
 hero = "winston"
@@ -18017,10 +18097,10 @@ opick = 0
 [[matchup]]
 hero = "winston"
 vs = "widowmaker"
-value = 95
+value = 91
 cpgg = 100
 opick = 0
-cwatch = 79
+cwatch = 64
 reason = "Widowmaker lacks options to counter Winston's dives. Grappling Hook has a long cooldown, so repeated dives are hard to handle."
 
 [[matchup]]
@@ -18040,7 +18120,7 @@ opick = 50
 [[matchup]]
 hero = "winston"
 vs = "zarya"
-value = 37
+value = 36
 disagreement = true
 cpgg = 100
 opick = -50
@@ -18074,11 +18154,10 @@ reason = "Ashe has difficulty dealing with Wrecking Ball's dives."
 [[matchup]]
 hero = "wrecking-ball"
 vs = "baptiste"
-value = 5
-disagreement = true
+value = 10
 cpgg = 25
 opick = 50
-cwatch = -52
+cwatch = -35
 
 [[matchup]]
 hero = "wrecking-ball"
@@ -18112,9 +18191,9 @@ opick = 0
 [[matchup]]
 hero = "wrecking-ball"
 vs = "domina"
-value = -79
+value = -47
 opick = -50
-cwatch = -79
+cwatch = -47
 
 [[matchup]]
 hero = "wrecking-ball"
@@ -18129,7 +18208,7 @@ vs = "dva"
 value = -10
 cpgg = 0
 opick = 50
-cwatch = -38
+cwatch = -39
 
 [[matchup]]
 hero = "wrecking-ball"
@@ -18157,11 +18236,11 @@ opick = 0
 [[matchup]]
 hero = "wrecking-ball"
 vs = "genji"
-value = -4
+value = -3
 disagreement = true
 cpgg = -25
 opick = -50
-cwatch = 55
+cwatch = 59
 
 [[matchup]]
 hero = "wrecking-ball"
@@ -18196,10 +18275,10 @@ reason = "Wrecking Ball has difficulty landing Piledriver on Jetpack Cat."
 [[matchup]]
 hero = "wrecking-ball"
 vs = "junker-queen"
-value = -34
+value = -28
 cpgg = -25
 opick = 0
-cwatch = -59
+cwatch = -35
 
 [[matchup]]
 hero = "wrecking-ball"
@@ -18225,9 +18304,10 @@ opick = -100
 [[matchup]]
 hero = "wrecking-ball"
 vs = "lifeweaver"
-value = 25
+value = 30
 cpgg = 25
 opick = 0
+cwatch = 45
 
 [[matchup]]
 hero = "wrecking-ball"
@@ -18239,10 +18319,10 @@ opick = -50
 [[matchup]]
 hero = "wrecking-ball"
 vs = "mauga"
-value = -59
+value = -60
 cpgg = -50
 opick = 0
-cwatch = -86
+cwatch = -89
 reason = "Mauga's hitscan weapons make it easy to hit Wrecking Ball."
 
 [[matchup]]
@@ -18255,16 +18335,16 @@ opick = 0
 [[matchup]]
 hero = "wrecking-ball"
 vs = "mercy"
-value = -12
+value = -4
 disagreement = true
 cpgg = -25
 opick = -50
-cwatch = 25
+cwatch = 54
 
 [[matchup]]
 hero = "wrecking-ball"
 vs = "moira"
-value = -36
+value = -43
 disagreement = true
 cpgg = -50
 opick = 0
@@ -18281,7 +18361,7 @@ reason = "Orisa can easily protect her teammates from Wrecking Ball's dives."
 [[matchup]]
 hero = "wrecking-ball"
 vs = "pharah"
-value = -51
+value = -52
 disagreement = true
 cpgg = -75
 opick = -50
@@ -18312,10 +18392,10 @@ cwatch = -32
 [[matchup]]
 hero = "wrecking-ball"
 vs = "roadhog"
-value = -56
+value = -47
 cpgg = -50
 opick = -50
-cwatch = -72
+cwatch = -39
 reason = "Roadhog can protect teammates from diving Wrecking Ball by landing Hook."
 
 [[matchup]]
@@ -18359,16 +18439,16 @@ vs = "sombra"
 value = -68
 cpgg = -75
 opick = 50
-cwatch = -45
+cwatch = -46
 reason = "Sombra's hack can force Wrecking Ball out of Roll form. The hack reveals his position for a while, making flanking difficult."
 
 [[matchup]]
 hero = "wrecking-ball"
 vs = "symmetra"
-value = -35
+value = -36
 cpgg = -25
 opick = 50
-cwatch = -65
+cwatch = -68
 
 [[matchup]]
 hero = "wrecking-ball"
@@ -18389,26 +18469,24 @@ opick = -100
 [[matchup]]
 hero = "wrecking-ball"
 vs = "vendetta"
-value = -23
-disagreement = true
+value = -25
 cpgg = -25
 opick = -50
 
 [[matchup]]
 hero = "wrecking-ball"
 vs = "venture"
-value = -23
-disagreement = true
+value = -25
 cpgg = -25
 opick = 0
 
 [[matchup]]
 hero = "wrecking-ball"
 vs = "widowmaker"
-value = 78
+value = 72
 cpgg = 75
 opick = 0
-cwatch = 86
+cwatch = 63
 reason = "Widowmaker has difficulty dealing with Wrecking Ball's dives."
 
 [[matchup]]
@@ -18421,9 +18499,10 @@ opick = 0
 [[matchup]]
 hero = "wrecking-ball"
 vs = "wuyang"
-value = 25
+value = 30
 cpgg = 25
 opick = -50
+cwatch = 45
 
 [[matchup]]
 hero = "wrecking-ball"
@@ -18480,9 +18559,10 @@ reason = "Wuyang can kite Brigitte with mid-range attacks."
 [[matchup]]
 hero = "wuyang"
 vs = "cassidy"
-value = 50
+value = 43
 cpgg = 50
 opick = 50
+cwatch = 20
 reason = "Cassidy fights at mid-range, making him vulnerable to Wuyang's poke damage."
 
 [[matchup]]
@@ -18495,11 +18575,11 @@ opick = 0
 [[matchup]]
 hero = "wuyang"
 vs = "doomfist"
-value = 24
+value = 25
 disagreement = true
 cpgg = 50
 opick = 50
-cwatch = -36
+cwatch = -32
 reason = "Wuyang can deal with Doomfist's engages using Rushing Torrent or Guardian Wave."
 
 [[matchup]]
@@ -18555,10 +18635,10 @@ opick = 50
 [[matchup]]
 hero = "wuyang"
 vs = "jetpack-cat"
-value = -32
+value = -24
 cpgg = -25
 opick = 0
-cwatch = -51
+cwatch = -22
 
 [[matchup]]
 hero = "wuyang"
@@ -18577,10 +18657,10 @@ opick = 0
 [[matchup]]
 hero = "wuyang"
 vs = "juno"
-value = -10
+value = -5
 cpgg = 0
 opick = -50
-cwatch = -40
+cwatch = -21
 
 [[matchup]]
 hero = "wuyang"
@@ -18599,17 +18679,18 @@ opick = 0
 [[matchup]]
 hero = "wuyang"
 vs = "lucio"
-value = -12
+value = -6
 cpgg = 0
 opick = 0
-cwatch = -47
+cwatch = -22
 
 [[matchup]]
 hero = "wuyang"
 vs = "mauga"
-value = 25
+value = 24
 cpgg = 25
 opick = -50
+cwatch = 21
 
 [[matchup]]
 hero = "wuyang"
@@ -18622,18 +18703,18 @@ reason = "Mei's wide hitbox makes her easy to hit with Wuyang's poke damage."
 [[matchup]]
 hero = "wuyang"
 vs = "mercy"
-value = -30
+value = -28
 cpgg = -25
 opick = 0
-cwatch = -43
+cwatch = -36
 
 [[matchup]]
 hero = "wuyang"
 vs = "moira"
-value = -8
+value = -7
 cpgg = 0
 opick = -50
-cwatch = -32
+cwatch = -29
 
 [[matchup]]
 hero = "wuyang"
@@ -18648,7 +18729,7 @@ vs = "pharah"
 value = -7
 cpgg = 0
 opick = 50
-cwatch = -29
+cwatch = -27
 
 [[matchup]]
 hero = "wuyang"
@@ -18727,19 +18808,19 @@ cwatch = -25
 [[matchup]]
 hero = "wuyang"
 vs = "symmetra"
-value = 67
+value = 62
 cpgg = 75
 opick = 50
-cwatch = 42
+cwatch = 22
 reason = "Wuyang can poke from outside Symmetra's effective range, and can easily destroy Symmetra's Turret."
 
 [[matchup]]
 hero = "wuyang"
 vs = "torbjorn"
-value = 52
+value = 46
 cpgg = 50
 opick = -50
-cwatch = 58
+cwatch = 32
 reason = "Wuyang can destroy turret from mid-range."
 
 [[matchup]]
@@ -18773,18 +18854,18 @@ opick = 0
 [[matchup]]
 hero = "wuyang"
 vs = "winston"
-value = -33
+value = -26
 cpgg = -25
 opick = 50
-cwatch = -55
+cwatch = -28
 
 [[matchup]]
 hero = "wuyang"
 vs = "wrecking-ball"
-value = -33
+value = -30
 cpgg = -25
 opick = 0
-cwatch = -58
+cwatch = -45
 
 [[matchup]]
 hero = "wuyang"
@@ -18797,10 +18878,10 @@ reason = "Wuyang's primary fire makes it very easy for Zarya to gain barrier cha
 [[matchup]]
 hero = "wuyang"
 vs = "zenyatta"
-value = 25
+value = 24
 cpgg = 25
 opick = -50
-cwatch = 25
+cwatch = 22
 
 [[matchup]]
 hero = "zarya"
@@ -18829,10 +18910,10 @@ reason = "Zarya lacks mobility, making it difficult to attack Ashe's positions. 
 [[matchup]]
 hero = "zarya"
 vs = "baptiste"
-value = -12
+value = -5
 cpgg = 0
 opick = 0
-cwatch = -49
+cwatch = -21
 
 [[matchup]]
 hero = "zarya"
@@ -18845,16 +18926,15 @@ reason = "Bastion can melt through Zarya along with her barrier."
 [[matchup]]
 hero = "zarya"
 vs = "brigitte"
-value = -35
+value = -27
 cpgg = -25
 opick = 100
-cwatch = -64
+cwatch = -32
 
 [[matchup]]
 hero = "zarya"
 vs = "cassidy"
-value = -24
-disagreement = true
+value = -25
 cpgg = -25
 opick = 100
 
@@ -18877,10 +18957,10 @@ reason = "Domina's primary fire and abilities easily charge Zarya's barrier ener
 [[matchup]]
 hero = "zarya"
 vs = "doomfist"
-value = 25
+value = 26
 cpgg = 25
 opick = 50
-cwatch = 25
+cwatch = 28
 
 [[matchup]]
 hero = "zarya"
@@ -18909,18 +18989,19 @@ reason = "Freja's primary fire during Freja:R-CLICK makes it very easy for Zarya
 [[matchup]]
 hero = "zarya"
 vs = "genji"
-value = 68
+value = 64
 cpgg = 75
 opick = 50
-cwatch = 47
+cwatch = 31
 reason = "Beams pierce through Genji's Deflect. Zarya can protect teammates from Genji with her barrier."
 
 [[matchup]]
 hero = "zarya"
 vs = "hanzo"
-value = 25
+value = 26
 cpgg = 25
 opick = 0
+cwatch = 28
 
 [[matchup]]
 hero = "zarya"
@@ -18964,18 +19045,18 @@ reason = "Juno's Torpedoes makes it easy for Zarya to gain barrier charge."
 [[matchup]]
 hero = "zarya"
 vs = "kiriko"
-value = -9
+value = -8
 cpgg = 0
 opick = -50
-cwatch = -35
+cwatch = -33
 
 [[matchup]]
 hero = "zarya"
 vs = "lifeweaver"
-value = -71
+value = -63
 cpgg = -75
 opick = 0
-cwatch = -59
+cwatch = -25
 reason = "Lifeweaver rarely attacks Zarya directly, making it difficult for Zarya to gain barrier charge. Lifeweaver can save teammates caught in Zarya's ultimate by pulling them or lifting them with Life Grip."
 
 [[matchup]]
@@ -18996,10 +19077,10 @@ opick = -50
 [[matchup]]
 hero = "zarya"
 vs = "mei"
-value = -49
+value = -48
 cpgg = -50
 opick = -50
-cwatch = -44
+cwatch = -41
 reason = "Zarya lacks mobility and sustain, making her vulnerable to being isolated by Mei's Wall."
 
 [[matchup]]
@@ -19052,7 +19133,7 @@ vs = "reinhardt"
 value = -45
 cpgg = -50
 opick = 50
-cwatch = -30
+cwatch = -29
 reason = "Reinhardt can endure beams with Shield, and in close combat, Reinhardt deals more damage. Against Zarya's ultimate, Reinhardt can protect teammates with his shield or turn the tables with his own ultimate."
 
 [[matchup]]
@@ -19073,17 +19154,17 @@ reason = "Zarya can easily use Shion's Evade and Execution as barrier charge."
 [[matchup]]
 hero = "zarya"
 vs = "sierra"
-value = 19
+value = 29
 disagreement = true
 cpgg = 50
 opick = 0
-cwatch = -54
+cwatch = -24
 reason = "Even if Sierra lands Tracking Shot on an ally, Zarya can negate it with Particle Barrier or protect teammates with Projected Barrier."
 
 [[matchup]]
 hero = "zarya"
 vs = "sigma"
-value = 96
+value = 94
 disagreement = true
 cpgg = 100
 opick = 0
@@ -19119,7 +19200,7 @@ value = 18
 disagreement = true
 cpgg = 75
 opick = 0
-cwatch = -69
+cwatch = -62
 reason = "Symmetra's Turret makes it easy for Zarya to gain barrier charge. Symmetra, who fights at mid-range, often enters Zarya's effective range."
 
 [[matchup]]
@@ -19140,10 +19221,10 @@ opick = 50
 [[matchup]]
 hero = "zarya"
 vs = "vendetta"
-value = -10
+value = -9
 cpgg = 0
 opick = 50
-cwatch = -40
+cwatch = -37
 
 [[matchup]]
 hero = "zarya"
@@ -19155,20 +19236,21 @@ opick = -50
 [[matchup]]
 hero = "zarya"
 vs = "widowmaker"
-value = -19
+value = -30
 disagreement = true
 cpgg = -75
 opick = 0
-cwatch = 69
+cwatch = 33
 reason = "Widowmaker deals damage from afar, staying out of Zarya's effective range. Widowmaker can immediately stop attacking when she sees Zarya's barrier. Zarya's low mobility makes her vulnerable to Widowmaker's headshots."
 
 [[matchup]]
 hero = "zarya"
 vs = "winston"
-value = -54
+value = -36
 disagreement = true
 cpgg = -100
 opick = 50
+cwatch = 27
 reason = "Winston rarely targets Zarya directly, making it difficult for Zarya to gain Particle Barrier charge. Winston can immediately stop attacking when he sees Particle Barrier."
 
 [[matchup]]
@@ -19220,7 +19302,7 @@ vs = "baptiste"
 value = -7
 cpgg = 0
 opick = 50
-cwatch = -28
+cwatch = -26
 
 [[matchup]]
 hero = "zenyatta"
@@ -19262,7 +19344,7 @@ reason = "Zenyatta is an easy target for Doomfist's Rocket Punch and Hand Cannon
 [[matchup]]
 hero = "zenyatta"
 vs = "dva"
-value = -46
+value = -49
 disagreement = true
 cpgg = -75
 opick = 50
@@ -19286,10 +19368,10 @@ reason = "Zenyatta has a large and tall hitbox with no mobility, making him easy
 [[matchup]]
 hero = "zenyatta"
 vs = "genji"
-value = -46
+value = -44
 cpgg = -50
 opick = 0
-cwatch = -32
+cwatch = -26
 reason = "Zenyatta has difficulty dealing with Genji's close-range pressure."
 
 [[matchup]]
@@ -19303,9 +19385,10 @@ reason = "Zenyatta has a large and tall hitbox with no mobility, making him easy
 [[matchup]]
 hero = "zenyatta"
 vs = "hazard"
-value = 50
+value = 45
 cpgg = 50
 opick = 0
+cwatch = 29
 reason = "Hazard has no barrier, so when he receives Discord, he melts very quickly."
 
 [[matchup]]
@@ -19318,9 +19401,9 @@ opick = 0
 [[matchup]]
 hero = "zenyatta"
 vs = "jetpack-cat"
-value = -42
+value = -28
 opick = -100
-cwatch = -42
+cwatch = -28
 
 [[matchup]]
 hero = "zenyatta"
@@ -19339,43 +19422,44 @@ opick = 50
 [[matchup]]
 hero = "zenyatta"
 vs = "juno"
-value = -49
+value = -44
 cpgg = -50
 opick = 50
-cwatch = -45
+cwatch = -25
 reason = "Juno's mobility makes her difficult for Zenyatta to hit."
 
 [[matchup]]
 hero = "zenyatta"
 vs = "kiriko"
-value = -12
+value = -7
 cpgg = 0
 opick = 50
-cwatch = -48
+cwatch = -26
 
 [[matchup]]
 hero = "zenyatta"
 vs = "lifeweaver"
-value = -10
+value = -6
 cpgg = 0
 opick = -50
-cwatch = -38
+cwatch = -24
 
 [[matchup]]
 hero = "zenyatta"
 vs = "lucio"
-value = -51
+value = -45
 cpgg = -50
 opick = -50
-cwatch = -55
+cwatch = -30
 reason = "Lucio can use speed boost to help teammates close in on Zenyatta."
 
 [[matchup]]
 hero = "zenyatta"
 vs = "mauga"
-value = 50
+value = 44
 cpgg = 50
 opick = 0
+cwatch = 25
 reason = "Mauga lacks defensive options, making him very vulnerable when marked with Zenyatta's Discord."
 
 [[matchup]]
@@ -19388,10 +19472,10 @@ opick = 0
 [[matchup]]
 hero = "zenyatta"
 vs = "mercy"
-value = -32
+value = -26
 cpgg = -25
 opick = 0
-cwatch = -52
+cwatch = -28
 
 [[matchup]]
 hero = "zenyatta"
@@ -19419,10 +19503,10 @@ reason = "Zenyatta's primary fire has slow projectile speed, making it difficult
 [[matchup]]
 hero = "zenyatta"
 vs = "ramattra"
-value = 51
+value = 48
 cpgg = 50
 opick = 0
-cwatch = 55
+cwatch = 42
 reason = "Ramattra becomes very vulnerable when marked with Zenyatta's Discord while in Nemesis Form form."
 
 [[matchup]]
@@ -19436,18 +19520,18 @@ reason = "Zenyatta's wide hitbox makes him vulnerable to Reaper's spread. Zenyat
 [[matchup]]
 hero = "zenyatta"
 vs = "reinhardt"
-value = 29
+value = 28
 cpgg = 25
 opick = 100
-cwatch = 40
+cwatch = 37
 
 [[matchup]]
 hero = "zenyatta"
 vs = "roadhog"
-value = 63
+value = 65
 cpgg = 75
 opick = 0
-cwatch = 25
+cwatch = 33
 reason = "Roadhog has no barrier, making him very vulnerable when marked with Zenyatta's Discord. Zenyatta rarely enters Roadhog's range, allowing him to deal continuous damage."
 
 [[matchup]]
@@ -19468,7 +19552,7 @@ opick = 0
 [[matchup]]
 hero = "zenyatta"
 vs = "sigma"
-value = -40
+value = -41
 disagreement = true
 cpgg = -50
 opick = 0
@@ -19561,10 +19645,10 @@ opick = -50
 [[matchup]]
 hero = "zenyatta"
 vs = "wuyang"
-value = -28
+value = -26
 cpgg = -25
 opick = 50
-cwatch = -35
+cwatch = -27
 
 [[matchup]]
 hero = "zenyatta"
