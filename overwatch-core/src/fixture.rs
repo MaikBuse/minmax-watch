@@ -76,6 +76,7 @@ pub fn dataset() -> Dataset {
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
         generated: "test".to_owned(),
         patch: "test".to_owned(),
     })

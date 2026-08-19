@@ -155,10 +155,17 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     // --- matchups and their rationale ------------------------------------
     let mut matchups = Matrix::unrated(n);
     let mut reasons = vec![String::new(); n * n];
+    // Which rows the blend could not reconcile, carried through rather than
+    // dropped here: `Dataset::sources_disagree` is what puts it on screen, and
+    // until this line existed the flag the ingest writes was read by nothing.
+    let mut disputed = vec![false; n * n];
     for entry in &matchups_file.matchups {
         let a = hero_id("matchups.toml", &entry.hero)?;
         let b = hero_id("matchups.toml", &entry.vs)?;
         matchups.set(a, b, entry.value)?;
+        if let Some(slot) = disputed.get_mut(a.index() * n + b.index()) {
+            *slot = entry.disagreement;
+        }
         if !entry.reason.is_empty() {
             if let Some(slot) = reasons.get_mut(a.index() * n + b.index()) {
                 *slot = entry.reason.clone();
@@ -266,6 +273,7 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
         side_lean,
         shape,
         reasons,
+        disputed,
         generated: matchups_file.generated.clone(),
         patch: matchups_file.patch.clone(),
     })?)

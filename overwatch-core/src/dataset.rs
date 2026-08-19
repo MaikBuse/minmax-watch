@@ -53,6 +53,12 @@ pub struct Dataset {
     shape: Vec<[i8; 3]>,
     /// Row-major `n x n`, parallel to `matchups`. Empty string means "no text".
     reasons: Vec<String>,
+    /// Row-major `n x n`, parallel to `matchups`: the sources that rated this
+    /// direction contradicted each other by more than the blend threshold.
+    ///
+    /// Read through [`Self::sources_disagree`] rather than directly, because the
+    /// contradiction belongs to the pair and the flag lands on a direction.
+    disputed: Vec<bool>,
     /// Free-form provenance shown in the UI so stale data is visible.
     pub generated: String,
     pub patch: String,
@@ -73,6 +79,9 @@ pub struct DatasetParts {
     pub side_lean: Vec<i8>,
     pub shape: Vec<[i8; 3]>,
     pub reasons: Vec<String>,
+    /// Row-major `n x n`, parallel to `matchups`: the sources that rated this
+    /// direction contradicted each other by more than the blend threshold.
+    pub disputed: Vec<bool>,
     pub generated: String,
     pub patch: String,
 }
@@ -139,6 +148,13 @@ impl Dataset {
                 actual: parts.reasons.len(),
             });
         }
+        if parts.disputed.len() != n * n {
+            return Err(CoreError::RosterLengthMismatch {
+                what: "disputed",
+                expected: n * n,
+                actual: parts.disputed.len(),
+            });
+        }
         let expected_affinity = parts.maps.len() * n;
         if parts.map_affinity.len() != expected_affinity {
             return Err(CoreError::RosterLengthMismatch {
@@ -160,6 +176,7 @@ impl Dataset {
             side_lean: parts.side_lean,
             shape: parts.shape,
             reasons: parts.reasons,
+            disputed: parts.disputed,
             generated: parts.generated,
             patch: parts.patch,
         })
@@ -304,5 +321,131 @@ impl Dataset {
             .get(attacker.index() * n + defender.index())
             .map(String::as_str)
             .filter(|s| !s.is_empty())
+    }
+
+    /// Whether the sources contradicted each other about this pair, in either
+    /// direction.
+    ///
+    /// Read as `at(a, b) || at(b, a)` on purpose. The sources disagree about the
+    /// *pair*, and the flag lands on a direction. The ingest writes it per row
+    /// and the secondary source only rates part of each hero's list, so today
+    /// `winston vs zarya` is flagged — counterpickgg says `+100`, counterwatch
+    /// says `-31` — while its mirror escapes flagging purely because that source
+    /// was silent on the other side. 84 of the 1284 rated pairs carry a flag
+    /// somewhere against only 97 of 2534 directed rows, so reading one direction
+    /// would hide the contradiction from whichever half of the draft happened to
+    /// be on screen.
+    ///
+    /// Gated on [`Matrix::rating`] rather than on a presence bit of its own: a
+    /// pair nobody rated cannot be one the sources fought over, and [`Matrix`]
+    /// keeps "rated" in one place so the two cannot drift apart.
+    pub fn sources_disagree(&self, a: HeroId, b: HeroId) -> bool {
+        let n = self.heroes.len();
+        if a.index() >= n || b.index() >= n {
+            return false;
+        }
+        if self.matchups.rating(a, b).is_none() && self.matchups.rating(b, a).is_none() {
+            return false;
+        }
+        let at = |x: HeroId, y: HeroId| {
+            self.disputed
+                .get(x.index() * n + y.index())
+                .copied()
+                .unwrap_or(false)
+        };
+        at(a, b) || at(b, a)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::map::{GameMap, GameMode};
+
+    const A: HeroId = HeroId(0);
+    const B: HeroId = HeroId(1);
+
+    /// Two heroes, with `disputed` and the matchup matrix handed in so a test can
+    /// describe exactly the asymmetry it is about.
+    fn dataset(matchups: Matrix, disputed: Vec<bool>) -> Dataset {
+        let heroes = ["a", "b"]
+            .into_iter()
+            .map(|key| Hero {
+                key: key.to_owned(),
+                name: key.to_owned(),
+                role: Role::Tank,
+                subrole: None,
+                aliases: Vec::new(),
+            })
+            .collect::<Vec<_>>();
+        let n = heroes.len();
+
+        Dataset::new(DatasetParts {
+            heroes,
+            maps: vec![GameMap {
+                key: "kings-row".to_owned(),
+                name: "King's Row".to_owned(),
+                mode: GameMode::Hybrid,
+                aliases: Vec::new(),
+            }],
+            matchups,
+            synergy: Matrix::unrated(n),
+            map_affinity: vec![0; n],
+            base_strength: vec![0; n],
+            rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
+            win_rate: vec![None; n],
+            side_lean: vec![0; n],
+            shape: vec![[0; 3]; n],
+            reasons: vec![String::new(); n * n],
+            disputed,
+            generated: "test".to_owned(),
+            patch: "test".to_owned(),
+        })
+        .expect("a two-hero dataset is valid")
+    }
+
+    /// The Winston/Zarya shape: the secondary source rated one direction and
+    /// contradicted the primary there, and said nothing about the mirror. Both
+    /// halves of the draft have to see the same dispute.
+    #[test]
+    fn a_pair_flagged_in_either_direction_reads_as_disputed() {
+        let mut matchups = Matrix::unrated(2);
+        matchups.set(A, B, 67).expect("in range");
+        matchups.set(B, A, -100).expect("in range");
+
+        let flagged_forward_only = vec![false, true, false, false];
+        let ds = dataset(matchups.clone(), flagged_forward_only);
+        assert!(ds.sources_disagree(A, B));
+        assert!(
+            ds.sources_disagree(B, A),
+            "the mirror escaped flagging only because one source was silent on it"
+        );
+
+        let flagged_neither = vec![false; 4];
+        let quiet = dataset(matchups, flagged_neither);
+        assert!(!quiet.sources_disagree(A, B));
+        assert!(!quiet.sources_disagree(B, A));
+    }
+
+    /// A pair nobody rated cannot be one the sources fought over. The flag is
+    /// gated on the matrix rather than trusted on its own, so a stray `true` in a
+    /// hand-built dataset cannot invent a dispute about nothing.
+    #[test]
+    fn an_unrated_pair_is_never_disputed() {
+        let ds = dataset(Matrix::unrated(2), vec![true; 4]);
+        assert!(!ds.sources_disagree(A, B));
+        assert!(!ds.sources_disagree(B, A));
+    }
+
+    /// A draft in progress must never take down the UI over a bad index, which
+    /// is the rule every other lookup here follows.
+    #[test]
+    fn an_out_of_range_hero_is_not_disputed_rather_than_a_panic() {
+        let mut matchups = Matrix::unrated(2);
+        matchups.set(A, B, 40).expect("in range");
+        let ds = dataset(matchups, vec![true; 4]);
+
+        assert!(!ds.sources_disagree(HeroId(99), B));
+        assert!(!ds.sources_disagree(A, HeroId(99)));
     }
 }

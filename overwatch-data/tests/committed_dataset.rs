@@ -123,6 +123,53 @@ fn rationale_text_is_attached_to_real_matchups() {
     );
 }
 
+/// The flag the blend writes has to survive the loader, because for a long time
+/// it did not: `disagreement` was written into `matchups.toml`, deserialized by
+/// `MatchupEntry`, and then read by nothing at all, while the README and the
+/// schema both claimed the app said so.
+///
+/// Counts through `sources_disagree` rather than by re-reading the TOML, so this
+/// exercises the path the draft screen uses. The count is asserted as a **band**
+/// and not a floor: a scrape that stops flagging anything and a scrape that
+/// flags everything both slip past a bare `> 0`, and the second one is the more
+/// plausible failure — a source going offline makes every pair look contradicted.
+#[test]
+fn the_disagreement_flags_reach_the_dataset() {
+    let ds = load().expect("committed data must load");
+
+    let winston = ds.hero_by_key("winston").expect("present");
+    let zarya = ds.hero_by_key("zarya").expect("present");
+
+    // Only the forward row carries the flag — counterwatch rated Winston into
+    // Zarya and said nothing about the mirror — so this is also the pin on
+    // reading the pair rather than the direction.
+    assert!(
+        ds.sources_disagree(winston, zarya),
+        "the sources disagree sharply about Winston into Zarya"
+    );
+    assert!(
+        ds.sources_disagree(zarya, winston),
+        "and the mirror has to show the same dispute"
+    );
+
+    let n = ds.hero_count();
+    let mut flagged = 0;
+    for a in 0..n {
+        for b in 0..n {
+            if a != b && ds.sources_disagree(HeroId(a as u16), HeroId(b as u16)) {
+                flagged += 1;
+            }
+        }
+    }
+
+    // 168 of the 2534 directed rows today, from 84 flagged pairs counted twice.
+    assert!(
+        (50..=500).contains(&flagged),
+        "{flagged} directed rows read as disputed, which is outside the band a \
+         healthy blend produces"
+    );
+}
+
 #[test]
 fn base_strength_and_map_affinity_are_populated() {
     let ds = load().expect("committed data must load");

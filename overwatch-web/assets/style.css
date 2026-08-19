@@ -1002,6 +1002,34 @@ body {
     color: var(--text-faint);
 }
 
+/* How thin the evidence under this whole column is: three quarters of the matrix
+   is a single site's rating. Standing and first, not conditional and last like
+   `.threat-note` above — it qualifies the column itself rather than counting
+   anything on it, so it has to be readable before there is a single row to read.
+
+   Takes `.rank-note`'s leading margin rather than `.threat-note`'s trailing one,
+   and for the same reason that rule does: the heading and its caveat are one
+   block, and the first row must not look like it belongs to them. */
+.matchup-note {
+    margin: -0.15rem 0 0.6rem;
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+}
+
+/* The pairs the two sources actually contradicted each other about — 6.5% of
+   them — marked inline where the sentence making the claim is.
+
+   Its own element rather than words appended to the line: most of those lines
+   are counterpickgg's sentences quoted exactly, and an editorial aside run into
+   one would read as theirs. `nowrap` so the marker never breaks away from the
+   claim it qualifies onto a line of its own. */
+.caveat {
+    margin-left: 0.35em;
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+    white-space: nowrap;
+}
+
 /* Unlike the ban list, this one is not homogeneous — an enemy you beat appears
    here too — so the tint is per row rather than per column. The leading sign is
    what carries it and `{:+}` always emits one; the colour only reinforces,

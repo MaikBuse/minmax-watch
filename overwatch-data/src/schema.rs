@@ -74,8 +74,14 @@ pub struct MatchupEntry {
     pub vs: String,
     /// Blended, on -100..=100.
     pub value: i8,
-    /// Set when the sources disagree by more than the blend threshold. Surfaced
-    /// in the UI so bad data is visible rather than quietly averaged away.
+    /// Set when the sources disagree by more than the blend threshold.
+    ///
+    /// Read by `Dataset::sources_disagree`, which asks about the *pair* — the
+    /// flag lands on a direction, and the secondary source rates only part of
+    /// each hero's list, so a contradiction routinely marks one row of two.
+    /// Reaches the screen as a `disputed` tag beside the matchup and a marker on
+    /// the reason line, so a blend nobody could reconcile is visible rather than
+    /// quietly averaged away.
     #[serde(default, skip_serializing_if = "is_false")]
     pub disagreement: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]

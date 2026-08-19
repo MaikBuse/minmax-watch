@@ -346,6 +346,7 @@ mod tests {
                 [50, 40, 0], // clear
             ],
             reasons: vec![String::new(); n * n],
+            disputed: vec![false; n * n],
             generated: "test".to_owned(),
             patch: "test".to_owned(),
         })

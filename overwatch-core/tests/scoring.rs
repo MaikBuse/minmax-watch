@@ -95,6 +95,7 @@ fn fixture() -> Dataset {
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
         reasons,
+        disputed: vec![false; n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
     })
@@ -398,6 +399,7 @@ fn symmetric_fixture() -> Dataset {
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
     })
@@ -575,6 +577,7 @@ fn sparse_fixture() -> Dataset {
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
     })
@@ -743,6 +746,7 @@ fn synergy_fixture() -> Dataset {
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
     })
@@ -830,6 +834,7 @@ fn side_fixture() -> Dataset {
         side_lean,
         shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
     })
@@ -954,6 +959,7 @@ fn patch_fixture() -> Dataset {
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
     })
@@ -1507,6 +1513,7 @@ fn shape_fixture() -> Dataset {
             [0, 0, 0],  // unread: nobody has curated this one
         ],
         reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
     })
@@ -1707,6 +1714,7 @@ fn rank_fixture() -> Dataset {
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],
         reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
         generated: "fixture".to_owned(),
         patch: "fixture".to_owned(),
     })

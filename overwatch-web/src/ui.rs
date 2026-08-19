@@ -1053,6 +1053,11 @@ pub struct ThreatRow {
     pub even: bool,
     /// The scraped sentence for the pair, empty for most of them.
     pub text: String,
+    /// The two trusted sources contradicted each other about this pair.
+    ///
+    /// Not the roster's `contested`, which is two teammates on one hero. This is
+    /// about the number, not about the seat.
+    pub disputed: bool,
 }
 
 impl ThreatRow {
@@ -1096,6 +1101,7 @@ impl ThreatRow {
             favourable: points > 0,
             even: points == 0,
             text,
+            disputed: threat.disputed,
         }
     }
 }
@@ -1134,6 +1140,18 @@ pub fn ThreatPanel(
                     span { class: "subject", "{subject}" }
                 }
             }
+            // Standing, and above the rows rather than below them: this is the
+            // base rate every number in the column is read against, not a
+            // footnote about whichever rows happen to be on screen. `.threat-note`
+            // at the foot is the opposite — it counts something, and appears only
+            // when there is something to count.
+            //
+            // The base rate is stated once and only the pairs in active dispute
+            // are marked. Tagging three quarters of the matrix as thin would be
+            // noise rather than context, which is the complaint this answers.
+            p { class: "matchup-note",
+                "three quarters of matchups are one site's rating \u{2014} \u{201c}disputed\u{201d} means the second source disagrees"
+            }
             if items.is_empty() {
                 p { class: "empty", "{empty}" }
             }
@@ -1145,6 +1163,15 @@ pub fn ThreatPanel(
                     div { class: "rec-body",
                         div { class: "rec-head",
                             span { class: "rec-name", "{threat.name}" }
+                            // A word rather than a hue, so the caveat survives
+                            // the reader who cannot tell the two tints apart.
+                            if threat.disputed {
+                                span {
+                                    class: "tag",
+                                    title: "the two sources disagree about this matchup",
+                                    "disputed"
+                                }
+                            }
                             span {
                                 class: if threat.even {
                                     "score"
@@ -1191,8 +1218,25 @@ pub struct RecRow {
     /// overrides are already the lever for "I like this hero" and two levers for
     /// one job would fight.
     pub in_pool: bool,
-    /// `(is_positive, text)` per reason.
-    pub reasons: Vec<(bool, String)>,
+    pub reasons: Vec<ReasonLine>,
+}
+
+/// One line of a row's "why", resolved to the words it will show.
+///
+/// A struct rather than the `(bool, String)` tuple it grew out of, because the
+/// line now carries a claim *about* its own evidence as well as the evidence.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ReasonLine {
+    /// The term moved the score up. `>= 0.0`, which is the tint this list has
+    /// always drawn.
+    pub positive: bool,
+    pub text: String,
+    /// The two trusted sources contradicted each other about this matchup.
+    ///
+    /// Set for the counter terms and nothing else: they are the only ones that
+    /// read the matchup matrix, so they are the only ones with two sources that
+    /// could have disagreed.
+    pub disputed: bool,
 }
 
 impl RecRow {
@@ -1276,7 +1320,21 @@ impl RecRow {
                 } else {
                     reason.text.clone()
                 };
-                (reason.contribution >= 0.0, text)
+                // Only the counter terms read the matchup matrix, so only they
+                // can be in dispute. Asked of the pair rather than of the row
+                // the scorer happened to average, which is what
+                // `sources_disagree` is for.
+                let disputed = match reason.kind {
+                    ReasonKind::BeatsEnemy(enemy) | ReasonKind::LosesToEnemy(enemy) => {
+                        dataset.sources_disagree(rec.hero, enemy)
+                    }
+                    _ => false,
+                };
+                ReasonLine {
+                    positive: reason.contribution >= 0.0,
+                    text,
+                    disputed,
+                }
             })
             .collect();
 
@@ -1364,11 +1422,22 @@ pub fn Recommendations(
                             }
                         }
                         ul { class: "reasons",
-                            for (index, (positive, text)) in rec.reasons.iter().enumerate() {
+                            for (index, line) in rec.reasons.iter().enumerate() {
                                 li {
                                     key: "{index}",
-                                    class: if *positive { "reason good" } else { "reason bad" },
-                                    "{text}"
+                                    class: if line.positive { "reason good" } else { "reason bad" },
+                                    "{line.text}"
+                                    // A sibling, never appended to `text`: most
+                                    // of these sentences are counterpickgg's,
+                                    // quoted exactly, and our editorial must not
+                                    // read as part of theirs.
+                                    if line.disputed {
+                                        span {
+                                            class: "caveat",
+                                            title: "the two sources disagree about this matchup",
+                                            "disputed"
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1690,7 +1759,7 @@ pub fn SessionBar(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use overwatch_core::{DatasetParts, Hero, Matrix};
+    use overwatch_core::{DatasetParts, Hero, Matrix, Reason};
 
     const REINHARDT: HeroId = HeroId(0);
     const PHARAH: HeroId = HeroId(1);
@@ -1706,6 +1775,23 @@ mod tests {
     }
 
     fn fixture() -> Dataset {
+        dataset(Matrix::unrated(2), vec![false; 4])
+    }
+
+    /// Reinhardt rated into Pharah, and the sources fighting over that one pair.
+    /// The plain [`fixture`] cannot express this: its matrix is entirely unrated,
+    /// and an unrated pair is never disputed.
+    fn disputed_fixture() -> Dataset {
+        let mut matchups = Matrix::unrated(2);
+        matchups
+            .set(REINHARDT, PHARAH, -60)
+            .expect("the fixture roster has both");
+        // Flagged in one direction only, which is the shape the committed data
+        // actually has — see `Dataset::sources_disagree`.
+        dataset(matchups, vec![false, true, false, false])
+    }
+
+    fn dataset(matchups: Matrix, disputed: Vec<bool>) -> Dataset {
         let heroes = vec![
             hero("reinhardt", "Reinhardt", Role::Tank),
             hero("pharah", "Pharah", Role::Damage),
@@ -1715,7 +1801,7 @@ mod tests {
         Dataset::new(DatasetParts {
             heroes,
             maps: Vec::new(),
-            matchups: Matrix::unrated(n),
+            matchups,
             synergy: Matrix::unrated(n),
             map_affinity: Vec::new(),
             base_strength: vec![0; n],
@@ -1724,6 +1810,7 @@ mod tests {
             side_lean: vec![0; n],
             shape: vec![[0; 3]; n],
             reasons: vec![String::new(); n * n],
+            disputed,
             generated: String::new(),
             patch: String::new(),
         })
@@ -1735,6 +1822,17 @@ mod tests {
             enemy,
             severity,
             text: text.to_owned(),
+            disputed: false,
+        }
+    }
+
+    /// The same threat, with the sources contradicting each other about it.
+    /// Its own constructor rather than a parameter on [`threat`], which would
+    /// put a `false` on six calls that are not about this.
+    fn disputed_threat(enemy: HeroId, severity: f32, text: &str) -> Threat {
+        Threat {
+            disputed: true,
+            ..threat(enemy, severity, text)
         }
     }
 
@@ -1815,5 +1913,58 @@ mod tests {
 
         assert_eq!(row.name, "?", "a dataset mismatch must not blank the panel");
         assert_eq!(row.score, "-30");
+    }
+
+    /// The flag has to survive the last hop. `blend` writes it, the loader now
+    /// carries it and the scorer resolves it — and for a long time the whole
+    /// chain ended in a struct the screen never read.
+    #[test]
+    fn a_disputed_matchup_says_so_on_the_row() {
+        let ds = fixture();
+
+        let row = ThreatRow::build(&disputed_threat(PHARAH, 0.5, ""), REINHARDT, &ds);
+        assert!(row.disputed);
+
+        let ordinary = ThreatRow::build(&threat(PHARAH, 0.5, ""), REINHARDT, &ds);
+        assert!(
+            !ordinary.disputed,
+            "an agreed matchup must not be marked, or the marker means nothing"
+        );
+    }
+
+    /// Only the counter terms read the matchup matrix, so only they can be in
+    /// dispute. A marker on the patch-strength line would be pointing at a
+    /// number that has no second source behind it to disagree.
+    #[test]
+    fn only_a_counter_line_can_be_marked_as_disputed() {
+        let ds = disputed_fixture();
+
+        let rec = Recommendation {
+            hero: REINHARDT,
+            score: -0.3,
+            delta_vs_locked: None,
+            worth_swapping: false,
+            is_locked: false,
+            reasons: vec![
+                Reason {
+                    kind: ReasonKind::LosesToEnemy(PHARAH),
+                    contribution: -0.3,
+                    text: String::new(),
+                },
+                Reason {
+                    kind: ReasonKind::BaseStrength,
+                    contribution: 0.1,
+                    text: String::new(),
+                },
+            ],
+        };
+
+        let row = RecRow::build(&rec, &ds, false, false);
+        assert!(row.reasons[0].disputed, "the counter line reads the matrix");
+        assert!(!row.reasons[0].positive);
+        assert!(
+            !row.reasons[1].disputed,
+            "patch strength has one source and nothing to disagree with"
+        );
     }
 }

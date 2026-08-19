@@ -120,7 +120,11 @@ spike outright.
 Every entry in [`data/matchups.toml`](data/matchups.toml) carries the per-source
 values it was blended from, so any number can be traced back to the site that
 produced it. Where the two trusted sources disagree sharply the row is flagged
-rather than quietly averaged, and the app says so.
+rather than quietly averaged, and the app says so: the matchup carries a
+`disputed` tag on the matchups panel and a marker on the reason line that argues
+from it. The flag is read for the pair rather than the direction, because the
+second source rates only part of each hero's list and a contradiction usually
+lands on one row of the two.
 
 **Not all of it is measured.** [`data/archetype.toml`](data/archetype.toml)
 (dive/poke/brawl) and [`data/side.toml`](data/side.toml) (attack/defend lean) are

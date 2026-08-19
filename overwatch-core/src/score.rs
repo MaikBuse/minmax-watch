@@ -349,6 +349,13 @@ pub struct Threat {
     /// Positive means this enemy is winning the matchup against you.
     pub severity: f32,
     pub text: String,
+    /// The two trusted sources contradicted each other about this pair.
+    ///
+    /// Resolved here rather than left for the panel to look up, for the same
+    /// reason `text` is: the screen renders what the scorer read, and a second
+    /// resolution of the same question is a build away from disagreeing with the
+    /// first.
+    pub disputed: bool,
 }
 
 /// How sure the ban list is about what one member of your team will be on.
@@ -865,6 +872,7 @@ pub fn threats(ds: &Dataset, draft: &Draft, ctx: &UserContext, hero: HeroId) -> 
                     enemy: *enemy,
                     severity,
                     text: ds.reason(hero, *enemy).unwrap_or_default().to_owned(),
+                    disputed: ds.sources_disagree(hero, *enemy),
                 },
             ))
         })
