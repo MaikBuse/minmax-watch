@@ -310,6 +310,56 @@ fn report_rank_slices(by_rank: &StrengthByRankFile) {
     );
 }
 
+/// Says enough about the published counter ratings to decide whether the parse
+/// read the right row.
+///
+/// The distribution is the tell. Every way of getting this wrong lands on a
+/// document that still parses: reading the duo rows instead gives percentages
+/// near 50, reading the ban list gives the hardest-matchup ratings twice and no
+/// easy ones, and taking the direction from the wrong cue leaves the count intact
+/// while inverting half the signs. A run reporting 530 rows, a median near 7 and a
+/// even split of favourable and unfavourable is telling you it read the matchup
+/// table.
+///
+/// `swing` and `duels` are printed and never committed. They are here because
+/// they are the fields that prove the row was the right one — a matchup row is
+/// the only thing on the page carrying a duel count — and `swing` deserves a
+/// slice of its own before it becomes a column.
+fn report_matchup_ratings(ratings: &HashMap<(String, String), counterwatch::MatchupRating>) {
+    if ratings.is_empty() {
+        eprintln!("  warn: no published counter ratings were read at all");
+        return;
+    }
+
+    let mut magnitudes: Vec<f32> = ratings.values().map(|r| r.rating.abs()).collect();
+    magnitudes.sort_by(f32::total_cmp);
+    let median = |sorted: &[f32]| sorted[sorted.len() / 2];
+
+    let favourable = ratings.values().filter(|r| r.rating > 0.0).count();
+    let clamped = ratings.values().filter(|r| r.value.abs() == 100).count();
+
+    let mut swings: Vec<u8> = ratings.values().filter_map(|r| r.swing).collect();
+    swings.sort_unstable();
+    let mut duels: Vec<u32> = ratings.values().map(|r| r.duels).collect();
+    duels.sort_unstable();
+
+    eprintln!(
+        "    {} published ratings | {favourable} favourable, {} against | {clamped} clamped at the ceiling",
+        ratings.len(),
+        ratings.len() - favourable,
+    );
+    eprintln!(
+        "    |rating| median {:.1}, max {:.1} | swing on {}/{} (median {}%) | duels median {}, min {}",
+        median(&magnitudes),
+        magnitudes.last().copied().unwrap_or(0.0),
+        swings.len(),
+        ratings.len(),
+        swings.get(swings.len() / 2).copied().unwrap_or(0),
+        duels.get(duels.len() / 2).copied().unwrap_or(0),
+        duels.first().copied().unwrap_or(0),
+    );
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = parse_args()?;
@@ -460,6 +510,13 @@ async fn main() -> Result<()> {
             .iter()
             .map(|h| (h.name.clone(), h.key.clone()))
             .collect();
+        // The other direction, because the stats pages state which hero a row is
+        // favourable for by naming it, and the parser has to recognise the name.
+        let subject_names: HashMap<String, String> = roster
+            .heroes
+            .iter()
+            .map(|h| (h.key.clone(), h.name.clone()))
+            .collect();
 
         eprintln!(
             "counters: building the matrix for {} heroes",
@@ -485,8 +542,26 @@ async fn main() -> Result<()> {
                 blend::SourceMap::new()
             });
 
+        // The stats pages the `strength` step already caches, read here because
+        // the numbers on them land in matchups.toml and only this step writes
+        // that file. Free on a warm cache; 53 requests on a cold one.
+        eprintln!(
+            "  source: counterwatch stats ({} pages, shared with strength)",
+            hero_keys.len()
+        );
+        let ratings =
+            counterwatch::scrape_matchup_ratings(&mut fetcher, &hero_keys, &subject_names)
+                .await
+                .unwrap_or_else(|err| {
+                    // Degrades to the rank synthesis rather than aborting, which is
+                    // what the cross-check inside the parser is allowed to rely on.
+                    eprintln!("  warn: counterwatch ratings unusable: {err:#}");
+                    HashMap::new()
+                });
+        report_matchup_ratings(&ratings);
+
         eprintln!("  source: counterwatch ({} pages)", hero_keys.len());
-        let cwatch = counterwatch::scrape(&mut fetcher, &hero_keys, &names)
+        let cwatch = counterwatch::scrape(&mut fetcher, &hero_keys, &names, &ratings)
             .await
             .unwrap_or_else(|err| {
                 eprintln!("  warn: counterwatch unusable: {err:#}");

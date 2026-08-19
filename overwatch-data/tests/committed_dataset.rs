@@ -901,3 +901,42 @@ fn no_pair_reads_as_favourable_for_both_heroes() {
         both.len()
     );
 }
+
+/// The guard on the counterwatch column, and the counterpart to
+/// `almost_none_of_the_rank_shifts_saturate_the_scale`.
+///
+/// `COUNTER_CEILING` asserts that a published counter rating of 25 is as lopsided
+/// as that source gets, and it is the one scale in the pipeline set from a
+/// distribution rather than from a source's own documented range. A handful of
+/// readings at the rail is the ceiling honestly saying "as far as it goes"; a lot
+/// of them means the band has stopped describing what the site publishes, and the
+/// band is then the thing to argue about rather than this test.
+///
+/// Counted over readings and not over rows, because most of the matrix has no
+/// counterwatch opinion at all and folding that in would hide a saturating column
+/// behind the size of the file.
+#[test]
+fn almost_none_of_the_counter_readings_saturate_the_scale() {
+    let matchups: MatchupsFile =
+        toml::from_str(overwatch_data::MATCHUPS_TOML).expect("committed matchups must parse");
+
+    let readings: Vec<i8> = matchups
+        .matchups
+        .iter()
+        .filter_map(|entry| entry.cwatch)
+        .collect();
+    let saturated = readings.iter().filter(|value| value.abs() == 100).count();
+
+    assert!(
+        !readings.is_empty(),
+        "counterwatch has no readings in the committed matrix at all"
+    );
+    // 4 of 795 today, all of them D.Mon, whose ratings are the two outliers the
+    // site publishes.
+    assert!(
+        saturated * 50 <= readings.len(),
+        "{saturated} of {} counterwatch readings are pinned at the rails - the \
+         +-25 rating band no longer describes what the site publishes",
+        readings.len()
+    );
+}

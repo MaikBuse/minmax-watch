@@ -89,6 +89,14 @@ it carries the reasoning; counterwatch is duel-derived rather than
 opinion-derived and independently agrees with it (Pearson r = +0.51 over the
 pairs both cover), so it refines rather than drives.
 
+counterwatch contributes two different kinds of reading, and the difference is
+worth knowing. For 530 pairs it publishes an actual counter rating, measured from
+duel outcomes with a sample size beside it, and that number is used directly. For
+another 265 it publishes only a position in a top-ten list, which gets converted
+into a value by interpolating down from whatever the same list *did* publish a
+number for. A rank is a weaker reading than a rating and the file does not
+distinguish them, so `just ingest-counters` reports the split on every run.
+
 overpicker is excluded on evidence rather than by taste: its published matrix has
 no measurable relationship to either other source — r = −0.04 against
 counterpickgg and −0.07 against counterwatch, in both orientations. Two sources
