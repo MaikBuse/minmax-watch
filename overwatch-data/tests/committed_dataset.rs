@@ -140,9 +140,9 @@ fn the_disagreement_flags_reach_the_dataset() {
     let winston = ds.hero_by_key("winston").expect("present");
     let zarya = ds.hero_by_key("zarya").expect("present");
 
-    // Only the forward row carries the flag — counterwatch rated Winston into
-    // Zarya and said nothing about the mirror — so this is also the pin on
-    // reading the pair rather than the direction.
+    // counterwatch rated Winston into Zarya and said nothing about the mirror, so
+    // this pair is what the pair-level verdict was built for: both rows carry the
+    // flag now, and both readings were pulled toward even by the same factor.
     assert!(
         ds.sources_disagree(winston, zarya),
         "the sources disagree sharply about Winston into Zarya"
@@ -162,7 +162,7 @@ fn the_disagreement_flags_reach_the_dataset() {
         }
     }
 
-    // 168 of the 2534 directed rows today, from 84 flagged pairs counted twice.
+    // 164 of the 2534 directed rows today, from 82 flagged pairs counted twice.
     assert!(
         (50..=500).contains(&flagged),
         "{flagged} directed rows read as disputed, which is outside the band a \

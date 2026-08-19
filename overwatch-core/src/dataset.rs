@@ -327,14 +327,15 @@ impl Dataset {
     /// direction.
     ///
     /// Read as `at(a, b) || at(b, a)` on purpose. The sources disagree about the
-    /// *pair*, and the flag lands on a direction. The ingest writes it per row
-    /// and the secondary source only rates part of each hero's list, so today
-    /// `winston vs zarya` is flagged — counterpickgg says `+100`, counterwatch
-    /// says `-31` — while its mirror escapes flagging purely because that source
-    /// was silent on the other side. 84 of the 1284 rated pairs carry a flag
-    /// somewhere against only 97 of 2534 directed rows, so reading one direction
-    /// would hide the contradiction from whichever half of the draft happened to
-    /// be on screen.
+    /// *pair*, and the flag lands on a direction. The ingest reaches its verdict
+    /// per pair and so writes both rows — 164 of the 2534 directed rows today,
+    /// from 82 flagged pairs — but that is the ingest's choice rather than this
+    /// function's guarantee, and it has not always been true: `winston vs zarya`
+    /// used to be flagged at `+100` against `-31` while its mirror escaped the
+    /// flag purely because the secondary source was silent on the other side.
+    /// Reading one direction would have hidden the contradiction from whichever
+    /// half of the draft happened to be on screen, and it would do so again the
+    /// next time where the flag lands moves.
     ///
     /// Gated on [`Matrix::rating`] rather than on a presence bit of its own: a
     /// pair nobody rated cannot be one the sources fought over, and [`Matrix`]
