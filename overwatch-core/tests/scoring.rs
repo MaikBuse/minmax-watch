@@ -528,8 +528,12 @@ fn a_lone_first_pick_scores_the_same_weighted_or_not() {
     let a = recommend(&ds, &draft, &weighted).expect("scoring succeeds");
     let b = recommend(&ds, &draft, &plain).expect("scoring succeeds");
 
-    // Normalising over the enemies actually entered means one enemy weighs
-    // `w/w == 1`: the answer you get from the first pick alone is untouched.
+    // With one enemy on the board the denominator is that enemy's own weight, so
+    // it cancels: `w/w == 1`, and the answer from the first pick alone is
+    // untouched whatever the role table says. Still true now that the denominator
+    // counts every enemy rather than every *rated* enemy, because with a single
+    // enemy those are the same set - and it is why the fix costs the
+    // partial-input answer this app is built around nothing.
     for (weighted, plain) in a.iter().zip(b.iter()) {
         assert_eq!(weighted.hero, plain.hero);
         assert!((weighted.score - plain.score).abs() < 1e-6);
@@ -538,10 +542,15 @@ fn a_lone_first_pick_scores_the_same_weighted_or_not() {
 
 // --- partial coverage ------------------------------------------------------
 //
-// The matrix has an unrated state, and the counter term is a mean, so the thing
-// worth pinning down is what a missing reading does to that mean: nothing. These
-// use their own fixture because the ones above are deliberately fully rated over
-// the pairs they exercise.
+// The matrix has an unrated state and the counter term is a mean, so what a
+// missing reading does to that mean is worth pinning down precisely. It adds
+// nothing to the numerator - no term, no reason line, no invented dead even - and
+// it still takes its share of the denominator, so a hero the sources have barely
+// rated cannot read as more certain than one they have covered.
+//
+// The second half is newer than the first, and the tests below say which is
+// which. These use their own fixture because the ones above are deliberately
+// fully rated over the pairs they exercise.
 
 const C_REINHARDT: HeroId = HeroId(0);
 const C_DVA: HeroId = HeroId(1);
@@ -612,8 +621,23 @@ fn a_one_sided_matchup_counts_at_its_full_magnitude() {
     assert!((score_of(&recs, C_REINHARDT) + 0.80).abs() < 1e-6);
 }
 
+/// An unrated enemy contributes no reading and still takes its share of the
+/// denominator, which is two claims and both matter.
+///
+/// This test used to assert the opposite of its second half — that adding an
+/// unrated enemy could not move a score at all — and that was the shape of a real
+/// defect. Normalising over the rated enemies only is unbiased for the *mean* and
+/// wrong for the *ranking*: it made a candidate rated against one of five enemies
+/// divide by that one enemy's weight while a fully-rated candidate divided by all
+/// five, so thin coverage read as conviction. See
+/// `a_thinly_rated_hero_no_longer_outranks_a_fully_rated_one_on_coverage_alone`
+/// for the consequence, which is what the change was made for.
+///
+/// What has not changed, and is the first half: the numerator. An unrated pair
+/// still contributes no term and no reason line, so this is dilution rather than
+/// a fabricated dead-even reading.
 #[test]
-fn an_unrated_enemy_is_left_out_of_the_mean_rather_than_counted_as_even() {
+fn an_unrated_enemy_takes_its_share_of_the_denominator_without_adding_a_reading() {
     let ds = sparse_fixture();
     let ctx = UserContext::new(Role::Tank, ds.hero_count());
 
@@ -627,16 +651,105 @@ fn an_unrated_enemy_is_left_out_of_the_mean_rather_than_counted_as_even() {
     let a = recommend(&ds, &rated_only, &ctx).expect("scoring succeeds");
     let b = recommend(&ds, &with_unknown, &ctx).expect("scoring succeeds");
 
-    // Adding an enemy nobody has rated tells us nothing, so it must not move the
-    // answer. Folding it in as a zero would have halved both scores.
+    // Both enemies weigh 1.0 against a tank candidate, so adding the unrated one
+    // exactly halves the share the rated one carries. Reinhardt goes -0.80 to
+    // -0.40, D.Va +0.40 to +0.20.
     for hero in [C_REINHARDT, C_DVA] {
         assert!(
-            (score_of(&a, hero) - score_of(&b, hero)).abs() < 1e-6,
-            "an unrated enemy moved the score from {} to {}",
+            (score_of(&a, hero) / 2.0 - score_of(&b, hero)).abs() < 1e-6,
+            "expected {} to halve, got {}",
             score_of(&a, hero),
             score_of(&b, hero)
         );
     }
+
+    // Uniformly, because the denominator does not depend on the candidate. An
+    // unrated enemy costs every hero the same fraction, so it cannot reorder a
+    // list on its own — it can only stop a thin candidate being flattered.
+    let before = score_of(&a, C_DVA) - score_of(&a, C_REINHARDT);
+    let after = score_of(&b, C_DVA) - score_of(&b, C_REINHARDT);
+    assert!(
+        (before / 2.0 - after).abs() < 1e-6,
+        "the gap between the two candidates did not scale with the denominator"
+    );
+}
+
+/// The defect the denominator change exists for, at its smallest.
+///
+/// Both candidates are read against the same two enemies. Reinhardt is rated
+/// against both at +40; D.Va is rated against one at +60 and is unrated against
+/// the other. The honest reading is that Reinhardt has the better case — it is
+/// +40 against this team, where D.Va is +60 against half of it and unmeasured
+/// against the rest.
+///
+/// Dividing by the rated enemies only gave D.Va 0.60/1.0 against Reinhardt's
+/// 0.40, so the hero with half the evidence led the list. Dividing by the whole
+/// team gives D.Va 0.60/2.0 = 0.30 and leaves Reinhardt at 0.40.
+///
+/// Measured on the committed data this was worth up to eleven places: Emre, on 24
+/// rated rows of 52, reached the drawn top eight of the ban list 68 times in 300
+/// random comps against 16 with this denominator.
+#[test]
+fn a_thinly_rated_hero_no_longer_outranks_a_fully_rated_one_on_coverage_alone() {
+    let heroes = vec![
+        hero("reinhardt", "Reinhardt", Role::Tank),
+        hero("dva", "D.Va", Role::Tank),
+        hero("pharah", "Pharah", Role::Damage),
+        hero("ashe", "Ashe", Role::Damage),
+    ];
+    let n = heroes.len();
+    let (rein, dva, pharah, ashe) = (HeroId(0), HeroId(1), HeroId(2), HeroId(3));
+
+    let mut matchups = Matrix::unrated(n);
+    // Reinhardt: rated against both enemies, +40 each.
+    matchups.set(rein, pharah, 40).expect("in range");
+    matchups.set(pharah, rein, -40).expect("in range");
+    matchups.set(rein, ashe, 40).expect("in range");
+    matchups.set(ashe, rein, -40).expect("in range");
+    // D.Va: a larger reading against one of them, and silence about the other.
+    matchups.set(dva, pharah, 60).expect("in range");
+    matchups.set(pharah, dva, -60).expect("in range");
+
+    let ds = Dataset::new(DatasetParts {
+        heroes,
+        maps: Vec::new(),
+        matchups,
+        synergy: Matrix::unrated(n),
+        map_affinity: Vec::new(),
+        base_strength: vec![0; n],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
+        prevalence: vec![[0; Rank::CHOICES.len()]; n],
+        win_rate: vec![None; n],
+        side_lean: vec![0; n],
+        shape: vec![[0; 3]; n],
+        reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
+        generated: "fixture".to_owned(),
+        patch: "fixture".to_owned(),
+    })
+    .expect("fixture is internally consistent");
+
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+    let mut draft = Draft::new();
+    draft.add_enemy(pharah);
+    draft.add_enemy(ashe);
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+
+    assert!(
+        (score_of(&recs, rein) - 0.40).abs() < 1e-6,
+        "Reinhardt should read +0.40, got {}",
+        score_of(&recs, rein)
+    );
+    assert!(
+        (score_of(&recs, dva) - 0.30).abs() < 1e-6,
+        "D.Va should read +0.30 - its one reading over the whole team - got {}",
+        score_of(&recs, dva)
+    );
+    assert!(
+        score_of(&recs, rein) > score_of(&recs, dva),
+        "the fully-rated hero must lead the thinly-rated one"
+    );
 }
 
 #[test]
@@ -1437,6 +1550,67 @@ fn a_teammate_locking_in_changes_what_is_worth_banning() {
         board.candidates[0].worst_owner.as_deref(),
         Some("mika"),
         "whose hero takes the worst of it, since it is not yours"
+    );
+}
+
+/// The ban list's half of the coverage fix, which is where the defect did the most
+/// damage: `score <= 0.0` discards the unfavourable tail and the panel draws only
+/// the first eight, so a thin candidate's wider spread reached the user in one
+/// direction only.
+///
+/// Two members, and a candidate rated against just one of them. Dividing by the
+/// contributing members alone gave it that member's reading at full strength —
+/// `certainty * w * danger / certainty` — so half the evidence produced the whole
+/// score, and a hero rated against nobody but one teammate could lead a list over
+/// one measured against the entire team. Dividing by both halves it.
+///
+/// Baptiste beats Ana by 60 and is unrated against everything in my own pool, so
+/// it is the one candidate this fixture can express the case with.
+#[test]
+fn a_candidate_rated_against_one_member_of_two_scores_over_the_whole_team() {
+    let ds = symmetric_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let mut both = team(vec![pooled(
+        "me",
+        true,
+        Role::Tank,
+        vec![W_REINHARDT, W_DVA],
+    )]);
+    both.members
+        .push(locked("mika", false, Role::Support, W_ANA));
+
+    let with_two = ban_recommendations(&ds, &Draft::new(), &ctx, &both);
+    let baptiste = with_two
+        .candidates
+        .iter()
+        .find(|c| c.hero == W_BAPTISTE)
+        .expect("Baptiste is the one candidate with an argument here");
+
+    // Mika alone: Ana is a support member, so the role weight for a support
+    // candidate is 0.6, and the reading is +0.60 of danger. Over both members the
+    // score is `1.0 * 0.6 * 0.60 / 2.0 = 0.18`; over the contributing member only
+    // it was `/ 1.0 = 0.36`, twice as large on the same single reading.
+    let expected = 0.6 * 0.60 / 2.0;
+    assert!(
+        (baptiste.severity - 0.60 / 2.0).abs() < 1e-6,
+        "severity should be the danger spread over the whole team, got {}",
+        baptiste.severity
+    );
+    // `symmetric_fixture` leaves prevalence at zero everywhere, so the ordering
+    // multiplier is exactly 1.0 and `score` is the weighted mean unmodified.
+    assert_eq!(baptiste.prevalence, 0, "the fixture rates no pick rates");
+    assert!(
+        (baptiste.score - expected).abs() < 1e-6,
+        "score should be {expected}, got {}",
+        baptiste.score
+    );
+
+    // And the sorted column still agrees with the shown one: both took the same
+    // denominator, which is what `BanCandidate::severity` promises.
+    assert!(
+        baptiste.severity > 0.0 && baptiste.score > 0.0,
+        "a real argument, just a smaller one"
     );
 }
 

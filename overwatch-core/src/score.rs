@@ -659,18 +659,28 @@ fn score_hero(
     let rank_contribution = w.rank * rank_shift;
 
     // A weighted mean rather than a plain one, so the enemy tank is not outvoted
-    // by the damage pair just because a team fields two of them. Normalising over
-    // the enemies actually entered means a lone first pick weighs `w/w == 1`:
-    // role weighting only starts to bite as the team fills, and never distorts
-    // the partial-input answer this app is built around.
+    // by the damage pair just because a team fields two of them.
     //
-    // Enemies this candidate has no reading against are left out of the mean
-    // entirely rather than folded in as a zero. Counting them would be averaging
-    // in the absence of evidence — it drags a hero the sources have barely rated
-    // toward the middle of the field and, worse, produces a "strong into X"
-    // reason for a matchup nobody has an opinion on. The cost is that a candidate
-    // with one known matchup out of five enemies now leans entirely on that one;
-    // the sources' coverage, not this mean, is the thing to fix there.
+    // Enemies this candidate has no reading against contribute **nothing to the
+    // numerator but their weight to the denominator**, and the difference between
+    // that and dropping them from both is the whole point. An unrated pair still
+    // says nothing about this hero — no term, and no "strong into X" reason for a
+    // matchup nobody has an opinion on. What it must not do is make the readings
+    // that *do* exist count for more.
+    //
+    // Normalising over the rated enemies only, as this did, is unbiased for the
+    // mean and wrong for the ranking. Measured over 300 random five-enemy drafts:
+    // mean counter term is flat across coverage, but the standard deviation at one
+    // rated enemy is 1.88x the deviation at five, and a list is chosen by its
+    // maximum. A candidate rated against one enemy won the counter term 3.5x as
+    // often as one rated against all five (P(top) 0.200 against 0.057); with this
+    // denominator, 0.000 against 0.067. Concretely, Emre — 24 rated rows of 52 and
+    // a *below-average* mean counter — topped the damage list in 19 of 276 drafts
+    // while Soldier: 76, better mean and full coverage, topped it none.
+    //
+    // The fold in `matchup_term` is deliberately left alone: a lone reading is
+    // still worth its full magnitude, because that is a statement about one pair.
+    // This is a statement about comparing estimates of unequal precision.
     let rated: Vec<(HeroId, f32)> = draft
         .enemies
         .iter()
@@ -678,9 +688,10 @@ fn score_hero(
         .collect();
 
     let mut counter_total = 0.0;
-    let total_weight: f32 = rated
+    let total_weight: f32 = draft
+        .enemies
         .iter()
-        .map(|(enemy, _)| enemy_weight(ds, ctx, *enemy))
+        .map(|enemy| enemy_weight(ds, ctx, *enemy))
         .sum();
     if total_weight > 0.0 {
         for (enemy, term) in &rated {
@@ -715,11 +726,35 @@ fn score_hero(
     // empty, so this is the common case rather than the edge one.
     //
     // Allies this candidate has no synergy reading against are left out of the
-    // mean entirely, for the same reason the counter mean above leaves out
-    // unrated enemies: dividing by every ally would average in the absence of
-    // evidence and drag a well-paired hero toward zero purely because the file
-    // is sparse. `rating` rather than `get`, because here "nothing known" and
-    // "even" are emphatically not the same answer.
+    // mean entirely — and **unlike the counter mean above, they are left out of
+    // the denominator too.** The two look like the same normalisation and are not,
+    // so this is deliberate rather than an inconsistency to tidy up.
+    //
+    // The counter mean can divide by every enemy because matchup values are signed
+    // and centred: over the committed matrix, 39% positive, 43% negative, mean
+    // -0.63. The expected contribution of a pair nobody rated is therefore about
+    // zero, so counting it in the denominator costs a hero nothing it was owed —
+    // it only stops thin coverage reading as conviction.
+    //
+    // Synergy is one-signed. All 441 committed pairs are positive, mean +35, and
+    // the file covers 21% of the roster's ordered pairs against the matrix's 92%.
+    // Divide by every ally here and the term stops measuring how well a hero pairs
+    // and starts measuring how many of your allies the source happened to list it
+    // with: the expected value of an absent reading is +35, not 0, so omitting it
+    // from the numerator while charging it to the denominator is a penalty rather
+    // than a neutral dilution. It would land hardest on the heroes the source
+    // lists least, which are the tanks — Roadhog has 6 rated partners of 52,
+    // Reinhardt 8.
+    //
+    // Measured: the mean term is flat across coverage (+0.318 at one rated ally,
+    // +0.323 at three), so the same variance inflation exists here as in the
+    // counter mean — the standard deviation runs 0.172 at one against 0.106 at
+    // three. But the cure available there is worse than the disease here. If this
+    // ever needs fixing, it wants a shrink toward the file's own positive mean —
+    // the shape of `selection_shrink` in the ingest — and not this denominator.
+    //
+    // `rating` rather than `get`, because here "nothing known" and "even" are
+    // emphatically not the same answer.
     let mut synergy_total = 0.0;
     let rated_allies: Vec<(HeroId, f32)> = draft
         .allies
@@ -1102,13 +1137,28 @@ pub fn ban_recommendations(
             let mut worst: Option<(HeroId, &Defended, f32)> = None;
 
             for member in &team.members {
-                // Pairs nobody has rated are left out of the mean rather than
-                // folded in as a zero, for the same reason the counter term
-                // leaves them out: averaging in the absence of evidence drags a
-                // barely-rated hero toward the middle and invents a reading for
-                // a matchup the sources have no opinion on. A candidate rated
-                // against nobody on the team drops out entirely — silence is
-                // not safety.
+                let certainty = member.certainty();
+                // Every member divides, including one this candidate is unrated
+                // against. That member contributes no danger — an unrated pair
+                // still says nothing, and still produces no reason line — but it
+                // must not make the members who *did* rate the candidate count
+                // for more than their share of the team.
+                //
+                // Dividing by the contributing members only, as this did, is what
+                // let a barely-rated hero take the top row: rated against 1 of 5
+                // it divided by 1.0, rated against all five it divided by 5.0, so
+                // one strong pair beat five moderate ones. Mizuki led a Baptiste
+                // player's list at 0.5000 off a single pair — 23 rated rows of 52 —
+                // above a fully-rated Ramattra at 0.3464, whose numerator was three
+                // and a half times larger. Over 300 random comps, Emre reached the
+                // drawn top eight 68 times against 16 with this denominator.
+                //
+                // It is variance, not bias: the mean danger is flat across
+                // coverage, but `score <= 0` below discards the unfavourable tail
+                // and the panel draws only the first eight, so a thin candidate's
+                // wider spread reaches the user in one direction.
+                total += certainty;
+
                 let rated: Vec<(HeroId, f32)> = member
                     .heroes
                     .iter()
@@ -1121,10 +1171,8 @@ pub fn ban_recommendations(
                 }
 
                 let danger = rated.iter().map(|(_, term)| term).sum::<f32>() / rated.len() as f32;
-                let certainty = member.certainty();
                 weighted += certainty * ctx.weights.enemy_roles.get(member.role, role) * danger;
                 plain += certainty * danger;
-                total += certainty;
 
                 // Only somebody who has actually said what they play can have a
                 // hero take the worst of it. An `Unknown` member's worst case is
@@ -1138,6 +1186,12 @@ pub fn ban_recommendations(
                 }
             }
 
+            // An empty team, which `BanSubject` cannot actually produce — kept as
+            // the guard against dividing by zero rather than as a rule about
+            // coverage. Coverage is now the `score <= 0.0` gate's job: a candidate
+            // nobody on the team is rated against contributes nothing to
+            // `weighted`, so it scores exactly zero and drops out just below.
+            // Silence is still not safety; it is just stated one line later.
             if total <= 0.0 {
                 return None;
             }
@@ -1151,13 +1205,14 @@ pub fn ban_recommendations(
             // the only thing behind its score is a role somebody is queued in.
             // It drops out, and the `?` is the whole rule.
             //
-            // This is not tidiness about the missing "hardest on" line. `total`
-            // sums the certainty of the members that actually had a rating, so
-            // a candidate rated *only* by an `Unknown` member divides its 0.25
-            // straight back out again and lands at full weight — the discount
-            // evaporates exactly where it was supposed to bite. Ranking a hero
-            // off a role nobody claimed, above one your own pool is measured
-            // against, is the failure that guards against.
+            // This used to carry a second job it was bad at. `total` summed the
+            // certainty of the members that had a rating, so a candidate rated
+            // *only* by an `Unknown` member divided its 0.25 straight back out and
+            // landed at full weight — the discount evaporated exactly where it was
+            // supposed to bite, and this gate was the patch. The denominator above
+            // now counts every member, so the discount survives on its own and
+            // this is back to being about the missing "hardest on" line: there is
+            // no hero to name, so there is no row to draw.
             let (worst_hero, owner, _) = worst?;
 
             let prevalence = ds.prevalence_at(ctx.rank, hero);
