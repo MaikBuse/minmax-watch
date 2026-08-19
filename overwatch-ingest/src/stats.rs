@@ -88,6 +88,76 @@ fn blend_win_rate(cpgg: Option<f32>, cwatch: Option<f32>, blizzard: Option<f32>)
     Some(sum / total)
 }
 
+/// Pick-rate points at which a hero keeps half of its deviation from its role's
+/// mean win rate.
+///
+/// **This corrects selection, not sample size**, and the distinction matters
+/// because it wears the same `p/(p+K)` shape as [`CWATCH_SHRINKAGE_K`] and that
+/// one *is* about sample size. Role queue makes a hero's pick rate the fraction of
+/// teams it appears on, so a hero at 5% is not a hero somebody measured badly — it
+/// is a hero chosen by the people who main it, and its published win rate is what
+/// its specialists get rather than what the next player would. No amount of extra
+/// data fixes that; it is the population that is wrong, not its size.
+///
+/// Torbjörn is the case that made it visible. Three sources average him to 55.1%,
+/// which put him at the top of `strength.toml` off a 5.0% pick rate against a
+/// damage fair share of 8.33 — and a 0.3% ban rate at Grandmaster, which is the
+/// ladder saying out loud that nobody fears him.
+///
+/// 4.0 is about half of the damage fair share, so the rule reads "a hero picked
+/// half as often as its share keeps half of what makes it look unusual", and a
+/// hero *at* its share keeps about two thirds. **`0.0` reproduces the unshrunk
+/// value exactly**, which is the [`Rank::All`] property that lets the knob exist
+/// without a number nobody measured.
+///
+/// An ingest constant and not a `Weights` field, because it corrects a
+/// measurement rather than expressing a preference: there is no version of "how
+/// much do you care about selection bias" that a player could answer, and the diff
+/// review is where a number like this gets argued about.
+///
+/// What it costs, and it is worth stating plainly: mean |value| across the roster
+/// falls from 29.8 to 19.4, because every hero is below the pivot's reach to some
+/// degree and so every deviation shrinks. That is a third of the column's spread,
+/// and it is the intended reading rather than a side effect —
+/// [`WIN_RATE_FLOOR`]'s band is fixed precisely so that a roster which really is
+/// closer together reads as "nobody stands out" instead of having the remainder
+/// stretched back out to fill the scale.
+const SELECTION_PIVOT: f32 = 4.0;
+
+/// The mean blended win rate of each role.
+///
+/// Per role rather than per roster because "average" is a claim about the heroes a
+/// pick actually competes with, and role queue is what makes those disjoint. On
+/// the committed data the three currently agree within 0.2 points, so this is
+/// about getting the reasoning right rather than about a number that moves today.
+fn role_means(blends: &HashMap<&str, f32>, roles: &HashMap<String, Role>) -> HashMap<Role, f32> {
+    let mut totals: HashMap<Role, (f32, usize)> = HashMap::new();
+    for (hero, rate) in blends {
+        let Some(role) = roles.get(*hero) else {
+            continue;
+        };
+        let slot = totals.entry(*role).or_insert((0.0, 0));
+        slot.0 += rate;
+        slot.1 += 1;
+    }
+    totals
+        .into_iter()
+        .filter(|(_, (_, count))| *count > 0)
+        .map(|(role, (sum, count))| (role, sum / count as f32))
+        .collect()
+}
+
+/// Pulls a rarely-picked hero's win rate toward its role's mean. See
+/// [`SELECTION_PIVOT`].
+fn selection_shrink(rate: f32, role_mean: f32, pick: f32) -> f32 {
+    if pick <= 0.0 {
+        // Nobody picked it, so nothing about its rate is a reading of what a
+        // random player would get. The role mean is all that is left to say.
+        return role_mean;
+    }
+    role_mean + (rate - role_mean) * pick / (pick + SELECTION_PIVOT)
+}
+
 /// counterwatch's own published shrinkage constant, reused as its weight in the
 /// rank shift.
 ///
@@ -266,11 +336,29 @@ pub fn build(
     cwatch_rates: &HashMap<String, HeroRates>,
     blizzard: &BlizzardRates,
     known_maps: &HashSet<String>,
+    roles: &HashMap<String, Role>,
 ) -> (StrengthFile, MapAffinityFile, StrengthByRankFile) {
     let mut strength = Vec::with_capacity(stats.len());
     let mut by_rank: Vec<StrengthByRankEntry> = Vec::with_capacity(stats.len());
     let mut affinity = Vec::new();
     let mut unknown_maps: Vec<String> = Vec::new();
+    // (hero, published blend, corrected) for the shrink report below.
+    let mut corrections: Vec<(String, f32, f32)> = Vec::new();
+
+    // Blended first, for the whole roster, because the selection shrink below is
+    // measured against a role's mean and a mean needs every hero in the role.
+    let blends: HashMap<&str, f32> = stats
+        .iter()
+        .map(|hero| {
+            let cwatch = cwatch_rates.get(&hero.hero).map(|rates| rates.all_ranks);
+            let blizzard_rate = blizzard.baseline.get(&hero.hero).copied();
+            (
+                hero.hero.as_str(),
+                blend_win_rate(Some(hero.win_rate), cwatch, blizzard_rate).unwrap_or(hero.win_rate),
+            )
+        })
+        .collect();
+    let means = role_means(&blends, roles);
 
     for hero in stats {
         let cpgg = Some(hero.win_rate);
@@ -282,9 +370,21 @@ pub fn build(
         let blizzard_rate = blizzard.baseline.get(&hero.hero).copied();
         let blended = blend_win_rate(cpgg, cwatch, blizzard_rate).unwrap_or(hero.win_rate);
 
+        // Corrected for selection before it is scaled, and **only** here: the
+        // `win_rate` column keeps the published blend, and `shift_to_value` below
+        // keeps it as its base rate. See `selection_shrink`.
+        let corrected = match (
+            roles.get(&hero.hero).and_then(|role| means.get(role)),
+            blizzard.pick_rate.get(&(Rank::All, hero.hero.clone())),
+        ) {
+            (Some(mean), Some(pick)) => selection_shrink(blended, *mean, *pick),
+            _ => blended,
+        };
+
+        corrections.push((hero.hero.clone(), blended, corrected));
         strength.push(StrengthEntry {
             hero: hero.hero.clone(),
-            value: normalize(blended, WIN_RATE_FLOOR, WIN_RATE_CEILING),
+            value: normalize(corrected, WIN_RATE_FLOOR, WIN_RATE_CEILING),
             win_rate: Some((blended * 10.0).round() / 10.0),
             cpgg,
             cwatch,
@@ -319,6 +419,8 @@ pub fn build(
         }
     }
 
+    report_selection_shrink(&corrections);
+
     unknown_maps.sort_unstable();
     unknown_maps.dedup();
     for map in unknown_maps {
@@ -344,6 +446,35 @@ pub fn build(
             entries: by_rank,
         },
     )
+}
+
+/// Names what the selection shrink actually moved.
+///
+/// The diff review is where [`SELECTION_PIVOT`] gets argued about, so the run has
+/// to say who it moved and by how much — a correction that quietly rewrote 53 win
+/// rates and reported nothing would be indistinguishable from a bug.
+fn report_selection_shrink(corrections: &[(String, f32, f32)]) {
+    let mut movers: Vec<&(String, f32, f32)> = corrections
+        .iter()
+        .filter(|(_, blended, corrected)| (blended - corrected).abs() >= 0.05)
+        .collect();
+    if movers.is_empty() {
+        return;
+    }
+    movers.sort_by(|a, b| (b.1 - b.2).abs().total_cmp(&(a.1 - a.2).abs()));
+
+    let named: Vec<String> = movers
+        .iter()
+        .take(5)
+        .map(|(hero, blended, corrected)| format!("{hero} {blended:.1}->{corrected:.1}"))
+        .collect();
+    eprintln!(
+        "  selection shrink: {} of {} win rates pulled toward their role mean | \
+         furthest: {}",
+        movers.len(),
+        corrections.len(),
+        named.join(", "),
+    );
 }
 
 /// Slots each role fills on a team, in the population Blizzard measured.
@@ -494,6 +625,17 @@ mod tests {
         BlizzardRates::default()
     }
 
+    /// Every hero the fixtures use, so the selection shrink has a role mean to
+    /// pull toward. Deliberately every fixture hero in one role: with a single
+    /// hero the role mean *is* its own rate, so the shrink is a no-op and the
+    /// tests that predate it keep asserting exactly what they always did.
+    fn roles() -> HashMap<String, Role> {
+        ["torbjorn", "ana", "zenyatta", "dva", "symmetra"]
+            .into_iter()
+            .map(|hero| (hero.to_owned(), Role::Damage))
+            .collect()
+    }
+
     /// counterwatch's all-ranks figure, with no rank breakdown behind it.
     fn cwatch_all(pairs: &[(&str, f32)]) -> HashMap<String, HeroRates> {
         pairs
@@ -539,7 +681,14 @@ mod tests {
 
     #[test]
     fn win_rates_map_onto_the_canonical_scale() {
-        let (strength, _, _) = build("today", &stats(), &HashMap::new(), &no_ranks(), &known());
+        let (strength, _, _) = build(
+            "today",
+            &stats(),
+            &HashMap::new(),
+            &no_ranks(),
+            &known(),
+            &roles(),
+        );
 
         let ana = strength
             .entries
@@ -571,10 +720,17 @@ mod tests {
         }];
         let cwatch = cwatch_all(&[("zenyatta", 53.6)]);
 
-        let alone = &build("today", &zen, &HashMap::new(), &no_ranks(), &known())
-            .0
-            .entries[0];
-        let blended = &build("today", &zen, &cwatch, &no_ranks(), &known())
+        let alone = &build(
+            "today",
+            &zen,
+            &HashMap::new(),
+            &no_ranks(),
+            &known(),
+            &roles(),
+        )
+        .0
+        .entries[0];
+        let blended = &build("today", &zen, &cwatch, &no_ranks(), &known(), &roles())
             .0
             .entries[0];
 
@@ -603,7 +759,7 @@ mod tests {
         }];
         let cwatch = cwatch_all(&[("torbjorn", 55.7)]);
 
-        let two = &build("today", &torb, &cwatch, &no_ranks(), &known())
+        let two = &build("today", &torb, &cwatch, &no_ranks(), &known(), &roles())
             .0
             .entries[0];
         let three = &build(
@@ -612,6 +768,7 @@ mod tests {
             &cwatch,
             &blizzard("torbjorn", 51.6, [51.6; 8]),
             &known(),
+            &roles(),
         )
         .0
         .entries[0];
@@ -646,6 +803,7 @@ mod tests {
             &HashMap::new(),
             &blizzard("ana", 53.0, [53.0; 8]),
             &known(),
+            &roles(),
         )
         .0
         .entries[0];
@@ -661,7 +819,7 @@ mod tests {
     fn a_hero_above_the_band_still_saturates_after_blending() {
         let cwatch = cwatch_all(&[("torbjorn", 55.7)]);
 
-        let (blended, _, _) = build("today", &stats(), &cwatch, &no_ranks(), &known());
+        let (blended, _, _) = build("today", &stats(), &cwatch, &no_ranks(), &known(), &roles());
         let torb = blended
             .entries
             .iter()
@@ -677,7 +835,14 @@ mod tests {
 
     #[test]
     fn a_hero_only_one_site_rates_keeps_that_sites_number() {
-        let (only_cpgg, _, _) = build("today", &stats(), &HashMap::new(), &no_ranks(), &known());
+        let (only_cpgg, _, _) = build(
+            "today",
+            &stats(),
+            &HashMap::new(),
+            &no_ranks(),
+            &known(),
+            &roles(),
+        );
         let ana = only_cpgg
             .entries
             .iter()
@@ -691,9 +856,138 @@ mod tests {
         assert_eq!(ana.value, 0);
     }
 
+    /// A roster of two damage heroes with pick rates, which is what the selection
+    /// shrink needs: a role mean to pull toward and a published pick rate to say
+    /// how hard.
+    fn picked(pairs: &[(&str, f32, f32)]) -> (Vec<HeroStats>, BlizzardRates) {
+        let stats = pairs
+            .iter()
+            .map(|(hero, win_rate, pick_rate)| HeroStats {
+                hero: (*hero).to_owned(),
+                win_rate: *win_rate,
+                pick_rate: *pick_rate,
+                best_maps: Vec::new(),
+            })
+            .collect();
+        let mut rates = BlizzardRates::default();
+        for (hero, _, pick_rate) in pairs {
+            rates
+                .pick_rate
+                .insert((Rank::All, (*hero).to_owned()), *pick_rate);
+        }
+        (stats, rates)
+    }
+
+    /// The correction Torbjörn made necessary. Two heroes with the same win rate
+    /// and different pick rates must not read as equally strong: one of them is
+    /// being measured over the people who chose to main it.
+    #[test]
+    fn a_rarely_picked_hero_keeps_less_of_its_win_rate_deviation() {
+        // Both 54%, so both deviate from the role mean of 52% by the same 2
+        // points. Only the pick rate differs.
+        let (stats, rates) = picked(&[("torbjorn", 54.0, 2.0), ("ana", 50.0, 20.0)]);
+        let roles: HashMap<String, Role> = [("torbjorn", Role::Damage), ("ana", Role::Damage)]
+            .into_iter()
+            .map(|(hero, role)| (hero.to_owned(), role))
+            .collect();
+
+        let (strength, _, _) = build("today", &stats, &HashMap::new(), &rates, &known(), &roles);
+        let value = |hero: &str| {
+            strength
+                .entries
+                .iter()
+                .find(|entry| entry.hero == hero)
+                .expect("rated")
+                .value
+        };
+
+        // The role mean is 52. Torbjörn at a 2.0 pick rate keeps 2/(2+4) of his
+        // two points above it and lands at 52.67; Ana at 20.0 keeps 20/24 of her
+        // two points below it and lands at 50.33. Same distance from the mean,
+        // very different readings of how much of it is a hero rather than the
+        // people who chose it — and his raw 54.0 would have scaled to 67.
+        assert_eq!(value("torbjorn"), 44);
+        // The correction has no preferred direction: below the mean, a
+        // well-picked hero keeps almost all of its deficit.
+        assert_eq!(value("ana"), 6);
+    }
+
+    #[test]
+    fn a_hero_at_its_roles_fair_share_keeps_most_of_it() {
+        // 8.33 is the damage fair share, so this is the reference case: 8.33/12.33
+        // of the deviation survives.
+        let (stats, rates) = picked(&[("torbjorn", 56.0, 8.33), ("ana", 50.0, 8.33)]);
+        let roles: HashMap<String, Role> = [("torbjorn", Role::Damage), ("ana", Role::Damage)]
+            .into_iter()
+            .map(|(hero, role)| (hero.to_owned(), role))
+            .collect();
+
+        let (strength, _, _) = build("today", &stats, &HashMap::new(), &rates, &known(), &roles);
+        let torb = &strength.entries[1];
+
+        assert_eq!(torb.hero, "torbjorn");
+        // 3 points above the mean of 53, two thirds of which survives, so 55.03 —
+        // against the 100 the raw 56.0 would have scaled to.
+        assert_eq!(torb.value, 84);
+    }
+
+    /// The property that lets the pivot exist without a number nobody measured:
+    /// zero turns the whole correction off and reproduces the old file exactly.
+    #[test]
+    fn a_zero_pivot_reproduces_the_unshrunk_value() {
+        assert_eq!(selection_shrink(56.0, 50.0, 8.33), {
+            50.0 + 6.0 * 8.33 / (8.33 + SELECTION_PIVOT)
+        });
+
+        // `SELECTION_PIVOT` is a constant, so this asserts the shape rather than
+        // rebinding it: at a pivot of zero the factor is `p/p`, which is one.
+        let unshrunk = |rate: f32, mean: f32, pick: f32| mean + (rate - mean) * pick / (pick + 0.0);
+        assert_eq!(unshrunk(56.0, 50.0, 8.33), 56.0);
+        assert_eq!(unshrunk(44.0, 50.0, 0.5), 44.0);
+    }
+
+    /// The published figure has to survive, because the ban panel prints it
+    /// verbatim as "56.9% win rate". A shrunk number shown as *the* win rate would
+    /// be a figure no source published.
+    #[test]
+    fn the_displayed_win_rate_is_still_the_published_one() {
+        let (stats, rates) = picked(&[("torbjorn", 58.0, 2.0), ("ana", 50.0, 20.0)]);
+        let roles: HashMap<String, Role> = [("torbjorn", Role::Damage), ("ana", Role::Damage)]
+            .into_iter()
+            .map(|(hero, role)| (hero.to_owned(), role))
+            .collect();
+        let cwatch = cwatch_all(&[("torbjorn", 55.7)]);
+
+        let (strength, _, by_rank) = build("today", &stats, &cwatch, &rates, &known(), &roles);
+        let torb = &strength.entries[1];
+
+        assert_eq!(torb.hero, "torbjorn");
+        assert_eq!(
+            torb.win_rate,
+            Some(56.9),
+            "the blend of what the sources actually published"
+        );
+        assert!(
+            torb.value < normalize(56.9, WIN_RATE_FLOOR, WIN_RATE_CEILING),
+            "while the value it scores on has been corrected downward"
+        );
+        assert!(
+            by_rank.entries.is_empty(),
+            "and the rank slices are untouched, because they keep the raw blend \
+             as their base rate"
+        );
+    }
+
     #[test]
     fn map_affinity_decays_by_rank() {
-        let (_, affinity, _) = build("today", &stats(), &HashMap::new(), &no_ranks(), &known());
+        let (_, affinity, _) = build(
+            "today",
+            &stats(),
+            &HashMap::new(),
+            &no_ranks(),
+            &known(),
+            &roles(),
+        );
 
         let value_for = |map: &str| {
             affinity
@@ -712,7 +1006,14 @@ mod tests {
         let mut stats = stats();
         stats[1].best_maps = vec!["atlantis".to_owned()];
 
-        let (_, affinity, _) = build("today", &stats, &HashMap::new(), &no_ranks(), &known());
+        let (_, affinity, _) = build(
+            "today",
+            &stats,
+            &HashMap::new(),
+            &no_ranks(),
+            &known(),
+            &roles(),
+        );
         assert!(affinity.entries.iter().all(|e| e.hero != "ana"));
     }
 
@@ -723,7 +1024,14 @@ mod tests {
     #[test]
     fn a_hero_with_no_rank_effect_stores_no_shift_at_all() {
         let flat = blizzard("ana", 50.0, [50.0; 8]);
-        let (_, _, by_rank) = build("today", &stats(), &HashMap::new(), &flat, &known());
+        let (_, _, by_rank) = build(
+            "today",
+            &stats(),
+            &HashMap::new(),
+            &flat,
+            &known(),
+            &roles(),
+        );
 
         assert_eq!(
             curve(&by_rank, "ana"),
@@ -742,7 +1050,14 @@ mod tests {
             50.0,
             [53.0, 52.0, 51.0, 50.0, 49.0, 48.0, 47.0, 46.0],
         );
-        let (_, _, by_rank) = build("today", &stats(), &HashMap::new(), &ramp, &known());
+        let (_, _, by_rank) = build(
+            "today",
+            &stats(),
+            &HashMap::new(),
+            &ramp,
+            &known(),
+            &roles(),
+        );
         let curve = curve(&by_rank, "ana");
 
         // A straight line is a fixed point of `[1, 2, 1] / 4`, including at the
@@ -775,7 +1090,14 @@ mod tests {
             50.0,
             [50.0, 50.0, 50.0, 50.0, 50.0, 50.0, 56.0, 50.0],
         );
-        let (_, _, by_rank) = build("today", &stats(), &HashMap::new(), &spike, &known());
+        let (_, _, by_rank) = build(
+            "today",
+            &stats(),
+            &HashMap::new(),
+            &spike,
+            &known(),
+            &roles(),
+        );
         let curve = curve(&by_rank, "ana");
 
         let master = curve[Rank::Master.column().expect("a rung")].expect("rated");
@@ -830,12 +1152,19 @@ mod tests {
         )]);
 
         let read = |cwatch: &HashMap<String, HeroRates>| {
-            let (_, _, by_rank) = build("today", &stats(), cwatch, &bliz, &known());
+            let (_, _, by_rank) = build("today", &stats(), cwatch, &bliz, &known(), &roles());
             curve(&by_rank, "ana")[Rank::Gold.column().expect("a rung")].expect("rated")
         };
 
         let alone = {
-            let (_, _, by_rank) = build("today", &stats(), &HashMap::new(), &bliz, &known());
+            let (_, _, by_rank) = build(
+                "today",
+                &stats(),
+                &HashMap::new(),
+                &bliz,
+                &known(),
+                &roles(),
+            );
             curve(&by_rank, "ana")[Rank::Gold.column().expect("a rung")].expect("rated")
         };
 
@@ -861,7 +1190,14 @@ mod tests {
             .expect("a rung")
             .remove("ana");
 
-        let (_, _, by_rank) = build("today", &stats(), &HashMap::new(), &partial, &known());
+        let (_, _, by_rank) = build(
+            "today",
+            &stats(),
+            &HashMap::new(),
+            &partial,
+            &known(),
+            &roles(),
+        );
         let entry = by_rank
             .entries
             .iter()
@@ -888,8 +1224,16 @@ mod tests {
             &HashMap::new(),
             &blizzard("ana", 50.0, [55.0; 8]),
             &known(),
+            &roles(),
         );
-        let (without, _, empty) = build("today", &stats(), &HashMap::new(), &no_ranks(), &known());
+        let (without, _, empty) = build(
+            "today",
+            &stats(),
+            &HashMap::new(),
+            &no_ranks(),
+            &known(),
+            &roles(),
+        );
 
         let values =
             |file: &StrengthFile| -> Vec<i8> { file.entries.iter().map(|e| e.value).collect() };
@@ -900,8 +1244,14 @@ mod tests {
 
     #[test]
     fn output_is_ordered_for_a_clean_diff() {
-        let (strength, affinity, _) =
-            build("today", &stats(), &HashMap::new(), &no_ranks(), &known());
+        let (strength, affinity, _) = build(
+            "today",
+            &stats(),
+            &HashMap::new(),
+            &no_ranks(),
+            &known(),
+            &roles(),
+        );
 
         let heroes: Vec<_> = strength.entries.iter().map(|e| e.hero.as_str()).collect();
         let mut sorted = heroes.clone();

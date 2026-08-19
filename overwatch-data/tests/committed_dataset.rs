@@ -1003,3 +1003,55 @@ fn the_prevalence_columns_are_populated_and_actually_differ_from_one_another() {
         );
     }
 }
+
+/// The failure the selection shrink could cause rather than fix.
+///
+/// It pulls a hero's win rate toward its role's mean in proportion to how rarely
+/// it is picked, which is the correction a specialist-only win rate needs. Applied
+/// too hard, though, it would turn `strength.toml` into a ranking of pick rate:
+/// every rarely-picked hero flattened to average and every common one left alone,
+/// so the strongest heroes would simply be the most-played ones — or, if the sign
+/// went wrong, the least.
+///
+/// So this asserts the two columns are not measuring the same thing. Deliberately
+/// a weak bound in both directions: some genuine relationship is expected and
+/// fine, because a hero that is actually strong does get picked more.
+#[test]
+fn the_strongest_heroes_are_not_simply_the_least_picked_ones() {
+    let ds = load().expect("committed data must load");
+
+    let pairs: Vec<(f32, f32)> = (0..ds.hero_count())
+        .map(|index| HeroId(index as u16))
+        .map(|hero| {
+            (
+                f32::from(ds.base_strength(hero)),
+                f32::from(ds.prevalence_at(Rank::All, hero)),
+            )
+        })
+        .collect();
+
+    let mean = |values: &[f32]| values.iter().sum::<f32>() / values.len() as f32;
+    let strengths: Vec<f32> = pairs.iter().map(|(s, _)| *s).collect();
+    let picks: Vec<f32> = pairs.iter().map(|(_, p)| *p).collect();
+    let (mean_s, mean_p) = (mean(&strengths), mean(&picks));
+
+    let covariance: f32 = pairs
+        .iter()
+        .map(|(s, p)| (s - mean_s) * (p - mean_p))
+        .sum::<f32>();
+    let spread = |values: &[f32], mean: f32| {
+        values
+            .iter()
+            .map(|v| (v - mean).powi(2))
+            .sum::<f32>()
+            .sqrt()
+    };
+    let r = covariance / (spread(&strengths, mean_s) * spread(&picks, mean_p));
+
+    assert!(
+        r.abs() < 0.7,
+        "base strength and prevalence correlate at r = {r:.2} - patch strength has \
+         become a reading of how often a hero is picked rather than of how often \
+         it wins"
+    );
+}

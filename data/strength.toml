@@ -2,7 +2,7 @@ generated = "2026-08-19"
 
 [[strength]]
 hero = "ana"
-value = -29
+value = -25
 win_rate = 48.29999923706055
 cpgg = 48.0
 cwatch = 48.29999923706055
@@ -10,7 +10,7 @@ blizzard = 48.5
 
 [[strength]]
 hero = "anran"
-value = 31
+value = 22
 win_rate = 51.900001525878906
 cpgg = 52.0
 cwatch = 51.900001525878906
@@ -18,7 +18,7 @@ blizzard = 51.70000076293945
 
 [[strength]]
 hero = "ashe"
-value = 21
+value = 16
 win_rate = 51.20000076293945
 cpgg = 51.0
 cwatch = 51.70000076293945
@@ -26,7 +26,7 @@ blizzard = 51.0
 
 [[strength]]
 hero = "baptiste"
-value = -57
+value = -34
 win_rate = 46.599998474121094
 cpgg = 46.0
 cwatch = 47.599998474121094
@@ -34,7 +34,7 @@ blizzard = 46.20000076293945
 
 [[strength]]
 hero = "bastion"
-value = -23
+value = -18
 win_rate = 48.599998474121094
 cpgg = 50.0
 cwatch = 48.20000076293945
@@ -42,7 +42,7 @@ blizzard = 47.599998474121094
 
 [[strength]]
 hero = "brigitte"
-value = 8
+value = 4
 win_rate = 50.5
 cpgg = 50.0
 cwatch = 52.20000076293945
@@ -50,7 +50,7 @@ blizzard = 49.20000076293945
 
 [[strength]]
 hero = "cassidy"
-value = -44
+value = -35
 win_rate = 47.29999923706055
 cpgg = 47.0
 cwatch = 47.79999923706055
@@ -58,7 +58,7 @@ blizzard = 47.20000076293945
 
 [[strength]]
 hero = "dmon"
-value = 16
+value = 13
 win_rate = 50.900001525878906
 cpgg = 50.0
 cwatch = 52.70000076293945
@@ -66,7 +66,7 @@ blizzard = 50.099998474121094
 
 [[strength]]
 hero = "domina"
-value = 3
+value = 2
 win_rate = 50.20000076293945
 cpgg = 50.0
 cwatch = 51.29999923706055
@@ -74,7 +74,7 @@ blizzard = 49.20000076293945
 
 [[strength]]
 hero = "doomfist"
-value = 39
+value = 23
 win_rate = 52.29999923706055
 cpgg = 53.0
 cwatch = 50.599998474121094
@@ -82,7 +82,7 @@ blizzard = 53.400001525878906
 
 [[strength]]
 hero = "dva"
-value = -77
+value = -44
 win_rate = 45.400001525878906
 cpgg = 45.0
 cwatch = 45.70000076293945
@@ -90,7 +90,7 @@ blizzard = 45.5
 
 [[strength]]
 hero = "echo"
-value = -18
+value = -7
 win_rate = 48.900001525878906
 cpgg = 49.0
 cwatch = 49.29999923706055
@@ -98,7 +98,7 @@ blizzard = 48.400001525878906
 
 [[strength]]
 hero = "emre"
-value = -35
+value = -21
 win_rate = 47.900001525878906
 cpgg = 48.0
 cwatch = 48.099998474121094
@@ -106,7 +106,7 @@ blizzard = 47.599998474121094
 
 [[strength]]
 hero = "freja"
-value = -16
+value = -8
 win_rate = 49.099998474121094
 cpgg = 49.0
 cwatch = 48.599998474121094
@@ -114,7 +114,7 @@ blizzard = 49.599998474121094
 
 [[strength]]
 hero = "genji"
-value = 31
+value = 24
 win_rate = 51.79999923706055
 cpgg = 51.0
 cwatch = 51.70000076293945
@@ -130,7 +130,7 @@ blizzard = 50.5
 
 [[strength]]
 hero = "hazard"
-value = 20
+value = 9
 win_rate = 51.20000076293945
 cpgg = 51.0
 cwatch = 51.599998474121094
@@ -138,7 +138,7 @@ blizzard = 51.0
 
 [[strength]]
 hero = "illari"
-value = -6
+value = -3
 win_rate = 49.70000076293945
 cpgg = 50.0
 cwatch = 50.70000076293945
@@ -146,7 +146,7 @@ blizzard = 48.29999923706055
 
 [[strength]]
 hero = "jetpack-cat"
-value = 64
+value = 43
 win_rate = 53.900001525878906
 cpgg = 55.0
 cwatch = 51.20000076293945
@@ -154,7 +154,7 @@ blizzard = 55.400001525878906
 
 [[strength]]
 hero = "junker-queen"
-value = 63
+value = 31
 win_rate = 53.79999923706055
 cpgg = 55.0
 cwatch = 53.29999923706055
@@ -162,7 +162,7 @@ blizzard = 53.0
 
 [[strength]]
 hero = "junkrat"
-value = 26
+value = 20
 win_rate = 51.599998474121094
 cpgg = 53.0
 cwatch = 51.5
@@ -170,7 +170,7 @@ blizzard = 50.20000076293945
 
 [[strength]]
 hero = "juno"
-value = 24
+value = 21
 win_rate = 51.5
 cpgg = 52.0
 cwatch = 50.5
@@ -178,7 +178,7 @@ blizzard = 51.900001525878906
 
 [[strength]]
 hero = "kiriko"
-value = -54
+value = -48
 win_rate = 46.79999923706055
 cpgg = 46.0
 cwatch = 48.20000076293945
@@ -186,7 +186,7 @@ blizzard = 46.099998474121094
 
 [[strength]]
 hero = "lifeweaver"
-value = -37
+value = -28
 win_rate = 47.79999923706055
 cpgg = 47.0
 cwatch = 48.79999923706055
@@ -194,7 +194,7 @@ blizzard = 47.5
 
 [[strength]]
 hero = "lucio"
-value = 8
+value = 5
 win_rate = 50.5
 cpgg = 50.0
 cwatch = 51.0
@@ -202,7 +202,7 @@ blizzard = 50.5
 
 [[strength]]
 hero = "mauga"
-value = 4
+value = 3
 win_rate = 50.29999923706055
 cpgg = 51.0
 cwatch = 50.599998474121094
@@ -210,7 +210,7 @@ blizzard = 49.20000076293945
 
 [[strength]]
 hero = "mei"
-value = 42
+value = 30
 win_rate = 52.5
 cpgg = 54.0
 cwatch = 53.0
@@ -218,7 +218,7 @@ blizzard = 50.5
 
 [[strength]]
 hero = "mercy"
-value = -30
+value = -24
 win_rate = 48.20000076293945
 cpgg = 46.0
 cwatch = 49.400001525878906
@@ -226,7 +226,7 @@ blizzard = 49.20000076293945
 
 [[strength]]
 hero = "mizuki"
-value = 27
+value = 21
 win_rate = 51.599998474121094
 cpgg = 52.0
 cwatch = 52.099998474121094
@@ -234,7 +234,7 @@ blizzard = 50.70000076293945
 
 [[strength]]
 hero = "moira"
-value = 4
+value = 3
 win_rate = 50.20000076293945
 cpgg = 51.0
 cwatch = 50.0
@@ -242,7 +242,7 @@ blizzard = 49.70000076293945
 
 [[strength]]
 hero = "orisa"
-value = -69
+value = -48
 win_rate = 45.900001525878906
 cpgg = 47.0
 cwatch = 45.900001525878906
@@ -250,7 +250,7 @@ blizzard = 44.70000076293945
 
 [[strength]]
 hero = "pharah"
-value = 26
+value = 15
 win_rate = 51.599998474121094
 cpgg = 52.0
 cwatch = 51.70000076293945
@@ -258,7 +258,7 @@ blizzard = 51.0
 
 [[strength]]
 hero = "ramattra"
-value = -3
+value = -1
 win_rate = 49.79999923706055
 cpgg = 51.0
 cwatch = 49.29999923706055
@@ -266,7 +266,7 @@ blizzard = 49.20000076293945
 
 [[strength]]
 hero = "reaper"
-value = 12
+value = 10
 win_rate = 50.70000076293945
 cpgg = 52.0
 cwatch = 50.0
@@ -274,7 +274,7 @@ blizzard = 50.20000076293945
 
 [[strength]]
 hero = "reinhardt"
-value = 62
+value = 46
 win_rate = 53.70000076293945
 cpgg = 54.0
 cwatch = 53.599998474121094
@@ -282,7 +282,7 @@ blizzard = 53.5
 
 [[strength]]
 hero = "roadhog"
-value = -50
+value = -29
 win_rate = 47.0
 cpgg = 47.0
 cwatch = 46.79999923706055
@@ -290,7 +290,7 @@ blizzard = 47.20000076293945
 
 [[strength]]
 hero = "shion"
-value = -6
+value = -3
 win_rate = 49.599998474121094
 cpgg = 49.0
 cwatch = 50.29999923706055
@@ -298,7 +298,7 @@ blizzard = 49.599998474121094
 
 [[strength]]
 hero = "sierra"
-value = -15
+value = -10
 win_rate = 49.099998474121094
 cpgg = 49.0
 cwatch = 49.5
@@ -314,7 +314,7 @@ blizzard = 49.0
 
 [[strength]]
 hero = "sojourn"
-value = -73
+value = -55
 win_rate = 45.599998474121094
 cpgg = 46.0
 cwatch = 45.5
@@ -322,7 +322,7 @@ blizzard = 45.29999923706055
 
 [[strength]]
 hero = "soldier-76"
-value = -11
+value = -8
 win_rate = 49.400001525878906
 cpgg = 49.0
 cwatch = 49.5
@@ -330,7 +330,7 @@ blizzard = 49.599998474121094
 
 [[strength]]
 hero = "sombra"
-value = -29
+value = -11
 win_rate = 48.20000076293945
 cpgg = 48.0
 cwatch = 48.20000076293945
@@ -338,7 +338,7 @@ blizzard = 48.5
 
 [[strength]]
 hero = "symmetra"
-value = 48
+value = 23
 win_rate = 52.900001525878906
 cpgg = 55.0
 cwatch = 54.599998474121094
@@ -346,7 +346,7 @@ blizzard = 49.0
 
 [[strength]]
 hero = "torbjorn"
-value = 85
+value = 49
 win_rate = 55.099998474121094
 cpgg = 58.0
 cwatch = 55.70000076293945
@@ -354,7 +354,7 @@ blizzard = 51.599998474121094
 
 [[strength]]
 hero = "tracer"
-value = 8
+value = 7
 win_rate = 50.5
 cpgg = 50.0
 cwatch = 50.900001525878906
@@ -362,7 +362,7 @@ blizzard = 50.599998474121094
 
 [[strength]]
 hero = "vendetta"
-value = 24
+value = 13
 win_rate = 51.5
 cpgg = 51.0
 cwatch = 51.5
@@ -370,7 +370,7 @@ blizzard = 51.900001525878906
 
 [[strength]]
 hero = "venture"
-value = 39
+value = 18
 win_rate = 52.29999923706055
 cpgg = 53.0
 cwatch = 52.400001525878906
@@ -378,7 +378,7 @@ blizzard = 51.599998474121094
 
 [[strength]]
 hero = "widowmaker"
-value = -37
+value = -16
 win_rate = 47.79999923706055
 cpgg = 45.0
 cwatch = 47.70000076293945
@@ -394,7 +394,7 @@ blizzard = 49.400001525878906
 
 [[strength]]
 hero = "wrecking-ball"
-value = 25
+value = 11
 win_rate = 51.5
 cpgg = 51.0
 cwatch = 51.70000076293945
@@ -402,7 +402,7 @@ blizzard = 51.79999923706055
 
 [[strength]]
 hero = "wuyang"
-value = 19
+value = 12
 win_rate = 51.20000076293945
 cpgg = 51.0
 cwatch = 51.29999923706055
@@ -410,7 +410,7 @@ blizzard = 51.20000076293945
 
 [[strength]]
 hero = "zarya"
-value = -10
+value = -4
 win_rate = 49.400001525878906
 cpgg = 49.0
 cwatch = 49.900001525878906
@@ -418,7 +418,7 @@ blizzard = 49.29999923706055
 
 [[strength]]
 hero = "zenyatta"
-value = 64
+value = 46
 win_rate = 53.79999923706055
 cpgg = 55.0
 cwatch = 53.599998474121094

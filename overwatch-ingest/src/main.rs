@@ -763,8 +763,27 @@ async fn main() -> Result<()> {
                     blizzard::report_key_drift(&blizzard, &hero_keys);
                 }
 
-                let (strength, affinity, by_rank) =
-                    stats::build(&generated, &stats, &cwatch_rates, &blizzard, &known_maps);
+                // Roles are the app's own, off the roster, and not Blizzard's —
+                // the response carries one but `heroes.toml` is what everything
+                // else in this project means by a hero's role.
+                let roles: HashMap<String, Role> = roster
+                    .heroes
+                    .iter()
+                    .filter_map(|hero| {
+                        Role::parse(&hero.role)
+                            .ok()
+                            .map(|role| (hero.key.clone(), role))
+                    })
+                    .collect();
+
+                let (strength, affinity, by_rank) = stats::build(
+                    &generated,
+                    &stats,
+                    &cwatch_rates,
+                    &blizzard,
+                    &known_maps,
+                    &roles,
+                );
 
                 let blended = strength
                     .entries
@@ -815,15 +834,6 @@ async fn main() -> Result<()> {
                 // Prevalence comes off responses already fetched above, which is
                 // why it belongs to this step rather than one of its own: pick
                 // rates move on the patch, on the same clock as the win rates.
-                let roles: HashMap<String, Role> = roster
-                    .heroes
-                    .iter()
-                    .filter_map(|hero| {
-                        Role::parse(&hero.role)
-                            .ok()
-                            .map(|role| (hero.key.clone(), role))
-                    })
-                    .collect();
                 let prevalence = stats::prevalence(&generated, &blizzard, &roles);
 
                 // Same failure shape as the rank slices, and for a sharper reason:
