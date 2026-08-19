@@ -143,9 +143,19 @@ a value back by hand takes the mirror row's columns as well as its own.
 **Not all of it is measured.** [`data/archetype.toml`](data/archetype.toml)
 (dive/poke/brawl) and [`data/side.toml`](data/side.toml) (attack/defend lean) are
 hand-curated judgement with a written note per entry and no source behind them —
-no site publishes either. `synergy.toml` has a hand-written `curated` column that
-overrides the scraped one for pairs the source does not list. These are opinions,
-and the files say so on the first line.
+no site publishes either. `synergy.toml` and `matchups.toml` both carry a
+hand-written `curated` column that overrides the generated one, for pairs the
+sources do not list or read wrongly. These are opinions, and the files say so on
+the first line.
+
+The matchup lane exists because every counter source measures a **duel**, which is
+the wrong instrument for a fight decided by an ability rather than an aim contest —
+a cleanse landing on a nade, a lamp eating a burst combo, a pull taking a target
+out from under a dive. Those pairs come back rated dead even, and an even pair
+argues for nothing, which is why the ban list used to have no supports on it at
+all. A curated row is written on both directions of the pair with opposing signs,
+carries a note saying which interaction it is about, and never reaches the extremes
+the measured columns do.
 
 The scrape is polite: one request every 1.1 seconds, and a user-agent that names
 the project and a contact address. The header of the app shows the date the

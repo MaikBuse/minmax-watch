@@ -1,5 +1,6 @@
 generated = "2026-08-19"
 patch = "ingested 2026-08-19"
+note = "Generated, except for the curated column. Hand-write `curated` and a `note` for a pair the sources rate wrongly or cannot see - on both directions, with opposing signs - and never hand-edit `value`, `cpgg`, `opick` or `cwatch`, because the next ingest overwrites all four."
 
 [[matchup]]
 hero = "ana"

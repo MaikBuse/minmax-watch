@@ -57,9 +57,27 @@ pub struct MatchupsFile {
     pub generated: String,
     #[serde(default)]
     pub patch: String,
+    /// The rule for editing this file by hand, addressed to whoever opens it.
+    ///
+    /// A data field rather than a `#` comment, the same trick `BanRateFile::note`
+    /// uses and for the same reason: `toml` cannot emit comments, and every other
+    /// line here is machine-written, so a comment would survive exactly until the
+    /// next ingest. The ingest rewrites this string from `MATCHUPS_NOTE` on every
+    /// run, which is what stops it going stale.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub note: String,
     #[serde(default, rename = "matchup")]
     pub matchups: Vec<MatchupEntry>,
 }
+
+/// What the ingest stamps into [`MatchupsFile::note`].
+///
+/// Lives here rather than in the ingest so the sentence and the fields it talks
+/// about cannot drift apart.
+pub const MATCHUPS_NOTE: &str = "Generated, except for the curated column. \
+Hand-write `curated` and a `note` for a pair the sources rate wrongly or cannot \
+see - on both directions, with opposing signs - and never hand-edit `value`, \
+`cpgg`, `opick` or `cwatch`, because the next ingest overwrites all four.";
 
 /// One directed matchup: how `hero` fares against `vs`, from `hero`'s side.
 ///
@@ -80,6 +98,11 @@ pub struct MatchupEntry {
     /// mirror row's: the sources are averaged across both directions before they
     /// are compared, so that a contradiction one of them states only once still
     /// reaches both.
+    ///
+    /// Always the blend, and therefore **not always what the scorer reads** —
+    /// [`Self::resolved`] is. Keeping this column pure is what lets `reblend`
+    /// derive every value in the file from the per-source columns beside it and
+    /// still come out with an empty diff.
     pub value: i8,
     /// Set when the two trusted sources contradict each other about this pair by
     /// more than the blend threshold.
@@ -104,9 +127,43 @@ pub struct MatchupEntry {
     pub cwatch: Option<i8>,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub reason: String,
+    /// A hand-written override, winning over `value` wherever it is set.
+    ///
+    /// The ingest never writes this and must never drop it: it is the only way
+    /// to rate a pair the duel-derived sources are structurally blind to, and
+    /// re-running the scrape must not silently discard somebody's judgement.
+    ///
+    /// **Curate both directions, with opposing signs.** `matchup_term` reads a
+    /// pair as `(forward - reverse) / 2` whenever both directions are rated —
+    /// and a measured zero *is* rated — so a curated `+40` whose mirror sits at
+    /// a scraped `0` reaches the score as `+20`, and the reason line then says
+    /// half of what the note argues. `+40` against a curated `-40` is the shape
+    /// every scraped pair already has. Writing both sides positive is worse
+    /// still: `no_pair_reads_as_favourable_for_both_heroes` fails on it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub curated: Option<i8>,
+    /// Why the curated value is what it is. Same bar as `side.toml`: a number
+    /// with no source behind it is indistinguishable from a typo unless it says
+    /// why.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub note: String,
 }
 
 impl MatchupEntry {
+    /// What the loader should score. Curated judgement beats the blend, because
+    /// the only reason to write one is that the sources are wrong or silent
+    /// about this pair.
+    ///
+    /// Two arms rather than [`SynergyEntry::resolved`]'s three, and the
+    /// difference is not cosmetic: synergy has a single source, so its `value`
+    /// is a last-resort fallback for a hand-written row. Here `value` *is* the
+    /// blend of the three columns above and is authoritative whenever nobody has
+    /// overridden it, so falling back through a per-source column would demote
+    /// the blend to one of its own inputs.
+    pub fn resolved(&self) -> i8 {
+        self.curated.unwrap_or(self.value)
+    }
+
     /// The per-source readings that were actually available, paired with the
     /// source name for reporting.
     pub fn source_values(&self) -> Vec<(&'static str, i8)> {
@@ -339,9 +396,10 @@ impl PrevalenceEntry {
 
 /// Pair synergies.
 ///
-/// The one file in `data/` that is both generated and hand-curated, which is
-/// why it carries a source column and an override column rather than a bare
-/// value. counterwatch publishes a short top-N of duo partners per hero with a
+/// Generated and hand-curated both, which is why it carries a source column and
+/// an override column rather than a bare value. `matchups.toml` grew the same
+/// arrangement later, for the same reason: a duel-derived source cannot see an
+/// ability interaction, so somebody has to be able to write one down. counterwatch publishes a short top-N of duo partners per hero with a
 /// measured "% above expected" beside each, which is real evidence but covers
 /// only the pairs it chose to list; `curated` is how a pair it does not list
 /// gets an opinion, and it wins wherever both are present.

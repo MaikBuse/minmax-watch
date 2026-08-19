@@ -26,7 +26,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result};
 use overwatch_core::{Rank, Role};
 use overwatch_data::schema::{
-    HeroesFile, MapsFile, MatchupsFile, StrengthByRankFile, SynergyEntry, SynergyFile,
+    HeroesFile, MapsFile, MatchupEntry, MatchupsFile, StrengthByRankFile, SynergyEntry,
+    SynergyFile, MATCHUPS_NOTE,
 };
 use time::format_description::well_known::Iso8601;
 use time::OffsetDateTime;
@@ -150,6 +151,151 @@ fn merge_synergy(
     SynergyFile {
         generated: generated.to_owned(),
         entries,
+    }
+}
+
+/// Reads whatever `matchups.toml` already says, so a re-scrape can keep the
+/// curated column.
+///
+/// A missing or unparseable file is not fatal here, for the same reason it is not
+/// in [`load_synergy`]: the scrape can rebuild every other column from nothing.
+/// It is only `curated` and `note` that cannot be reconstructed, and losing those
+/// silently is the failure worth guarding.
+async fn load_matchups(data_dir: &Path) -> Result<MatchupsFile> {
+    let path = data_dir.join("matchups.toml");
+    let Ok(text) = tokio::fs::read_to_string(&path).await else {
+        return Ok(MatchupsFile::default());
+    };
+    toml::from_str(&text).with_context(|| {
+        format!(
+            "parsing {} - fix it by hand rather than letting the scrape overwrite it",
+            path.display()
+        )
+    })
+}
+
+/// Merges a fresh blend over the existing file, curated rows winning.
+///
+/// The counter matrix is otherwise written wholesale, which is what makes this
+/// necessary: `curated` and `note` are the only two columns nothing can
+/// reconstruct, and *both* write paths rebuild every other column from the
+/// sources — `counters` from a live scrape and `reblend` from the committed
+/// per-source columns. Either one would drop a hand-written row without this.
+///
+/// Three things have to survive a re-run:
+///
+/// - a curated row for a pair no trusted source rated must stay in the file.
+///   `blend_values` emits *nothing* for such a direction rather than an even row,
+///   so this function is the only thing keeping it;
+/// - a curated row for a pair the sources do rate must keep its override and its
+///   note, with the fresh blend recorded in `value` beside it rather than on top
+///   of it;
+/// - a row the sources have stopped rating must otherwise leave with them,
+///   exactly as it does today.
+///
+/// Unlike `merge_synergy`, `value` is *not* kept in step with `resolved()`. It
+/// stays the pure blend, so `reblend` can keep deriving every value in the file
+/// from the columns beside it and still come out with an empty diff.
+fn merge_matchups(
+    generated: &str,
+    patch: &str,
+    existing: &MatchupsFile,
+    blended: Vec<MatchupEntry>,
+) -> MatchupsFile {
+    let mut curated: HashMap<(String, String), &MatchupEntry> = HashMap::new();
+    for entry in &existing.matchups {
+        if entry.curated.is_some() {
+            curated.insert((entry.hero.clone(), entry.vs.clone()), entry);
+        }
+    }
+
+    let mut matchups = blended;
+    let mut blended_keys: HashSet<(String, String)> = HashSet::new();
+    for entry in &mut matchups {
+        let key = (entry.hero.clone(), entry.vs.clone());
+        if let Some(previous) = curated.get(&key) {
+            entry.curated = previous.curated;
+            entry.note = previous.note.clone();
+        }
+        blended_keys.insert(key);
+    }
+
+    for (key, previous) in &curated {
+        if blended_keys.contains(key) {
+            continue;
+        }
+        matchups.push(MatchupEntry {
+            hero: key.0.clone(),
+            vs: key.1.clone(),
+            // The blend of nothing. `resolved()` reads `curated` for this row,
+            // and keeping `value` at zero is what stops the file claiming a
+            // measurement that does not exist.
+            value: 0,
+            disagreement: false,
+            cpgg: None,
+            opick: None,
+            cwatch: None,
+            reason: String::new(),
+            curated: previous.curated,
+            note: previous.note.clone(),
+        });
+    }
+
+    // Sorted for a readable diff, which is the point of the whole tool. The
+    // iteration order of `curated` above is arbitrary; this is what makes the
+    // output deterministic anyway.
+    matchups.sort_by(|a, b| (&a.hero, &a.vs).cmp(&(&b.hero, &b.vs)));
+
+    MatchupsFile {
+        generated: generated.to_owned(),
+        patch: patch.to_owned(),
+        // Rewritten every run rather than carried over, so the rule in the file
+        // is always the rule this build enforces.
+        note: MATCHUPS_NOTE.to_owned(),
+        matchups,
+    }
+}
+
+/// Says how much of the matrix is hand-written, and warns where a curated row is
+/// missing its mirror.
+///
+/// One-sidedness is the failure mode worth reporting rather than asserting: the
+/// scorer folds a pair as `(forward - reverse) / 2` whenever both directions are
+/// rated, so a curated `+40` opposite a scraped `0` lands at `+20`. A warning
+/// rather than an error because the file is legitimately one-sided while a batch
+/// is being written; `a_curated_matchup_is_curated_from_both_sides` is what
+/// refuses to let it ship that way.
+fn report_curated_matchups(file: &MatchupsFile) {
+    let curated: Vec<&MatchupEntry> = file
+        .matchups
+        .iter()
+        .filter(|entry| entry.curated.is_some())
+        .collect();
+    if curated.is_empty() {
+        return;
+    }
+
+    let rated: HashSet<(&str, &str)> = file
+        .matchups
+        .iter()
+        .map(|entry| (entry.hero.as_str(), entry.vs.as_str()))
+        .collect();
+    let overridden: HashSet<(&str, &str)> = curated
+        .iter()
+        .map(|entry| (entry.hero.as_str(), entry.vs.as_str()))
+        .collect();
+
+    eprintln!("  {} curated row(s)", curated.len());
+    for entry in &curated {
+        let mirror = (entry.vs.as_str(), entry.hero.as_str());
+        if overridden.contains(&mirror) || !rated.contains(&mirror) {
+            continue;
+        }
+        eprintln!(
+            "  warn: {} vs {} is curated but its mirror is rated and is not - \
+             the pair will score at half the curated magnitude",
+            entry.hero, entry.vs
+        );
     }
 }
 
@@ -563,11 +709,12 @@ async fn main() -> Result<()> {
 
         // `generated` and `patch` carry over untouched. Nothing was fetched, and
         // stamping today's date would claim otherwise.
-        let file = MatchupsFile {
-            generated: existing.generated,
-            patch: existing.patch,
-            matchups,
-        };
+        //
+        // Through `merge_matchups` for the curated column: this path harvests
+        // only the source columns above, so serialising the blend directly would
+        // drop every hand-written override with no network round trip to blame.
+        let file = merge_matchups(&existing.generated, &existing.patch, &existing, matchups);
+        report_curated_matchups(&file);
         let toml = toml::to_string_pretty(&file).context("serialising matchups.toml")?;
         if write_if_changed(&path, &toml).await? {
             eprintln!("reblend: updated matchups.toml");
@@ -716,11 +863,15 @@ async fn main() -> Result<()> {
         let (matchups, report) = blend::blend(&hero_keys, &cpgg, &opick, &cwatch);
         eprintln!("{}", report.render());
 
-        let file = MatchupsFile {
-            generated: generated.clone(),
-            patch: patch_label(&generated),
-            matchups,
-        };
+        // Deliberately *after* the guard above rather than folded into it, which
+        // is where the synergy step puts its curated count. The two files fail
+        // differently: an empty duo scrape costs synergy.toml nothing it cannot
+        // rebuild, while every trusted counter source failing would trade 2,472
+        // blended rows for a handful of curated ones. Refusing to write is what
+        // keeps the curated rows safe here, so they must not license the write.
+        let existing = load_matchups(&data_dir).await?;
+        let file = merge_matchups(&generated, &patch_label(&generated), &existing, matchups);
+        report_curated_matchups(&file);
         let toml = toml::to_string_pretty(&file).context("serialising matchups.toml")?;
         if write_if_changed(&data_dir.join("matchups.toml"), &toml).await? {
             changed.push("matchups.toml");
@@ -1042,5 +1193,194 @@ mod tests {
                 ("winston", "lucio")
             ]
         );
+    }
+
+    fn curated_matchup(hero: &str, vs: &str, value: i8, note: &str) -> MatchupEntry {
+        MatchupEntry {
+            hero: hero.to_owned(),
+            vs: vs.to_owned(),
+            // Zero, not `value`: a curated row that no source rated has no blend
+            // behind it, and this column only ever holds the blend.
+            value: 0,
+            disagreement: false,
+            cpgg: None,
+            opick: None,
+            cwatch: None,
+            reason: String::new(),
+            curated: Some(value),
+            note: note.to_owned(),
+        }
+    }
+
+    /// A row shaped the way `blend_values` emits them: a blended `value` with the
+    /// source column that produced it, and nothing in the curated lane.
+    fn blended_row(hero: &str, vs: &str, value: i8) -> MatchupEntry {
+        MatchupEntry {
+            hero: hero.to_owned(),
+            vs: vs.to_owned(),
+            value,
+            disagreement: false,
+            cpgg: Some(value),
+            opick: None,
+            cwatch: None,
+            reason: String::new(),
+            curated: None,
+            note: String::new(),
+        }
+    }
+
+    fn find_matchup<'a>(file: &'a MatchupsFile, hero: &str, vs: &str) -> &'a MatchupEntry {
+        file.matchups
+            .iter()
+            .find(|e| e.hero == hero && e.vs == vs)
+            .unwrap_or_else(|| panic!("{hero} vs {vs} is missing from the merged file"))
+    }
+
+    /// The whole reason this merge exists rather than a plain serialise, and the
+    /// case `blend_values` cannot produce on its own: it skips a direction no
+    /// trusted source rated instead of emitting an even row for it.
+    #[test]
+    fn a_curated_matchup_the_blend_does_not_list_survives_the_blend() {
+        let existing = MatchupsFile {
+            generated: "old".to_owned(),
+            patch: "ingested old".to_owned(),
+            note: String::new(),
+            matchups: vec![curated_matchup("kiriko", "ana", 40, "suzu cleanses nade")],
+        };
+
+        let merged = merge_matchups(
+            "new",
+            "ingested new",
+            &existing,
+            vec![blended_row("winston", "zarya", 36)],
+        );
+
+        let entry = find_matchup(&merged, "kiriko", "ana");
+        assert_eq!(entry.curated, Some(40));
+        assert_eq!(entry.note, "suzu cleanses nade");
+        assert_eq!(entry.resolved(), 40, "the loader reads the override");
+        assert_eq!(
+            entry.value, 0,
+            "nothing measured this pair, so the blend column claims nothing"
+        );
+        assert_eq!(entry.cpgg, None);
+        assert_eq!(entry.opick, None);
+        assert_eq!(entry.cwatch, None);
+    }
+
+    /// Curated wins, and the blend it overrode stays legible beside it — the same
+    /// traceability argument the per-source columns exist for.
+    #[test]
+    fn a_curated_matchup_outranks_the_blend_without_hiding_it() {
+        let existing = MatchupsFile {
+            generated: "old".to_owned(),
+            patch: "ingested old".to_owned(),
+            note: String::new(),
+            matchups: vec![curated_matchup("kiriko", "ana", 40, "suzu cleanses nade")],
+        };
+
+        // The dominant real case: the sources rate the pair, and rate it even.
+        let merged = merge_matchups(
+            "new",
+            "ingested new",
+            &existing,
+            vec![blended_row("kiriko", "ana", 0)],
+        );
+
+        assert_eq!(
+            merged.matchups.len(),
+            1,
+            "the curated row is not duplicated"
+        );
+        let entry = &merged.matchups[0];
+        assert_eq!(entry.curated, Some(40));
+        assert_eq!(entry.note, "suzu cleanses nade");
+        assert_eq!(entry.resolved(), 40, "curated wins");
+        assert_eq!(
+            entry.value, 0,
+            "and `value` is still the blend, so reblend stays reproducible"
+        );
+        assert_eq!(entry.cpgg, Some(0), "and the reading is still traceable");
+    }
+
+    /// A row the sources have stopped rating must leave with them, or the file
+    /// would keep asserting something nothing measures any more. Curation is the
+    /// only thing that buys a row a stay of execution.
+    #[test]
+    fn an_uncurated_matchup_the_sources_drop_leaves_with_them() {
+        let existing = MatchupsFile {
+            generated: "old".to_owned(),
+            patch: "ingested old".to_owned(),
+            note: String::new(),
+            matchups: vec![blended_row("emre", "zarya", 100)],
+        };
+
+        let merged = merge_matchups("new", "ingested new", &existing, Vec::new());
+
+        assert!(
+            merged.matchups.is_empty(),
+            "an unsourced, uncurated row outlived its source: {:?}",
+            merged.matchups
+        );
+    }
+
+    /// Both keys, because the curated rows are appended out of a `HashMap` whose
+    /// iteration order is arbitrary — the sort is what makes the diff reviewable.
+    #[test]
+    fn the_matchup_file_is_written_in_a_stable_order() {
+        let existing = MatchupsFile {
+            generated: "old".to_owned(),
+            patch: "ingested old".to_owned(),
+            note: String::new(),
+            matchups: vec![
+                curated_matchup("winston", "ana", 10, "note"),
+                curated_matchup("ana", "winston", -10, "note"),
+            ],
+        };
+
+        let merged = merge_matchups(
+            "new",
+            "ingested new",
+            &existing,
+            vec![
+                blended_row("winston", "zarya", 36),
+                blended_row("ana", "zarya", 20),
+                blended_row("winston", "brigitte", 40),
+            ],
+        );
+
+        let order: Vec<(&str, &str)> = merged
+            .matchups
+            .iter()
+            .map(|e| (e.hero.as_str(), e.vs.as_str()))
+            .collect();
+        assert_eq!(
+            order,
+            vec![
+                ("ana", "winston"),
+                ("ana", "zarya"),
+                ("winston", "ana"),
+                ("winston", "brigitte"),
+                ("winston", "zarya"),
+            ]
+        );
+    }
+
+    /// `generated` and `patch` come from the caller, not from the file being
+    /// merged over — `reblend` hands its own back precisely because nothing was
+    /// fetched, and `counters` must not inherit a stale date from the old file.
+    #[test]
+    fn the_merge_stamps_the_provenance_it_is_handed() {
+        let existing = MatchupsFile {
+            generated: "old".to_owned(),
+            patch: "ingested old".to_owned(),
+            note: String::new(),
+            matchups: vec![curated_matchup("kiriko", "ana", 40, "note")],
+        };
+
+        let merged = merge_matchups("2026-08-19", "ingested 2026-08-19", &existing, Vec::new());
+
+        assert_eq!(merged.generated, "2026-08-19");
+        assert_eq!(merged.patch, "ingested 2026-08-19");
     }
 }

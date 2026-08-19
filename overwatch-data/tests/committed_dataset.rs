@@ -5,6 +5,8 @@
 //! silently starts returning nothing, or that transposes the matrix, fails
 //! here rather than in the middle of a hero select.
 
+use std::collections::HashSet;
+
 use overwatch_core::{
     ban_recommendations, recommend, threats, Archetype, BanSubject, Defended, DefendedTeam, Draft,
     HeroId, Knowledge, MapId, Rank, ReasonKind, Role, Subrole, UserContext,
@@ -856,16 +858,20 @@ fn the_extreme_end_of_the_matchup_scale_stays_rare() {
         toml::from_str(overwatch_data::MATCHUPS_TOML).expect("committed matchups must parse");
 
     let rated = matchups.matchups.len();
+    // `resolved()` and not `value`, because `value` is only ever the blend: a
+    // hand-written `curated = 95` would otherwise sail straight past the one
+    // guard on the top of the scale, and the curated column is precisely the one
+    // a person can set without a source arguing them down.
     let extreme = matchups
         .matchups
         .iter()
-        .filter(|entry| entry.value.abs() >= 90)
+        .filter(|entry| entry.resolved().abs() >= 90)
         .count();
 
-    // 30 of 2534 today, a little over 1%.
+    // 22 of 2535 today, a little under 1%.
     assert!(
         extreme * 50 <= rated,
-        "{extreme} of {rated} rated rows sit at |value| >= 90, which is more of the \
+        "{extreme} of {rated} rated rows sit at |resolved| >= 90, which is more of the \
          matchup scale's top end than a healthy blend reaches"
     );
 }
@@ -904,6 +910,141 @@ fn no_pair_reads_as_favourable_for_both_heroes() {
         both.is_empty(),
         "{} pair(s) read as favourable in both directions: {both:?}",
         both.len()
+    );
+}
+
+/// A curated matchup is curated from both sides, or from neither.
+///
+/// The scorer folds a pair as `(forward - reverse) / 2` whenever *both*
+/// directions are rated — and a measured zero is rated, which is the state most
+/// of the pairs worth curating are in. So a curated `+40` opposite a scraped `0`
+/// reaches the score as `+20`, and the reason line then argues half of what the
+/// note says. That is not a wrong number the review would catch; it is the right
+/// number quietly halved.
+///
+/// The mirror may also be *unrated*, which is the one honest one-sided case:
+/// `matchup_term` uses a lone reading at full magnitude rather than folding the
+/// absent direction in as a zero.
+///
+/// Reads the TOML directly because the loader collapses `curated` into the matrix
+/// through `resolved()` and cannot tell an override from a blend afterwards.
+#[test]
+fn a_curated_matchup_is_curated_from_both_sides() {
+    let matchups: MatchupsFile =
+        toml::from_str(overwatch_data::MATCHUPS_TOML).expect("committed matchups must parse");
+
+    let rated: HashSet<(&str, &str)> = matchups
+        .matchups
+        .iter()
+        .map(|entry| (entry.hero.as_str(), entry.vs.as_str()))
+        .collect();
+    let curated: HashSet<(&str, &str)> = matchups
+        .matchups
+        .iter()
+        .filter(|entry| entry.curated.is_some())
+        .map(|entry| (entry.hero.as_str(), entry.vs.as_str()))
+        .collect();
+
+    let halved: Vec<(&str, &str)> = curated
+        .iter()
+        .copied()
+        .filter(|(hero, vs)| {
+            let mirror = (*vs, *hero);
+            rated.contains(&mirror) && !curated.contains(&mirror)
+        })
+        .collect();
+
+    assert!(
+        halved.is_empty(),
+        "{} curated row(s) have a rated mirror that is not curated, so the pair scores at \
+         half the curated magnitude: {halved:?}",
+        halved.len()
+    );
+
+    // The other half of the rule, and the reason it is not merely "curate both":
+    // two positives read as both heroes winning, which
+    // `no_pair_reads_as_favourable_for_both_heroes` rejects outright.
+    let notes = matchups
+        .matchups
+        .iter()
+        .filter(|entry| entry.curated.is_some() && entry.note.trim().is_empty())
+        .count();
+    assert_eq!(
+        notes, 0,
+        "{notes} curated row(s) carry no note - a number with no source behind it is \
+         indistinguishable from a typo unless it says why"
+    );
+}
+
+/// How much of the support mirror the data has an opinion about.
+///
+/// The tool was reviewed in public and told, correctly, that it never suggests
+/// banning a support. The cause is not the scorer: duel-derived sources cannot see
+/// Suzu cleansing a nade or a lamp eating a burst, so they read those pairs as
+/// dead even, and an even pair argues for nothing. This is the measurement of that
+/// gap, so that closing it is visible and reopening it is not silent.
+///
+/// The bound is a ceiling on *dead-even* readings rather than a floor on threats,
+/// because a support genuinely can be favoured into most of the mirror — what
+/// cannot be true is that the whole role is a coin flip against itself.
+///
+/// Folds the pair the way `matchup_term` does rather than reading one row, because
+/// the folded reading is what the scorer sees. `matchup_term` is private to
+/// `overwatch-core`, so the four arms are repeated here.
+#[test]
+fn the_support_mirror_is_not_mostly_dead_even() {
+    let ds = load().expect("committed data must load");
+
+    let supports: Vec<HeroId> = ds.heroes_in_role(Role::Support).collect();
+    let mut worst = 0;
+    let mut table: Vec<String> = Vec::new();
+
+    for hero in &supports {
+        let (mut threat, mut even, mut favoured, mut unrated) = (0, 0, 0, 0);
+        for enemy in &supports {
+            if hero == enemy {
+                continue;
+            }
+            let forward = ds.matchups().rating(*hero, *enemy).map(f32::from);
+            let reverse = ds.matchups().rating(*enemy, *hero).map(f32::from);
+            match (forward, reverse) {
+                (Some(f), Some(r)) => {
+                    let term = (f - r) / 2.0;
+                    if term < 0.0 {
+                        threat += 1;
+                    } else if term == 0.0 {
+                        even += 1;
+                    } else {
+                        favoured += 1;
+                    }
+                }
+                (Some(f), None) if f < 0.0 => threat += 1,
+                (None, Some(r)) if r > 0.0 => threat += 1,
+                (Some(0.0), None) | (None, Some(0.0)) => even += 1,
+                (Some(_), None) | (None, Some(_)) => favoured += 1,
+                (None, None) => unrated += 1,
+            }
+        }
+
+        worst = worst.max(even);
+        let name = ds
+            .hero(*hero)
+            .map(|h| h.key.as_str())
+            .unwrap_or("?")
+            .to_owned();
+        table.push(format!(
+            "{name}: {threat} lose, {even} even, {favoured} win, {unrated} unrated"
+        ));
+    }
+
+    // 8 today, both Kiriko and Lifeweaver, out of 13 opponents each. Every value
+    // curated brings this down; tighten the bound when it does, because a bound
+    // that never moves is a bound nobody is reading.
+    assert!(
+        worst <= 8,
+        "a support reads dead even against more than 8 of the other 13 supports, \
+         which is more of the role than the counter data can honestly call a coin flip\n  {}",
+        table.join("\n  ")
     );
 }
 

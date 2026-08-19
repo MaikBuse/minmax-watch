@@ -134,7 +134,7 @@ ingest-roster:
 ingest-art:
     cargo run -p overwatch-ingest -- art
 
-# Counter matrix only, from the community sites
+# Counter matrix only, from the community sites. Curated rows survive this.
 ingest-counters:
     cargo run -p overwatch-ingest -- counters
 
@@ -169,6 +169,9 @@ reblend:
     # No network. Every committed value is reproducible from the per-source
     # columns beside it, so a change to the blend reviews as a diff of exactly
     # the rows the blend moved. A second run must produce an empty diff.
+    #
+    # Curated rows survive this, and that is not free: the blend emits nothing at
+    # all for a pair no source rated, so `merge_matchups` puts them back.
     cargo run -p overwatch-ingest -- reblend
 
 # Show what the last ingest changed

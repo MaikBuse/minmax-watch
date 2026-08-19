@@ -449,6 +449,11 @@ pub fn blend_values(
                     opick: opick_value,
                     cwatch: cwatch_value,
                     reason,
+                    // The blend has no opinion about the curated lane; it is
+                    // `merge_matchups` that carries it over from the committed
+                    // file, for the same reason `merge_synergy` does.
+                    curated: None,
+                    note: String::new(),
                 });
             }
         }

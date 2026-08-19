@@ -166,7 +166,9 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     for entry in &matchups_file.matchups {
         let a = hero_id("matchups.toml", &entry.hero)?;
         let b = hero_id("matchups.toml", &entry.vs)?;
-        matchups.set(a, b, entry.value)?;
+        // `resolved()` rather than `value`: a curated row overrides the blend,
+        // and this is the one line where that override takes effect.
+        matchups.set(a, b, entry.resolved())?;
         if let Some(slot) = disputed.get_mut(a.index() * n + b.index()) {
             *slot = entry.disagreement;
         }
