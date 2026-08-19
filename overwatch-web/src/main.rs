@@ -177,10 +177,15 @@ fn map_chip(dataset: &Dataset, map: overwatch_core::MapId) -> Option<MapChip> {
 /// number on every row means a different thing in each case, and on the patch
 /// rung it is not about this team at all.
 ///
-/// `rank` reaches exactly one arm, and that is the whole point of it being here.
-/// `Patch` is the one subject `ban_recommendations` scores with
-/// `base_strength_at(rank, ..)` — every other arm is pure threat, where the rung
-/// does not enter and naming it would be a claim the score does not make.
+/// `rank` reaches exactly one arm *of the caption*, and that is the whole point of
+/// it being here. `Patch` is the one subject `ban_recommendations` scores with
+/// `base_strength_at(rank, ..)` — every other arm is threat, where the rung does
+/// not enter the matchup and naming it would be a claim the score does not make.
+///
+/// The rung does now reach every arm's *ordering*, through the prevalence
+/// discount, which is why the other arms still say nothing about it: a prior on
+/// who turns up is not a reading of the matchup the row is about, and a caption
+/// that named the rung would suggest it was.
 fn ban_subject(subject: &BanSubject, rank: Rank, role: Role) -> String {
     match subject {
         // The rung that sorted the list, said in the caption. Without it this
@@ -1182,6 +1187,10 @@ fn App() -> Element {
                                         }
                                         _ => ban.text.clone(),
                                     },
+                                    prevalence: ui::prevalence_note(
+                                        ban.prevalence,
+                                        profile.read().rank,
+                                    ),
                                 }
                             })
                             .collect::<Vec<_>>(),

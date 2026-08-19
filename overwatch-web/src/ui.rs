@@ -977,6 +977,37 @@ pub struct BanRow {
     pub worst_owner: Option<String>,
     /// The scraped sentence for that pair, or the win rate on the patch rung.
     pub text: String,
+    /// Why this row sits higher or lower than its matchup alone would put it, when
+    /// prevalence moved it far enough to be worth saying. `None` for the ordinary
+    /// middle of the roster, which is most of it.
+    pub prevalence: Option<String>,
+}
+
+/// Says out loud that a hero is picked far more or far less often than its role's
+/// share, when it is.
+///
+/// The threshold is `|50|`, which is not a round number picked for looking like
+/// one: on the log scale `prevalence.toml` uses, 50 is exactly the point where a
+/// hero is twice or half its fair share. Below that the row would be explaining
+/// an ordinary hero to no purpose, and the discount it earned is small enough that
+/// naming it would overstate what moved.
+///
+/// **Deliberately no percentage.** The dataset holds nine log-compressed
+/// comparisons against a role, not nine pick rates, so there is no figure here to
+/// print — and a percentage read off one rung's population, sitting beside a list
+/// sorted on another, would be a column disagreeing with itself. The rung is named
+/// instead, which is the part that is actually true.
+pub fn prevalence_note(value: i8, rank: Rank) -> Option<String> {
+    if value.abs() < 50 {
+        return None;
+    }
+    let common = value > 0;
+    Some(match (common, rank) {
+        (true, Rank::All) => "commonly picked".to_owned(),
+        (false, Rank::All) => "rarely picked".to_owned(),
+        (true, rank) => format!("commonly picked at {}", rank.label()),
+        (false, rank) => format!("rarely picked at {}", rank.label()),
+    })
 }
 
 /// Who to deny the enemy, before anyone has picked.
@@ -1028,6 +1059,12 @@ pub fn BanPanel(subject: String, items: Vec<BanRow>) -> Element {
                         }
                         if !ban.text.is_empty() {
                             p { class: "ban-text", "{ban.text}" }
+                        }
+                        // A third claim, so a third line: how often this hero
+                        // turns up at all, which is what moved the row relative
+                        // to the matchup above it.
+                        if let Some(prevalence) = &ban.prevalence {
+                            p { class: "ban-worst", "{prevalence}" }
                         }
                     }
                 }

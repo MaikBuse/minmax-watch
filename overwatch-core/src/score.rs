@@ -155,10 +155,35 @@ pub struct Weights {
     /// typical counter contribution around 0.25 and a
     /// [`Weights::swap_threshold`] of 0.15.
     ///
-    /// Nothing else in the scorer is rank-aware, and nothing else can be: no
-    /// source publishes per-rung matchups or duos. See [`crate::Rank`].
+    /// The only other rank-aware thing in the scorer is [`Weights::prevalence`],
+    /// which reads a different rank-sliced file and reaches only the ban list. No
+    /// source publishes per-rung matchups or duos, so nothing about a *pair* is or
+    /// can be rank-aware. See [`crate::Rank`].
     #[serde(default = "default_rank")]
     pub rank: f32,
+    /// How much a hero's pick rate discounts the case for banning it.
+    ///
+    /// **A multiplier, not a term**, and the only one in here — the last
+    /// multiplicative field this struct had was `focus_multiplier`, and it was
+    /// removed. The reason it is not additive is the whole point: prevalence is
+    /// not an argument *for* a ban, it is a discount on one. Added, a hero
+    /// everybody picks and nobody loses to would climb the list on popularity
+    /// alone, which is the failure this exists to fix rather than to cause.
+    ///
+    /// At 0.40 the factor lives in `[0.60, 1.40]` — a 2.3:1 spread against the
+    /// 20:1 the raw pick rates would give, and strictly positive, so it can never
+    /// flip a sign or promote a hero the sources say your team beats. It sits just
+    /// under [`EnemyRoleWeights`], the largest lever here, which is the same
+    /// argument that holds `map` and `synergy` down: this is a prior on who turns
+    /// up, not a reading of the matchup the ban is about.
+    ///
+    /// **It reaches the ban list and nothing else.** [`threats`] reads heroes
+    /// already on the board, where the probability of appearing is 1 and
+    /// multiplying by a prior would be arithmetic about an event that has already
+    /// happened; [`recommend`] is excused by the same argument, because the
+    /// candidate there is you.
+    #[serde(default = "default_prevalence")]
+    pub prevalence: f32,
     /// Minimum advantage before swap mode suggests leaving a working hero.
     /// Without this the list churns every time the enemy team twitches.
     pub swap_threshold: f32,
@@ -194,11 +219,24 @@ fn default_rank() -> f32 {
     0.15
 }
 
+/// The same trap once more, and it needs saying explicitly because this one is a
+/// multiplier and the arithmetic looks like it should be safe.
+///
+/// It is not: the stored number is the *weight*, so a bare `#[serde(default)]`
+/// resolving to 0.0 makes `prevalence_factor` return exactly 1.0 for every hero.
+/// That is the term shipped switched off for everybody with a stored profile —
+/// the identical failure the three defaults above guard against, arrived at
+/// through a factor of one instead of a term of zero.
+fn default_prevalence() -> f32 {
+    0.40
+}
+
 impl Default for Weights {
     fn default() -> Self {
         Self {
             base: 0.15,
             rank: default_rank(),
+            prevalence: default_prevalence(),
             counter: 1.0,
             // Lowered from 0.30 when the term stopped being hypothetical:
             // `synergy.toml` shipped empty for a long time, so 0.30 was a number
@@ -262,8 +300,10 @@ pub struct UserContext {
     /// number. That is not the situation [`crate::Matrix::rating`] is in, where
     /// "nothing known" and "dead even" are genuinely different claims.
     ///
-    /// It reaches exactly one term. Nothing else in here is rank-aware and
-    /// nothing else can be — see [`Rank`].
+    /// It reaches exactly two things, and neither of them is a matchup: the
+    /// [`Weights::rank`] term on the pick list, and [`Weights::prevalence`] on the
+    /// ban list. Nothing else in here is rank-aware and nothing else can be — no
+    /// source publishes a *pair* per rung. See [`Rank`].
     pub rank: Rank,
     /// Personal nudges on the -100..=100 scale, indexed by hero. Never written
     /// by the ingest.
@@ -506,6 +546,14 @@ pub struct BanCandidate {
     /// a column sorted by `score` while showing `severity` would visibly
     /// disagree with itself.
     pub severity: f32,
+    /// How often this hero is picked relative to its role's fair share, at the
+    /// rung the list was read on. Positive means more often than its share.
+    ///
+    /// Already spent on `score`. It is carried anyway for the reason `severity`
+    /// is: the panel says out loud that a hero is rare, and re-deriving that from
+    /// the dataset on the other side of the wall is a build away from disagreeing
+    /// with the number that actually moved the row.
+    pub prevalence: i8,
     /// Whichever of the team's heroes it hurts most.
     ///
     /// `None` only on the [`BanSubject::Patch`] rung, where the score comes from
@@ -952,10 +1000,18 @@ fn ban_by_strength(ds: &Dataset, draft: &Draft, ctx: &UserContext) -> Vec<BanCan
             if score <= 0.0 {
                 return None;
             }
+            let prevalence = ds.prevalence_at(ctx.rank, hero);
             Some(BanCandidate {
                 hero,
-                score,
+                // Discounted by who actually turns up. Applied *after* the gate
+                // above, so the prior decides the order and never the membership.
+                score: score * prevalence_factor(ctx, prevalence),
+                // Raw, which on this rung deliberately breaks the identity these
+                // two used to have: `severity` is the reading and `score` is the
+                // reading times a prior, and only one of them is what the column
+                // is sorted by.
                 severity: score,
+                prevalence,
                 // No pair produced this, and naming one would be a claim
                 // nothing here made.
                 worst: None,
@@ -970,6 +1026,20 @@ fn ban_by_strength(ds: &Dataset, draft: &Draft, ctx: &UserContext) -> Vec<BanCan
             .unwrap_or(core::cmp::Ordering::Equal)
     });
     candidates
+}
+
+/// Discounts a ban by how rarely the hero turns up. See [`Weights::prevalence`].
+///
+/// A multiplier and not a term, because prevalence is not an argument for a ban —
+/// it is a discount on one. Strictly positive at any sane weight, so it reorders
+/// the list and can never put a hero on it or take one off: that is decided above,
+/// by whether the sources say the hero beats your side.
+///
+/// Takes the reading rather than the hero, so the caller has already asked
+/// [`Dataset::prevalence_at`] once and the number it multiplies by is the same one
+/// it hands to the panel.
+fn prevalence_factor(ctx: &UserContext, prevalence: i8) -> f32 {
+    1.0 + ctx.weights.prevalence * f32::from(prevalence) / 100.0
 }
 
 /// Whether `hero` is still a hero anybody could ban.
@@ -1090,10 +1160,14 @@ pub fn ban_recommendations(
             // against, is the failure that guards against.
             let (worst_hero, owner, _) = worst?;
 
+            let prevalence = ds.prevalence_at(ctx.rank, hero);
             Some(BanCandidate {
                 hero,
-                score,
+                // As on the patch rung: the argument decided membership above, and
+                // the prior only decides where in the list it lands.
+                score: score * prevalence_factor(ctx, prevalence),
                 severity: plain / total,
+                prevalence,
                 worst: Some(worst_hero),
                 worst_owner: (!owner.is_me && !owner.is_typed).then(|| owner.who.clone()),
                 text: ds.reason(worst_hero, hero).unwrap_or_default().to_owned(),

@@ -937,6 +937,45 @@ const P_ANA: HeroId = HeroId(3);
 /// nothing above this point scores on it. The patch rung does, so it needs a
 /// roster where "strongest" is a different answer from "worst matchup", or the
 /// test cannot tell which one produced the order.
+/// [`patch_fixture`] with the two heroes it ranks pulled apart by how often they
+/// are picked: Ana leads on strength and is rare, Sigma trails and is everywhere.
+///
+/// Built so the two orderings disagree by construction, which is the only way to
+/// tell which of them produced the list.
+fn prevalence_fixture() -> Dataset {
+    let ds = patch_fixture();
+    let n = ds.hero_count();
+
+    let mut prevalence = vec![[0i8; Rank::CHOICES.len()]; n];
+    prevalence[P_ANA.index()] = [-100; Rank::CHOICES.len()];
+    prevalence[P_SIGMA.index()] = [100; Rank::CHOICES.len()];
+
+    let mut matchups = Matrix::unrated(n);
+    matchups.set(P_PHARAH, P_REINHARDT, 100).expect("in range");
+    matchups.set(P_REINHARDT, P_PHARAH, -100).expect("in range");
+
+    Dataset::new(DatasetParts {
+        heroes: (0..n)
+            .map(|index| ds.hero(HeroId(index as u16)).expect("in range").clone())
+            .collect(),
+        maps: Vec::new(),
+        matchups,
+        synergy: Matrix::unrated(n),
+        map_affinity: Vec::new(),
+        base_strength: vec![-20, 40, -60, 80],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
+        prevalence,
+        win_rate: vec![Some(48.5), Some(52.0), Some(46.0), Some(54.0)],
+        side_lean: vec![0; n],
+        shape: vec![[0; 3]; n],
+        reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
+        generated: "fixture".to_owned(),
+        patch: "fixture".to_owned(),
+    })
+    .expect("fixture is internally consistent")
+}
+
 fn patch_fixture() -> Dataset {
     let heroes = vec![
         hero("reinhardt", "Reinhardt", Role::Tank),
@@ -1020,6 +1059,15 @@ fn team(members: Vec<Defended>) -> DefendedTeam {
 
 /// Drafting alone, having marked a pool. The one-member case, which is what the
 /// solo screen actually passes.
+/// Two people who have said only their role, which is the state the patch rung
+/// answers for.
+fn quiet_team(ds: &Dataset) -> DefendedTeam {
+    team(vec![
+        unknown(ds, "me", true, Role::Tank),
+        unknown(ds, "mika", false, Role::Support),
+    ])
+}
+
 fn solo_pool(heroes: Vec<HeroId>) -> DefendedTeam {
     team(vec![pooled("me", true, Role::Tank, heroes)])
 }
@@ -1183,6 +1231,110 @@ fn the_enemy_tank_is_worth_more_to_ban_for_a_tank_player() {
 // The ladder the panel climbs: nobody has said anything, then somebody marks a
 // pool, then somebody else does, then people lock in. Each rung has to move the
 // answer, or the panel is claiming to use information it is throwing away.
+
+/// The Torbjörn case, in miniature. Ana is the strongest hero here and almost
+/// nobody picks her; Sigma is weaker and everywhere. A ban is spent on a hero the
+/// enemy might actually take, so the list has to weigh that.
+#[test]
+fn a_rarely_picked_hero_falls_down_the_ban_list() {
+    let ds = prevalence_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let board = ban_recommendations(&ds, &Draft::new(), &ctx, &quiet_team(&ds));
+
+    assert_eq!(
+        board.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
+        vec![P_SIGMA, P_ANA],
+        "strength alone would have put Ana first"
+    );
+    // 0.40 x 1.40 against 0.80 x 0.60.
+    assert!((ban_score_of(&board, P_SIGMA).expect("listed") - 0.56).abs() < 1e-6);
+    assert!((ban_score_of(&board, P_ANA).expect("listed") - 0.48).abs() < 1e-6);
+}
+
+/// Membership is decided by the argument and only the order by the prior. The
+/// discount is applied after the `score <= 0.0` gate and is strictly positive, so
+/// there is no weight at which it can put a hero on this list or take one off.
+#[test]
+fn prevalence_reorders_the_ban_list_without_changing_who_is_on_it() {
+    let ds = prevalence_fixture();
+    let mut ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let discounted = ban_recommendations(&ds, &Draft::new(), &ctx, &quiet_team(&ds));
+    ctx.weights.prevalence = 0.0;
+    let plain = ban_recommendations(&ds, &Draft::new(), &ctx, &quiet_team(&ds));
+
+    let membership = |board: &BanBoard| {
+        let mut heroes: Vec<HeroId> = board.candidates.iter().map(|c| c.hero).collect();
+        heroes.sort_by_key(|hero| hero.index());
+        heroes
+    };
+    assert_eq!(membership(&discounted), membership(&plain));
+    assert_ne!(
+        discounted.candidates[0].hero, plain.candidates[0].hero,
+        "and the order really did move, or this test proves nothing"
+    );
+
+    // Zeroing the weight makes the factor exactly 1.0, which is patch strength
+    // read straight — the behaviour everybody had before this term existed.
+    assert!((ban_score_of(&plain, P_ANA).expect("listed") - 0.80).abs() < 1e-6);
+}
+
+/// `severity` is the reading and `score` is the reading times a prior. The panel
+/// sorts on and displays the second; the first has to survive un-multiplied, or
+/// nothing on screen can say what the matchup alone was.
+#[test]
+fn the_discount_reaches_the_score_and_leaves_the_severity_alone() {
+    let ds = prevalence_fixture();
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+
+    let board = ban_recommendations(&ds, &Draft::new(), &ctx, &quiet_team(&ds));
+    let ana = board
+        .candidates
+        .iter()
+        .find(|c| c.hero == P_ANA)
+        .expect("listed");
+
+    assert!((ana.severity - 0.80).abs() < 1e-6, "the raw reading");
+    assert!((ana.score - 0.48).abs() < 1e-6, "and the discounted one");
+    assert_eq!(
+        ana.prevalence, -100,
+        "carried, so the panel says the same thing"
+    );
+}
+
+/// Prevalence reaches a hero the enemy has not picked yet, and nothing else. The
+/// pick list is about you, and the threat board is about heroes already on the
+/// board — where the probability of turning up is 1 and a prior about it would be
+/// arithmetic on an event that has already happened.
+#[test]
+fn prevalence_never_reaches_the_pick_list_or_the_threat_board() {
+    let ds = prevalence_fixture();
+    let mut draft = Draft::new();
+    draft.enemies.push(P_PHARAH);
+
+    let mut discounted = UserContext::new(Role::Tank, ds.hero_count());
+    discounted.weights.prevalence = 0.90;
+    let mut plain = UserContext::new(Role::Tank, ds.hero_count());
+    plain.weights.prevalence = 0.0;
+
+    let scores = |ctx: &UserContext| {
+        recommend(&ds, &draft, ctx)
+            .expect("scoring succeeds")
+            .into_iter()
+            .map(|rec| (rec.hero, rec.score))
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(scores(&discounted), scores(&plain));
+
+    let severities = |ctx: &UserContext| {
+        threats(&ds, &draft, ctx, P_REINHARDT)
+            .into_iter()
+            .map(|threat| threat.severity)
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(severities(&discounted), severities(&plain));
+}
 
 /// Nobody has said anything, so there is no team to answer about. Ranked by
 /// patch strength instead — a role-wide matchup average is nearly flat, and a

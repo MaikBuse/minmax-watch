@@ -346,6 +346,12 @@ mod tests {
         assert_eq!(weights.rank, Weights::default().rank);
         assert!(weights.rank > 0.0);
         assert_eq!(weights.shape, Weights::default().shape);
+        // And the same again for the prevalence discount, where the failure looks
+        // harmless instead of obvious: it is a *multiplier*, so serde's 0.0 does
+        // not zero a term — it makes the factor exactly 1.0, which is the ban list
+        // ignoring pick rate entirely. See `default_prevalence` in core.
+        assert_eq!(weights.prevalence, Weights::default().prevalence);
+        assert!(weights.prevalence > 0.0);
     }
 
     /// The two-person build called this field `room` and defaulted it to "us",
