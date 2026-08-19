@@ -856,6 +856,15 @@ async fn main() -> Result<()> {
                     {
                         changed.push("prevalence.toml");
                     }
+
+                    // The yardstick, off the same nine responses. Never loaded by
+                    // the app — see `BanRateFile`.
+                    let ban_rates = stats::ban_rates(&generated, &blizzard);
+                    let ban_rate_toml =
+                        toml::to_string_pretty(&ban_rates).context("serialising ban_rate.toml")?;
+                    if write_if_changed(&data_dir.join("ban_rate.toml"), &ban_rate_toml).await? {
+                        changed.push("ban_rate.toml");
+                    }
                 }
             }
             Err(err) => eprintln!("  warn: counterpickgg index unusable: {err:#}"),

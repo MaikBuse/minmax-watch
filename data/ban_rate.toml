@@ -1,0 +1,638 @@
+generated = "2026-08-19"
+note = "Published ban rates, per rung, as a yardstick for the ban list. Deliberately not compiled into the app: this measures who gets banned rather than who is strong, and it is what the acceptance test predicts, so scoring on it would be circular. Read only by overwatch-data/tests/committed_dataset.rs."
+
+[[ban_rate]]
+hero = "ana"
+all = 12.699999809265137
+bronze = 5.099999904632568
+silver = 9.600000381469727
+gold = 13.800000190734863
+platinum = 14.699999809265137
+emerald = 12.800000190734863
+diamond = 12.199999809265137
+master = 13.0
+grandmaster = 14.399999618530273
+
+[[ban_rate]]
+hero = "anran"
+all = 29.799999237060547
+bronze = 31.5
+silver = 34.599998474121094
+gold = 35.20000076293945
+platinum = 32.099998474121094
+emerald = 23.799999237060547
+diamond = 12.199999809265137
+master = 2.5999999046325684
+grandmaster = 0.30000001192092896
+
+[[ban_rate]]
+hero = "ashe"
+all = 1.7999999523162842
+bronze = 0.6000000238418579
+silver = 0.800000011920929
+gold = 1.600000023841858
+platinum = 2.5
+emerald = 2.5999999046325684
+diamond = 1.600000023841858
+master = 0.800000011920929
+grandmaster = 0.20000000298023224
+
+[[ban_rate]]
+hero = "baptiste"
+all = 0.10000000149011612
+bronze = 0.0
+silver = 0.10000000149011612
+gold = 0.10000000149011612
+platinum = 0.10000000149011612
+emerald = 0.10000000149011612
+diamond = 0.10000000149011612
+master = 0.0
+grandmaster = 0.10000000149011612
+
+[[ban_rate]]
+hero = "bastion"
+all = 6.800000190734863
+bronze = 3.9000000953674316
+silver = 5.800000190734863
+gold = 7.300000190734863
+platinum = 8.0
+emerald = 7.400000095367432
+diamond = 4.699999809265137
+master = 2.9000000953674316
+grandmaster = 1.899999976158142
+
+[[ban_rate]]
+hero = "brigitte"
+all = 0.10000000149011612
+bronze = 0.20000000298023224
+silver = 0.10000000149011612
+gold = 0.10000000149011612
+platinum = 0.10000000149011612
+emerald = 0.20000000298023224
+diamond = 0.30000001192092896
+master = 0.5
+grandmaster = 0.5
+
+[[ban_rate]]
+hero = "cassidy"
+all = 7.5
+bronze = 1.0
+silver = 1.600000023841858
+gold = 3.799999952316284
+platinum = 7.800000190734863
+emerald = 13.5
+diamond = 18.399999618530273
+master = 21.899999618530273
+grandmaster = 22.700000762939453
+
+[[ban_rate]]
+hero = "dmon"
+all = 9.5
+bronze = 17.700000762939453
+silver = 13.300000190734863
+gold = 10.199999809265137
+platinum = 8.600000381469727
+emerald = 7.0
+diamond = 5.0
+master = 4.300000190734863
+grandmaster = 2.5999999046325684
+
+[[ban_rate]]
+hero = "domina"
+all = 5.400000095367432
+bronze = 7.400000095367432
+silver = 7.300000190734863
+gold = 6.800000190734863
+platinum = 5.400000095367432
+emerald = 3.299999952316284
+diamond = 1.5
+master = 0.5
+grandmaster = 0.20000000298023224
+
+[[ban_rate]]
+hero = "doomfist"
+all = 17.0
+bronze = 12.699999809265137
+silver = 13.5
+gold = 16.0
+platinum = 19.299999237060547
+emerald = 20.0
+diamond = 16.799999237060547
+master = 11.600000381469727
+grandmaster = 12.300000190734863
+
+[[ban_rate]]
+hero = "dva"
+all = 3.9000000953674316
+bronze = 3.700000047683716
+silver = 2.4000000953674316
+gold = 2.200000047683716
+platinum = 3.4000000953674316
+emerald = 5.699999809265137
+diamond = 9.300000190734863
+master = 11.300000190734863
+grandmaster = 11.800000190734863
+
+[[ban_rate]]
+hero = "echo"
+all = 0.5
+bronze = 0.800000011920929
+silver = 0.6000000238418579
+gold = 0.5
+platinum = 0.5
+emerald = 0.6000000238418579
+diamond = 0.800000011920929
+master = 0.4000000059604645
+grandmaster = 0.20000000298023224
+
+[[ban_rate]]
+hero = "emre"
+all = 0.30000001192092896
+bronze = 0.20000000298023224
+silver = 0.20000000298023224
+gold = 0.20000000298023224
+platinum = 0.30000001192092896
+emerald = 0.30000001192092896
+diamond = 0.30000001192092896
+master = 0.10000000149011612
+grandmaster = 0.10000000149011612
+
+[[ban_rate]]
+hero = "freja"
+all = 11.600000381469727
+bronze = 1.0
+silver = 1.7999999523162842
+gold = 4.5
+platinum = 10.399999618530273
+emerald = 21.399999618530273
+diamond = 35.900001525878906
+master = 47.099998474121094
+grandmaster = 43.20000076293945
+
+[[ban_rate]]
+hero = "genji"
+all = 4.5
+bronze = 3.200000047683716
+silver = 3.299999952316284
+gold = 4.300000190734863
+platinum = 5.5
+emerald = 5.5
+diamond = 3.5999999046325684
+master = 1.7000000476837158
+grandmaster = 0.5
+
+[[ban_rate]]
+hero = "hanzo"
+all = 1.2000000476837158
+bronze = 0.8999999761581421
+silver = 0.6000000238418579
+gold = 1.0
+platinum = 1.5
+emerald = 1.7000000476837158
+diamond = 1.2999999523162842
+master = 0.6000000238418579
+grandmaster = 0.30000001192092896
+
+[[ban_rate]]
+hero = "hazard"
+all = 3.299999952316284
+bronze = 0.699999988079071
+silver = 1.0
+gold = 1.5
+platinum = 3.0
+emerald = 5.900000095367432
+diamond = 9.600000381469727
+master = 10.800000190734863
+grandmaster = 8.100000381469727
+
+[[ban_rate]]
+hero = "illari"
+all = 0.10000000149011612
+bronze = 0.20000000298023224
+silver = 0.10000000149011612
+gold = 0.10000000149011612
+platinum = 0.10000000149011612
+emerald = 0.10000000149011612
+diamond = 0.10000000149011612
+master = 0.0
+grandmaster = 0.8999999761581421
+
+[[ban_rate]]
+hero = "jetpack-cat"
+all = 25.100000381469727
+bronze = 33.5
+silver = 26.600000381469727
+gold = 23.299999237060547
+platinum = 21.600000381469727
+emerald = 24.899999618530273
+diamond = 30.200000762939453
+master = 44.400001525878906
+grandmaster = 67.9000015258789
+
+[[ban_rate]]
+hero = "junker-queen"
+all = 0.5
+bronze = 0.4000000059604645
+silver = 0.5
+gold = 0.5
+platinum = 0.5
+emerald = 0.6000000238418579
+diamond = 0.699999988079071
+master = 0.5
+grandmaster = 0.699999988079071
+
+[[ban_rate]]
+hero = "junkrat"
+all = 4.0
+bronze = 8.5
+silver = 6.400000095367432
+gold = 4.599999904632568
+platinum = 3.4000000953674316
+emerald = 2.0999999046325684
+diamond = 1.2000000476837158
+master = 0.5
+grandmaster = 3.0
+
+[[ban_rate]]
+hero = "juno"
+all = 0.30000001192092896
+bronze = 0.8999999761581421
+silver = 0.4000000059604645
+gold = 0.30000001192092896
+platinum = 0.30000001192092896
+emerald = 0.30000001192092896
+diamond = 0.30000001192092896
+master = 0.20000000298023224
+grandmaster = 0.30000001192092896
+
+[[ban_rate]]
+hero = "kiriko"
+all = 4.400000095367432
+bronze = 1.2999999523162842
+silver = 1.7000000476837158
+gold = 3.0
+platinum = 4.699999809265137
+emerald = 6.300000190734863
+diamond = 8.5
+master = 11.300000190734863
+grandmaster = 18.700000762939453
+
+[[ban_rate]]
+hero = "lifeweaver"
+all = 0.6000000238418579
+bronze = 0.4000000059604645
+silver = 0.30000001192092896
+gold = 0.4000000059604645
+platinum = 0.699999988079071
+emerald = 0.800000011920929
+diamond = 0.699999988079071
+master = 0.4000000059604645
+grandmaster = 0.20000000298023224
+
+[[ban_rate]]
+hero = "lucio"
+all = 0.5
+bronze = 0.5
+silver = 0.5
+gold = 0.5
+platinum = 0.4000000059604645
+emerald = 0.4000000059604645
+diamond = 0.4000000059604645
+master = 1.0
+grandmaster = 3.299999952316284
+
+[[ban_rate]]
+hero = "mauga"
+all = 30.5
+bronze = 20.899999618530273
+silver = 23.799999237060547
+gold = 27.200000762939453
+platinum = 30.399999618530273
+emerald = 36.0
+diamond = 43.900001525878906
+master = 51.5
+grandmaster = 50.29999923706055
+
+[[ban_rate]]
+hero = "mei"
+all = 6.199999809265137
+bronze = 11.800000190734863
+silver = 9.600000381469727
+gold = 7.599999904632568
+platinum = 5.599999904632568
+emerald = 3.299999952316284
+diamond = 1.2999999523162842
+master = 0.800000011920929
+grandmaster = 0.800000011920929
+
+[[ban_rate]]
+hero = "mercy"
+all = 8.100000381469727
+bronze = 7.5
+silver = 7.0
+gold = 6.699999809265137
+platinum = 8.0
+emerald = 10.300000190734863
+diamond = 11.199999809265137
+master = 9.5
+grandmaster = 3.200000047683716
+
+[[ban_rate]]
+hero = "mizuki"
+all = 8.300000190734863
+bronze = 1.2000000476837158
+silver = 2.4000000953674316
+gold = 4.400000095367432
+platinum = 8.199999809265137
+emerald = 14.699999809265137
+diamond = 20.799999237060547
+master = 24.399999618530273
+grandmaster = 20.399999618530273
+
+[[ban_rate]]
+hero = "moira"
+all = 4.400000095367432
+bronze = 13.699999809265137
+silver = 9.0
+gold = 5.0
+platinum = 2.700000047683716
+emerald = 1.7000000476837158
+diamond = 0.8999999761581421
+master = 0.5
+grandmaster = 0.4000000059604645
+
+[[ban_rate]]
+hero = "orisa"
+all = 8.199999809265137
+bronze = 11.100000381469727
+silver = 9.899999618530273
+gold = 9.0
+platinum = 7.900000095367432
+emerald = 6.400000095367432
+diamond = 5.300000190734863
+master = 5.5
+grandmaster = 7.900000095367432
+
+[[ban_rate]]
+hero = "pharah"
+all = 6.099999904632568
+bronze = 9.0
+silver = 9.199999809265137
+gold = 7.099999904632568
+platinum = 5.199999809265137
+emerald = 3.9000000953674316
+diamond = 3.700000047683716
+master = 3.5
+grandmaster = 3.700000047683716
+
+[[ban_rate]]
+hero = "ramattra"
+all = 10.300000190734863
+bronze = 9.5
+silver = 12.699999809265137
+gold = 12.300000190734863
+platinum = 10.600000381469727
+emerald = 7.599999904632568
+diamond = 4.900000095367432
+master = 3.799999952316284
+grandmaster = 3.799999952316284
+
+[[ban_rate]]
+hero = "reaper"
+all = 2.0999999046325684
+bronze = 2.200000047683716
+silver = 2.200000047683716
+gold = 2.0
+platinum = 2.0
+emerald = 2.0999999046325684
+diamond = 2.0999999046325684
+master = 2.299999952316284
+grandmaster = 3.4000000953674316
+
+[[ban_rate]]
+hero = "reinhardt"
+all = 2.700000047683716
+bronze = 6.599999904632568
+silver = 4.0
+gold = 2.700000047683716
+platinum = 2.299999952316284
+emerald = 1.899999976158142
+diamond = 1.899999976158142
+master = 1.5
+grandmaster = 2.0999999046325684
+
+[[ban_rate]]
+hero = "roadhog"
+all = 20.5
+bronze = 8.699999809265137
+silver = 9.899999618530273
+gold = 15.399999618530273
+platinum = 24.0
+emerald = 30.899999618530273
+diamond = 30.299999237060547
+master = 27.399999618530273
+grandmaster = 21.5
+
+[[ban_rate]]
+hero = "shion"
+all = 1.600000023841858
+bronze = 1.600000023841858
+silver = 1.7000000476837158
+gold = 1.600000023841858
+platinum = 1.5
+emerald = 1.600000023841858
+diamond = 1.2999999523162842
+master = 1.399999976158142
+grandmaster = 1.0
+
+[[ban_rate]]
+hero = "sierra"
+all = 26.100000381469727
+bronze = 39.5
+silver = 39.5
+gold = 34.29999923706055
+platinum = 24.5
+emerald = 12.199999809265137
+diamond = 3.799999952316284
+master = 0.6000000238418579
+grandmaster = 0.0
+
+[[ban_rate]]
+hero = "sigma"
+all = 4.400000095367432
+bronze = 5.599999904632568
+silver = 4.5
+gold = 3.700000047683716
+platinum = 4.0
+emerald = 4.699999809265137
+diamond = 6.099999904632568
+master = 8.5
+grandmaster = 5.900000095367432
+
+[[ban_rate]]
+hero = "sojourn"
+all = 1.399999976158142
+bronze = 0.20000000298023224
+silver = 0.4000000059604645
+gold = 0.800000011920929
+platinum = 1.5
+emerald = 2.5999999046325684
+diamond = 3.299999952316284
+master = 2.0
+grandmaster = 2.299999952316284
+
+[[ban_rate]]
+hero = "soldier-76"
+all = 0.6000000238418579
+bronze = 0.5
+silver = 0.699999988079071
+gold = 0.6000000238418579
+platinum = 0.5
+emerald = 0.5
+diamond = 0.4000000059604645
+master = 0.6000000238418579
+grandmaster = 0.699999988079071
+
+[[ban_rate]]
+hero = "sombra"
+all = 38.099998474121094
+bronze = 73.19999694824219
+silver = 65.19999694824219
+gold = 49.400001525878906
+platinum = 31.799999237060547
+emerald = 14.899999618530273
+diamond = 5.199999809265137
+master = 0.699999988079071
+grandmaster = 0.10000000149011612
+
+[[ban_rate]]
+hero = "symmetra"
+all = 4.0
+bronze = 5.099999904632568
+silver = 4.900000095367432
+gold = 5.0
+platinum = 4.199999809265137
+emerald = 2.700000047683716
+diamond = 1.5
+master = 0.800000011920929
+grandmaster = 0.4000000059604645
+
+[[ban_rate]]
+hero = "torbjorn"
+all = 0.6000000238418579
+bronze = 0.800000011920929
+silver = 0.800000011920929
+gold = 0.699999988079071
+platinum = 0.5
+emerald = 0.4000000059604645
+diamond = 0.4000000059604645
+master = 0.20000000298023224
+grandmaster = 0.30000001192092896
+
+[[ban_rate]]
+hero = "tracer"
+all = 6.599999904632568
+bronze = 7.900000095367432
+silver = 5.0
+gold = 4.599999904632568
+platinum = 5.699999809265137
+emerald = 9.100000381469727
+diamond = 13.0
+master = 14.0
+grandmaster = 11.399999618530273
+
+[[ban_rate]]
+hero = "vendetta"
+all = 3.799999952316284
+bronze = 5.599999904632568
+silver = 4.900000095367432
+gold = 4.800000190734863
+platinum = 3.700000047683716
+emerald = 2.299999952316284
+diamond = 1.2000000476837158
+master = 0.6000000238418579
+grandmaster = 0.5
+
+[[ban_rate]]
+hero = "venture"
+all = 0.699999988079071
+bronze = 0.4000000059604645
+silver = 0.5
+gold = 0.699999988079071
+platinum = 0.8999999761581421
+emerald = 0.8999999761581421
+diamond = 0.6000000238418579
+master = 0.6000000238418579
+grandmaster = 0.30000001192092896
+
+[[ban_rate]]
+hero = "widowmaker"
+all = 6.099999904632568
+bronze = 7.300000190734863
+silver = 4.400000095367432
+gold = 4.300000190734863
+platinum = 5.699999809265137
+emerald = 8.600000381469727
+diamond = 10.5
+master = 9.899999618530273
+grandmaster = 7.699999809265137
+
+[[ban_rate]]
+hero = "winston"
+all = 3.9000000953674316
+bronze = 5.0
+silver = 4.699999809265137
+gold = 4.199999809265137
+platinum = 4.0
+emerald = 3.4000000953674316
+diamond = 2.4000000953674316
+master = 1.100000023841858
+grandmaster = 0.5
+
+[[ban_rate]]
+hero = "wrecking-ball"
+all = 9.899999618530273
+bronze = 10.399999618530273
+silver = 7.699999809265137
+gold = 8.300000190734863
+platinum = 10.800000190734863
+emerald = 13.0
+diamond = 11.300000190734863
+master = 6.5
+grandmaster = 3.299999952316284
+
+[[ban_rate]]
+hero = "wuyang"
+all = 0.10000000149011612
+bronze = 0.10000000149011612
+silver = 0.10000000149011612
+gold = 0.10000000149011612
+platinum = 0.10000000149011612
+emerald = 0.10000000149011612
+diamond = 0.10000000149011612
+master = 0.10000000149011612
+grandmaster = 0.0
+
+[[ban_rate]]
+hero = "zarya"
+all = 53.79999923706055
+bronze = 51.599998474121094
+silver = 63.79999923706055
+gold = 64.30000305175781
+platinum = 54.400001525878906
+emerald = 40.70000076293945
+diamond = 30.899999618530273
+master = 25.200000762939453
+grandmaster = 22.100000381469727
+
+[[ban_rate]]
+hero = "zenyatta"
+all = 2.799999952316284
+bronze = 1.100000023841858
+silver = 1.2999999523162842
+gold = 2.0999999046325684
+platinum = 3.200000047683716
+emerald = 4.400000095367432
+diamond = 4.699999809265137
+master = 3.5999999046325684
+grandmaster = 1.100000023841858

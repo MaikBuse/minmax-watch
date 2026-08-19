@@ -10,7 +10,12 @@ use overwatch_core::{
     HeroId, Knowledge, MapId, Rank, ReasonKind, Role, Subrole, UserContext,
 };
 use overwatch_data::load;
-use overwatch_data::schema::MatchupsFile;
+use overwatch_data::schema::{BanRateFile, MatchupsFile};
+
+/// The yardstick, read straight from `data/` because it is deliberately not one of
+/// the documents `overwatch-data` compiles in. See
+/// `the_ban_rate_table_never_reaches_the_bundle`.
+const BAN_RATE_TOML: &str = include_str!("../../data/ban_rate.toml");
 
 #[test]
 fn the_roster_is_plausible() {
@@ -1053,5 +1058,150 @@ fn the_strongest_heroes_are_not_simply_the_least_picked_ones() {
         "base strength and prevalence correlate at r = {r:.2} - patch strength has \
          become a reading of how often a hero is picked rather than of how often \
          it wins"
+    );
+}
+
+/// `data/ban_rate.toml` is the one file in `data/` the app must never load.
+///
+/// It measures who gets banned rather than who is strong — a second argument the
+/// ban list refuses to add to the first — and it is the quantity the acceptance
+/// test below *predicts*, so scoring on it would make that test circular. The only
+/// thing standing between "a yardstick" and "a term somebody wired up" is an
+/// `include_str!` that does not exist, which is exactly the kind of absence that
+/// gets added back by accident.
+///
+/// So this reads the loader's own source and asserts the file is not in it. The
+/// test file reaches the data directly instead, which is what keeps the table out
+/// of a 1.2 MB wasm bundle it has no business being in.
+#[test]
+fn the_ban_rate_table_never_reaches_the_bundle() {
+    const LOADER: &str = include_str!("../src/lib.rs");
+
+    assert!(
+        !LOADER.contains("ban_rate"),
+        "overwatch-data/src/lib.rs mentions ban_rate, which means the yardstick is \
+         being compiled into the app it is supposed to be judging"
+    );
+    // And the guard is only worth anything while the file it guards exists.
+    assert!(
+        !BAN_RATE_TOML.is_empty(),
+        "data/ban_rate.toml is empty - run `just ingest-strength`"
+    );
+}
+
+/// The acceptance test for the whole prevalence feature: does the ban list move
+/// toward what Grandmaster players actually ban?
+///
+/// **Grandmaster only, on purpose.** rho(ban rate, pick rate) by rung runs 0.04 at
+/// Bronze and Gold, 0.17 at Diamond, 0.36 at Master and 0.52 at Grandmaster. Below
+/// Diamond the ban button is spent on annoyance rather than on strength — Sombra
+/// is banned in 73.2% of Bronze games and 0.1% of Grandmaster ones — so the
+/// ladder's ban rate down there is not ground truth for anything this app computes.
+///
+/// Three assertions, in descending order of how stable they should be. What it
+/// deliberately does **not** assert is worth writing down too, because both look
+/// like obvious additions:
+///
+/// - Not "the top eight are heroes the ladder bans". The median Grandmaster ban
+///   rate is 1.90%: the ladder spends its bans on two or three broken heroes, and a
+///   ranked eight cannot look like that without being wrong about the other five.
+/// - Not "Torbjörn is out of the top eight". That is a one-place margin a balance
+///   patch owns, and it is not this term's job anyway — reading Blizzard's win rate
+///   and correcting for selection are what moved him.
+#[test]
+fn the_patch_rung_at_grandmaster_moves_toward_what_grandmasters_actually_ban() {
+    let ds = load().expect("committed data must load");
+    let bans: BanRateFile = toml::from_str(BAN_RATE_TOML).expect("the yardstick must parse");
+    let published: std::collections::HashMap<&str, f32> = bans
+        .entries
+        .iter()
+        .filter_map(|entry| {
+            entry
+                .value_for(Rank::Grandmaster)
+                .map(|rate| (entry.hero.as_str(), rate))
+        })
+        .collect();
+
+    let board = |weight: f32| {
+        let mut ctx = UserContext::new(Role::Tank, ds.hero_count());
+        ctx.rank = Rank::Grandmaster;
+        ctx.weights.prevalence = weight;
+        let board = ban_recommendations(&ds, &Draft::new(), &ctx, &DefendedTeam::default());
+        assert_eq!(board.subject, BanSubject::Patch);
+        board
+            .candidates
+            .iter()
+            .map(|candidate| {
+                let key = ds.hero(candidate.hero).expect("in range").key.clone();
+                let rate = published.get(key.as_str()).copied().unwrap_or(0.0);
+                (candidate.score, rate)
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let discounted = board(0.40);
+    let plain = board(0.0);
+
+    // 1. It agrees with the ladder better than it did. Positive and strictly
+    //    improved, which is the claim; the magnitudes move with every patch.
+    let rho = |rows: &[(f32, f32)]| {
+        let rank_of = |values: Vec<f32>| {
+            let mut order: Vec<usize> = (0..values.len()).collect();
+            order.sort_by(|a, b| values[*a].total_cmp(&values[*b]));
+            let mut ranks = vec![0.0f32; values.len()];
+            for (position, index) in order.into_iter().enumerate() {
+                ranks[index] = position as f32;
+            }
+            ranks
+        };
+        let xs = rank_of(rows.iter().map(|(score, _)| *score).collect());
+        let ys = rank_of(rows.iter().map(|(_, rate)| *rate).collect());
+        let mean = |v: &[f32]| v.iter().sum::<f32>() / v.len() as f32;
+        let (mx, my) = (mean(&xs), mean(&ys));
+        let cov: f32 = xs.iter().zip(&ys).map(|(a, b)| (a - mx) * (b - my)).sum();
+        let dev = |v: &[f32], m: f32| v.iter().map(|x| (x - m).powi(2)).sum::<f32>().sqrt();
+        cov / (dev(&xs, mx) * dev(&ys, my))
+    };
+    let (with, without) = (rho(&discounted), rho(&plain));
+    assert!(
+        with > 0.0 && with > without,
+        "the discount has to improve agreement with the ladder, not just change it: \
+         rho {without:.3} without it, {with:.3} with"
+    );
+
+    // 2. The heroes the ladder bans hardest are on the list somewhere. Three of
+    //    five rather than five of five, because two of them are heroes our sources
+    //    say beat nobody, and this list only carries heroes there is an argument
+    //    for.
+    let mut ctx = UserContext::new(Role::Tank, ds.hero_count());
+    ctx.rank = Rank::Grandmaster;
+    let candidates = ban_recommendations(&ds, &Draft::new(), &ctx, &DefendedTeam::default());
+    let on_the_list: std::collections::HashSet<&str> = candidates
+        .candidates
+        .iter()
+        .filter_map(|candidate| ds.hero(candidate.hero).ok().map(|hero| hero.key.as_str()))
+        .collect();
+
+    let mut hardest: Vec<(&str, f32)> = published.iter().map(|(k, v)| (*k, *v)).collect();
+    hardest.sort_by(|a, b| b.1.total_cmp(&a.1));
+    let listed = hardest
+        .iter()
+        .take(5)
+        .filter(|(hero, _)| on_the_list.contains(hero))
+        .count();
+    assert!(
+        listed >= 3,
+        "only {listed} of the five most-banned heroes at grandmaster appear on the \
+         list at all"
+    );
+
+    // 3. And the top of the list is dangerous by the ladder's own reckoning, not
+    //    merely sorted. Against a roster mean of 7.35%.
+    let top_eight = discounted.iter().take(8).map(|(_, rate)| rate).sum::<f32>() / 8.0;
+    let roster = published.values().sum::<f32>() / published.len() as f32;
+    assert!(
+        top_eight >= roster * 2.0,
+        "the top eight average a {top_eight:.1}% ban rate against a roster mean of \
+         {roster:.1}% - the list is not finding the heroes the ladder fears"
     );
 }

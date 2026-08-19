@@ -147,10 +147,20 @@ struct Cells {
     /// arbitrary scale — it is P(this hero is on a team), and that is what gives
     /// `prevalence.toml` an exact zero point rather than a fitted one.
     pickrate: f32,
-    // `banrate` is deliberately not modelled. It swings enormously by rung —
-    // Sombra runs 73.2% at Bronze and 0.1% at Grandmaster — but it measures who
-    // gets banned, not who is strong, and the ban list refuses to put two
-    // arguments into one number. See `score::ban_by_strength`.
+    /// Who the ladder actually bans, and **the yardstick rather than an input**.
+    ///
+    /// It stays out of the scorer for the reason it always has: it measures who
+    /// gets banned rather than who is strong, and the ban list refuses to put two
+    /// arguments into one number — see `score::ban_by_strength`. Scoring on it
+    /// would also make the acceptance test circular, because this is the thing
+    /// that test predicts.
+    ///
+    /// What it is good for is checking the answer. It swings enormously by rung —
+    /// Sombra runs 73.2% at Bronze and 0.1% at Grandmaster — and that swing is
+    /// itself the reason only Grandmaster is worth checking against: rho(ban rate,
+    /// pick rate) runs 0.04 at Bronze and 0.52 at Grandmaster, so below Diamond the
+    /// ban button is spent on annoyance rather than on strength.
+    banrate: f32,
 }
 
 /// Every rung's win rates, plus the baseline they are measured against.
@@ -160,6 +170,11 @@ pub struct BlizzardRates {
     pub baseline: HashMap<String, f32>,
     /// One map per rung, keyed by hero.
     pub by_rank: HashMap<Rank, HashMap<String, f32>>,
+    /// Ban rate at every rung and at the baseline, keyed like [`Self::pick_rate`].
+    ///
+    /// Never scored on. It is written to `data/ban_rate.toml` for the acceptance
+    /// test to read, and that file is deliberately not part of the bundle.
+    pub ban_rate: HashMap<(Rank, String), f32>,
     /// Pick rate at every rung **and** at the baseline, so this map is nine
     /// buckets wide where [`Self::by_rank`] is eight.
     ///
@@ -219,6 +234,8 @@ pub async fn scrape(fetcher: &mut Fetcher) -> Result<BlizzardRates> {
         // has a real pick rate, and `prevalence.toml` has a column for it.
         out.pick_rate
             .insert((Rank::All, row.id.clone()), row.cells.pickrate);
+        out.ban_rate
+            .insert((Rank::All, row.id.clone()), row.cells.banrate);
         out.baseline.insert(row.id, row.cells.winrate);
     }
 
@@ -228,6 +245,8 @@ pub async fn scrape(fetcher: &mut Fetcher) -> Result<BlizzardRates> {
         for row in rows {
             out.pick_rate
                 .insert((rank, row.id.clone()), row.cells.pickrate);
+            out.ban_rate
+                .insert((rank, row.id.clone()), row.cells.banrate);
             tier.insert(row.id, row.cells.winrate);
         }
         out.by_rank.insert(rank, tier);
@@ -331,8 +350,8 @@ mod tests {
     fn a_tier_the_server_did_not_serve_is_rejected() {
         // The shape the endpoint really returns for an unknown tier: HTTP 200,
         // a full table, and `selected.tier` quietly reading "All".
-        let body = r#"{"rates":{"rates":[{"id":"ana","cells":{"winrate":48.5,"pickrate":25.1}}],
-                       "selected":{"tier":"All"}},"columns":[]}"#;
+        let body = r#"{"rates":{"rates":[{"id":"ana","cells":{"winrate":48.5,"pickrate":25.1,
+                       "banrate":12.7}}],"selected":{"tier":"All"}},"columns":[]}"#;
         let payload: RatesResponse = serde_json::from_str(body).expect("parses");
         assert_eq!(payload.rates.selected.tier, "All");
         assert_ne!(
@@ -340,6 +359,18 @@ mod tests {
             Tier::Rung(Rank::Bronze).query(),
             "this mismatch is what `fetch_tier` refuses to accept"
         );
+    }
+
+    /// All three cells are required rather than defaulted, and `banrate` is the one
+    /// where that matters most: it is the yardstick the ban list is judged against,
+    /// so a serde default of 0.0 would read as "the ladder never bans this hero"
+    /// and quietly make the acceptance test easier to pass.
+    #[test]
+    fn a_response_missing_a_cell_is_an_error_rather_than_a_zero() {
+        let body = r#"{"rates":{"rates":[{"id":"ana","cells":{"winrate":48.5,"pickrate":25.1}}],
+                       "selected":{"tier":"All"}},"columns":[]}"#;
+        serde_json::from_str::<RatesResponse>(body)
+            .expect_err("a missing ban rate is a schema change, not a zero");
     }
 
     #[test]

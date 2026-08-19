@@ -136,6 +136,94 @@ pub struct MapAffinityEntry {
     pub value: i8,
 }
 
+/// What the ladder actually bans, per hero and per rung — **the yardstick the ban
+/// list is judged against, and the one file in `data/` the app never loads.**
+///
+/// It is not a term and must never become one. It measures who gets banned rather
+/// than who is strong, which is a second argument the ban list refuses to add to
+/// the first, and it is also the quantity the acceptance test *predicts* — scoring
+/// on it would make that test circular.
+///
+/// So it lives in `data/` without an `include_str!` in `overwatch-data/src/lib.rs`,
+/// and `the_ban_rate_table_never_reaches_the_bundle` is what keeps it that way. It
+/// is in `data/` rather than inlined in the test because the assertion relates two
+/// columns of one scrape and both have to come from the same scrape; a hand-copied
+/// table in a test file is a second dataset that drifts.
+///
+/// Stored as the published percentage verbatim rather than through `normalize()`:
+/// the canonical -100..=100 scale is for values the scorer reads, and nothing here
+/// is one.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct BanRateFile {
+    #[serde(default)]
+    pub generated: String,
+    /// Why this file exists and why nothing loads it.
+    ///
+    /// A data field rather than a `#` comment, because `toml` cannot emit comments
+    /// — the same trick [`SynergyEntry::note`] uses for the opposite reason.
+    #[serde(default)]
+    pub note: String,
+    #[serde(default, rename = "ban_rate")]
+    pub entries: Vec<BanRateEntry>,
+}
+
+/// One hero's published ban rate across the ladder and on each rung of it, as a
+/// percentage.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct BanRateEntry {
+    pub hero: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub all: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bronze: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub silver: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gold: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub platinum: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub emerald: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diamond: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub master: Option<f32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grandmaster: Option<f32>,
+}
+
+impl BanRateEntry {
+    /// The column for one rung, walking [`Rank::CHOICES`] like
+    /// [`PrevalenceEntry::value_for`].
+    pub fn value_for(&self, rank: Rank) -> Option<f32> {
+        match rank {
+            Rank::All => self.all,
+            Rank::Bronze => self.bronze,
+            Rank::Silver => self.silver,
+            Rank::Gold => self.gold,
+            Rank::Platinum => self.platinum,
+            Rank::Emerald => self.emerald,
+            Rank::Diamond => self.diamond,
+            Rank::Master => self.master,
+            Rank::Grandmaster => self.grandmaster,
+        }
+    }
+
+    pub fn set(&mut self, rank: Rank, value: Option<f32>) {
+        match rank {
+            Rank::All => self.all = value,
+            Rank::Bronze => self.bronze = value,
+            Rank::Silver => self.silver = value,
+            Rank::Gold => self.gold = value,
+            Rank::Platinum => self.platinum = value,
+            Rank::Emerald => self.emerald = value,
+            Rank::Diamond => self.diamond = value,
+            Rank::Master => self.master = value,
+            Rank::Grandmaster => self.grandmaster = value,
+        }
+    }
+}
+
 /// How often each hero is actually picked, on each rung of the ladder and across
 /// all of them, on the canonical -100..=100 scale against that hero's role.
 ///

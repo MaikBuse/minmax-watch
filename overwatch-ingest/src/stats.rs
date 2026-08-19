@@ -18,8 +18,8 @@ use std::collections::{HashMap, HashSet};
 
 use overwatch_core::{normalize, Rank, Role};
 use overwatch_data::schema::{
-    MapAffinityEntry, MapAffinityFile, PrevalenceEntry, PrevalenceFile, StrengthByRankEntry,
-    StrengthByRankFile, StrengthEntry, StrengthFile,
+    BanRateEntry, BanRateFile, MapAffinityEntry, MapAffinityFile, PrevalenceEntry, PrevalenceFile,
+    StrengthByRankEntry, StrengthByRankFile, StrengthEntry, StrengthFile,
 };
 
 use crate::blizzard::BlizzardRates;
@@ -475,6 +475,46 @@ fn report_selection_shrink(corrections: &[(String, f32, f32)]) {
         corrections.len(),
         named.join(", "),
     );
+}
+
+/// Copies out the ban rates Blizzard publishes, for the acceptance test to read.
+///
+/// Not a term and not on the canonical scale — see [`BanRateFile`], which carries
+/// the whole argument for why this is a yardstick rather than an input, and why the
+/// file it produces is the one thing in `data/` the app never loads.
+pub fn ban_rates(generated: &str, blizzard: &BlizzardRates) -> BanRateFile {
+    let mut heroes: Vec<&String> = blizzard
+        .ban_rate
+        .keys()
+        .filter(|(rank, _)| *rank == Rank::All)
+        .map(|(_, hero)| hero)
+        .collect();
+    heroes.sort_unstable();
+
+    let entries = heroes
+        .into_iter()
+        .map(|hero| {
+            let mut entry = BanRateEntry {
+                hero: hero.clone(),
+                ..BanRateEntry::default()
+            };
+            for rank in Rank::CHOICES {
+                entry.set(rank, blizzard.ban_rate.get(&(rank, hero.clone())).copied());
+            }
+            entry
+        })
+        .collect();
+
+    BanRateFile {
+        generated: generated.to_owned(),
+        note: "Published ban rates, per rung, as a yardstick for the ban list. \
+               Deliberately not compiled into the app: this measures who gets \
+               banned rather than who is strong, and it is what the acceptance \
+               test predicts, so scoring on it would be circular. Read only by \
+               overwatch-data/tests/committed_dataset.rs."
+            .to_owned(),
+        entries,
+    }
 }
 
 /// Slots each role fills on a team, in the population Blizzard measured.
