@@ -72,6 +72,7 @@ pub fn dataset() -> Dataset {
         map_affinity: vec![0; n],
         base_strength: vec![0; n],
         rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
+        prevalence: vec![[0; Rank::CHOICES.len()]; n],
         win_rate: vec![None; n],
         side_lean: vec![0; n],
         shape: vec![[0; 3]; n],

@@ -329,6 +329,7 @@ mod tests {
             map_affinity: Vec::new(),
             base_strength: vec![0; n],
             rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
+            prevalence: vec![[0; Rank::CHOICES.len()]; n],
             win_rate: vec![None; n],
             side_lean: vec![0; n],
             // One pure hero per axis, at equal strength, so a team of all three

@@ -1,0 +1,637 @@
+generated = "2026-08-19"
+
+[[prevalence]]
+hero = "ana"
+all = 41
+bronze = -19
+silver = 6
+gold = 29
+platinum = 47
+emerald = 62
+diamond = 68
+master = 63
+grandmaster = 55
+
+[[prevalence]]
+hero = "anran"
+all = -4
+bronze = 19
+silver = 9
+gold = 3
+platinum = -7
+emerald = -15
+diamond = -33
+master = -55
+grandmaster = -100
+
+[[prevalence]]
+hero = "ashe"
+all = 22
+bronze = 6
+silver = 10
+gold = 22
+platinum = 28
+emerald = 28
+diamond = 19
+master = 9
+grandmaster = -23
+
+[[prevalence]]
+hero = "baptiste"
+all = -59
+bronze = -92
+silver = -73
+gold = -61
+platinum = -54
+emerald = -49
+diamond = -52
+master = -65
+grandmaster = -80
+
+[[prevalence]]
+hero = "bastion"
+all = 42
+bronze = 61
+silver = 63
+gold = 54
+platinum = 38
+emerald = 18
+diamond = 0
+master = -27
+grandmaster = -35
+
+[[prevalence]]
+hero = "brigitte"
+all = -87
+bronze = -100
+silver = -100
+gold = -99
+platinum = -92
+emerald = -77
+diamond = -54
+master = -27
+grandmaster = -42
+
+[[prevalence]]
+hero = "cassidy"
+all = 52
+bronze = 3
+silver = 20
+gold = 39
+platinum = 58
+emerald = 71
+diamond = 78
+master = 79
+grandmaster = 79
+
+[[prevalence]]
+hero = "dmon"
+all = 71
+bronze = 70
+silver = 70
+gold = 70
+platinum = 72
+emerald = 74
+diamond = 69
+master = 58
+grandmaster = 55
+
+[[prevalence]]
+hero = "domina"
+all = -42
+bronze = -18
+silver = -27
+gold = -35
+platinum = -44
+emerald = -58
+diamond = -74
+master = -77
+grandmaster = -87
+
+[[prevalence]]
+hero = "doomfist"
+all = -17
+bronze = -71
+silver = -53
+gold = -35
+platinum = -15
+emerald = 8
+diamond = 22
+master = 23
+grandmaster = 24
+
+[[prevalence]]
+hero = "dva"
+all = -13
+bronze = 37
+silver = 5
+gold = -14
+platinum = -22
+emerald = -22
+diamond = -19
+master = -10
+grandmaster = -24
+
+[[prevalence]]
+hero = "echo"
+all = -55
+bronze = -37
+silver = -53
+gold = -59
+platinum = -61
+emerald = -53
+diamond = -40
+master = -31
+grandmaster = -49
+
+[[prevalence]]
+hero = "emre"
+all = -12
+bronze = -6
+silver = -11
+gold = -12
+platinum = -11
+emerald = -11
+diamond = -16
+master = -21
+grandmaster = -38
+
+[[prevalence]]
+hero = "freja"
+all = -21
+bronze = -8
+silver = -21
+gold = -25
+platinum = -24
+emerald = -20
+diamond = -16
+master = -9
+grandmaster = 17
+
+[[prevalence]]
+hero = "genji"
+all = 22
+bronze = -12
+silver = -4
+gold = 6
+platinum = 26
+emerald = 43
+diamond = 52
+master = 49
+grandmaster = 22
+
+[[prevalence]]
+hero = "hanzo"
+all = -12
+bronze = -6
+silver = -11
+gold = -11
+platinum = -9
+emerald = -12
+diamond = -24
+master = -44
+grandmaster = -63
+
+[[prevalence]]
+hero = "hazard"
+all = -65
+bronze = -94
+silver = -91
+gold = -87
+platinum = -71
+emerald = -46
+diamond = -21
+master = -6
+grandmaster = 0
+
+[[prevalence]]
+hero = "illari"
+all = -90
+bronze = -74
+silver = -77
+gold = -85
+platinum = -96
+emerald = -100
+diamond = -97
+master = -85
+grandmaster = -56
+
+[[prevalence]]
+hero = "jetpack-cat"
+all = -40
+bronze = -56
+silver = -46
+gold = -46
+platinum = -41
+emerald = -33
+diamond = -21
+master = -14
+grandmaster = -12
+
+[[prevalence]]
+hero = "junker-queen"
+all = -41
+bronze = -49
+silver = -55
+gold = -49
+platinum = -39
+emerald = -30
+diamond = -22
+master = -25
+grandmaster = -49
+
+[[prevalence]]
+hero = "junkrat"
+all = 12
+bronze = 45
+silver = 37
+gold = 24
+platinum = 6
+emerald = -20
+diamond = -44
+master = -67
+grandmaster = -41
+
+[[prevalence]]
+hero = "juno"
+all = 35
+bronze = 53
+silver = 41
+gold = 34
+platinum = 32
+emerald = 33
+diamond = 34
+master = 29
+grandmaster = 2
+
+[[prevalence]]
+hero = "kiriko"
+all = 60
+bronze = 46
+silver = 47
+gold = 55
+platinum = 62
+emerald = 68
+diamond = 74
+master = 87
+grandmaster = 96
+
+[[prevalence]]
+hero = "lifeweaver"
+all = -11
+bronze = -5
+silver = -3
+gold = -4
+platinum = -9
+emerald = -22
+diamond = -43
+master = -61
+grandmaster = -80
+
+[[prevalence]]
+hero = "lucio"
+all = -70
+bronze = -49
+silver = -58
+gold = -73
+platinum = -83
+emerald = -82
+diamond = -60
+master = -33
+grandmaster = 10
+
+[[prevalence]]
+hero = "mauga"
+all = -17
+bronze = -15
+silver = -10
+gold = -13
+platinum = -19
+emerald = -27
+diamond = -19
+master = -13
+grandmaster = -2
+
+[[prevalence]]
+hero = "mei"
+all = 9
+bronze = 9
+silver = 20
+gold = 19
+platinum = 10
+emerald = -7
+diamond = -30
+master = -34
+grandmaster = -48
+
+[[prevalence]]
+hero = "mercy"
+all = 13
+bronze = 37
+silver = 25
+gold = 16
+platinum = 8
+emerald = 4
+diamond = -1
+master = -13
+grandmaster = -38
+
+[[prevalence]]
+hero = "mizuki"
+all = 4
+bronze = 10
+silver = 14
+gold = 11
+platinum = 3
+emerald = -6
+diamond = -14
+master = -22
+grandmaster = -10
+
+[[prevalence]]
+hero = "moira"
+all = 54
+bronze = 67
+silver = 70
+gold = 64
+platinum = 53
+emerald = 33
+diamond = 6
+master = -14
+grandmaster = -20
+
+[[prevalence]]
+hero = "orisa"
+all = 26
+bronze = 46
+silver = 41
+gold = 36
+platinum = 25
+emerald = 6
+diamond = -9
+master = -1
+grandmaster = 22
+
+[[prevalence]]
+hero = "pharah"
+all = -51
+bronze = -33
+silver = -38
+gold = -48
+platinum = -57
+emerald = -61
+diamond = -57
+master = -49
+grandmaster = -46
+
+[[prevalence]]
+hero = "ramattra"
+all = 22
+bronze = 34
+silver = 38
+gold = 32
+platinum = 19
+emerald = 0
+diamond = -15
+master = -24
+grandmaster = -14
+
+[[prevalence]]
+hero = "reaper"
+all = 14
+bronze = -19
+silver = 8
+gold = 17
+platinum = 17
+emerald = 14
+diamond = 9
+master = 12
+grandmaster = 10
+
+[[prevalence]]
+hero = "reinhardt"
+all = 37
+bronze = 22
+silver = 40
+gold = 42
+platinum = 41
+emerald = 33
+diamond = 18
+master = -6
+grandmaster = -24
+
+[[prevalence]]
+hero = "roadhog"
+all = -11
+bronze = -37
+silver = -27
+gold = -13
+platinum = -5
+emerald = -8
+diamond = -5
+master = -2
+grandmaster = -2
+
+[[prevalence]]
+hero = "shion"
+all = 11
+bronze = 21
+silver = 9
+gold = 6
+platinum = 6
+emerald = 12
+diamond = 29
+master = 45
+grandmaster = 56
+
+[[prevalence]]
+hero = "sierra"
+all = 21
+bronze = 49
+silver = 39
+gold = 32
+platinum = 21
+emerald = -3
+diamond = -41
+master = -100
+grandmaster = -100
+
+[[prevalence]]
+hero = "sigma"
+all = 22
+bronze = 30
+silver = 26
+gold = 25
+platinum = 21
+emerald = 16
+diamond = 11
+master = 6
+grandmaster = 28
+
+[[prevalence]]
+hero = "sojourn"
+all = 32
+bronze = 27
+silver = 17
+gold = 19
+platinum = 29
+emerald = 45
+diamond = 61
+master = 72
+grandmaster = 82
+
+[[prevalence]]
+hero = "soldier-76"
+all = 57
+bronze = 43
+silver = 57
+gold = 61
+platinum = 59
+emerald = 55
+diamond = 47
+master = 36
+grandmaster = 24
+
+[[prevalence]]
+hero = "sombra"
+all = -71
+bronze = -96
+silver = -96
+gold = -79
+platinum = -65
+emerald = -57
+diamond = -63
+master = -81
+grandmaster = -100
+
+[[prevalence]]
+hero = "symmetra"
+all = -71
+bronze = -67
+silver = -63
+gold = -65
+platinum = -69
+emerald = -81
+diamond = -93
+master = -93
+grandmaster = -76
+
+[[prevalence]]
+hero = "torbjorn"
+all = -37
+bronze = -18
+silver = -19
+gold = -30
+platinum = -44
+emerald = -55
+diamond = -61
+master = -57
+grandmaster = -40
+
+[[prevalence]]
+hero = "tracer"
+all = -19
+bronze = -61
+silver = -57
+gold = -49
+platinum = -27
+emerald = 6
+diamond = 40
+master = 65
+grandmaster = 87
+
+[[prevalence]]
+hero = "vendetta"
+all = -63
+bronze = -55
+silver = -53
+gold = -59
+platinum = -67
+emerald = -71
+diamond = -79
+master = -81
+grandmaster = -90
+
+[[prevalence]]
+hero = "venture"
+all = -84
+bronze = -96
+silver = -84
+gold = -81
+platinum = -84
+emerald = -81
+diamond = -87
+master = -81
+grandmaster = -100
+
+[[prevalence]]
+hero = "widowmaker"
+all = -59
+bronze = -57
+silver = -69
+gold = -65
+platinum = -57
+emerald = -51
+diamond = -41
+master = -30
+grandmaster = -12
+
+[[prevalence]]
+hero = "winston"
+all = -25
+bronze = -63
+silver = -46
+gold = -37
+platinum = -24
+emerald = -6
+diamond = 1
+master = 8
+grandmaster = -15
+
+[[prevalence]]
+hero = "wrecking-ball"
+all = -63
+bronze = -91
+silver = -94
+gold = -87
+platinum = -65
+emerald = -39
+diamond = -22
+master = -9
+grandmaster = -27
+
+[[prevalence]]
+hero = "wuyang"
+all = -66
+bronze = -57
+silver = -73
+gold = -76
+platinum = -70
+emerald = -59
+diamond = -46
+master = -35
+grandmaster = -21
+
+[[prevalence]]
+hero = "zarya"
+all = -42
+bronze = -99
+silver = -71
+gold = -55
+platinum = -37
+emerald = -24
+diamond = -13
+master = 2
+grandmaster = 9
+
+[[prevalence]]
+hero = "zenyatta"
+all = -24
+bronze = -27
+silver = -25
+gold = -24
+platinum = -23
+emerald = -23
+diamond = -30
+master = -49
+grandmaster = -69

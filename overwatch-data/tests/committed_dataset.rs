@@ -940,3 +940,66 @@ fn almost_none_of_the_counter_readings_saturate_the_scale() {
         readings.len()
     );
 }
+
+/// The guard on the newest generated file, in the shape
+/// `the_rank_shifts_are_populated_and_actually_differ_from_one_another` uses.
+///
+/// Coverage and **variation**, because coverage alone cannot tell nine readings
+/// from one reading written nine times — and that is what every realistic way of
+/// getting this wrong produces. The cache key without its tier, a rung the source
+/// stopped publishing, a nine-wide table read at `Rank::column` instead of
+/// `Rank::slot`: each one yields a file that parses, loads, scores and satisfies
+/// any count of filled cells.
+///
+/// It also pins the zero point, which is the part with no data in it: summed over
+/// a role, pick rate comes to exactly `100 x slots(role)`, so the role mean *is*
+/// the fair share and the values in a role must therefore straddle zero. A column
+/// where every hero reads positive is a column measured against the wrong
+/// denominator.
+#[test]
+fn the_prevalence_columns_are_populated_and_actually_differ_from_one_another() {
+    let ds = load().expect("committed data must load");
+    let n = ds.hero_count();
+
+    let mut rated = 0;
+    let mut varying = 0;
+    for index in 0..n {
+        let hero = HeroId(index as u16);
+        let readings: Vec<i8> = Rank::CHOICES
+            .iter()
+            .map(|rank| ds.prevalence_at(*rank, hero))
+            .collect();
+
+        if readings.iter().any(|value| *value != 0) {
+            rated += 1;
+        }
+        if readings.iter().any(|value| *value != readings[0]) {
+            varying += 1;
+        }
+    }
+
+    assert!(
+        rated * 10 >= n * 8,
+        "only {rated}/{n} heroes have a prevalence reading anywhere"
+    );
+    assert!(
+        varying * 2 >= n,
+        "{varying}/{n} heroes read differently across the rungs - nine identical \
+         columns is what a cache key without its tier produces"
+    );
+
+    // Nobody is above their share at every rung and nobody below it at every one,
+    // because the share is the role's own mean.
+    for role in Role::ALL {
+        let heroes: Vec<HeroId> = ds.heroes_in_role(role).collect();
+        let all_ranks: Vec<i8> = heroes
+            .iter()
+            .map(|hero| ds.prevalence_at(Rank::All, *hero))
+            .collect();
+        assert!(
+            all_ranks.iter().any(|value| *value > 0) && all_ranks.iter().any(|value| *value < 0),
+            "{role:?} prevalence has to straddle zero, because zero is that role's \
+             own mean by construction"
+        );
+    }
+}

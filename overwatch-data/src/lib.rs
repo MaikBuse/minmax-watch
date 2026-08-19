@@ -17,7 +17,7 @@ use overwatch_core::{
 use thiserror::Error;
 
 use crate::schema::{
-    ArchetypeFile, HeroesFile, MapAffinityFile, MapsFile, MatchupsFile, SideFile,
+    ArchetypeFile, HeroesFile, MapAffinityFile, MapsFile, MatchupsFile, PrevalenceFile, SideFile,
     StrengthByRankFile, StrengthFile, SynergyFile,
 };
 
@@ -28,6 +28,7 @@ pub const MAP_AFFINITY_TOML: &str = include_str!("../../data/map_affinity.toml")
 pub const SYNERGY_TOML: &str = include_str!("../../data/synergy.toml");
 pub const STRENGTH_TOML: &str = include_str!("../../data/strength.toml");
 pub const STRENGTH_BY_RANK_TOML: &str = include_str!("../../data/strength_by_rank.toml");
+pub const PREVALENCE_TOML: &str = include_str!("../../data/prevalence.toml");
 pub const SIDE_TOML: &str = include_str!("../../data/side.toml");
 pub const ARCHETYPE_TOML: &str = include_str!("../../data/archetype.toml");
 
@@ -70,12 +71,13 @@ pub fn load() -> Result<Dataset, DataError> {
         synergy: SYNERGY_TOML,
         strength: STRENGTH_TOML,
         strength_by_rank: STRENGTH_BY_RANK_TOML,
+        prevalence: PREVALENCE_TOML,
         side: SIDE_TOML,
         archetype: ARCHETYPE_TOML,
     })
 }
 
-/// The nine TOML documents that make up a dataset, as raw text.
+/// The ten TOML documents that make up a dataset, as raw text.
 ///
 /// Deliberately has no `Default`: adding a document here is meant to break every
 /// construction site so each one is looked at, rather than silently defaulting a
@@ -89,6 +91,7 @@ pub struct Sources<'a> {
     pub synergy: &'a str,
     pub strength: &'a str,
     pub strength_by_rank: &'a str,
+    pub prevalence: &'a str,
     pub side: &'a str,
     pub archetype: &'a str,
 }
@@ -101,6 +104,7 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     let synergy_file: SynergyFile = parse("synergy.toml", sources.synergy)?;
     let strength_file: StrengthFile = parse("strength.toml", sources.strength)?;
     let rank_file: StrengthByRankFile = parse("strength_by_rank.toml", sources.strength_by_rank)?;
+    let prevalence_file: PrevalenceFile = parse("prevalence.toml", sources.prevalence)?;
     let side_file: SideFile = parse("side.toml", sources.side)?;
     let archetype_file: ArchetypeFile = parse("archetype.toml", sources.archetype)?;
 
@@ -238,6 +242,29 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
         }
     }
 
+    // --- prevalence -------------------------------------------------------
+    // Row per hero, one column per entry in `Rank::CHOICES` order — nine wide,
+    // because this file has a column for the whole ladder where the shifts above
+    // cannot. `Rank::slot` is the index; `Rank::column` would read every rung one
+    // place out and load perfectly well.
+    //
+    // An absent column reads as zero here, as with the shifts, and for the same
+    // reason: the file separates "the source did not cover this rung" from
+    // "measured, and this hero is picked exactly its share", while the one term
+    // that reads it has a single answer to both — apply no discount.
+    let mut prevalence = vec![[0i8; Rank::CHOICES.len()]; n];
+    for entry in &prevalence_file.entries {
+        let hero = hero_id("prevalence.toml", &entry.hero)?;
+        let Some(row) = prevalence.get_mut(hero.index()) else {
+            continue;
+        };
+        for rank in Rank::CHOICES {
+            if let (Some(slot), Some(value)) = (row.get_mut(rank.slot()), entry.value_for(rank)) {
+                *slot = value;
+            }
+        }
+    }
+
     // --- attack/defend lean -----------------------------------------------
     // Absent from the file means zero, which is the honest answer for most of
     // the roster rather than a gap to be filled.
@@ -269,6 +296,7 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
         map_affinity,
         base_strength,
         rank_shift,
+        prevalence,
         win_rate,
         side_lean,
         shape,
@@ -314,6 +342,7 @@ mod tests {
             synergy: "",
             strength: "",
             strength_by_rank: "",
+            prevalence: "",
             side: "",
             archetype: "",
         };
@@ -347,6 +376,7 @@ mod tests {
             synergy: "",
             strength: "",
             strength_by_rank: "",
+            prevalence: "",
             side: "",
             archetype: "",
         };
@@ -381,6 +411,7 @@ mod tests {
             "#,
             strength: "",
             strength_by_rank: "",
+            prevalence: "",
             side: "",
             archetype: "",
         };

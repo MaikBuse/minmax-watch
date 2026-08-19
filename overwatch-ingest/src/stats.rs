@@ -16,10 +16,10 @@
 
 use std::collections::{HashMap, HashSet};
 
-use overwatch_core::{normalize, Rank};
+use overwatch_core::{normalize, Rank, Role};
 use overwatch_data::schema::{
-    MapAffinityEntry, MapAffinityFile, StrengthByRankEntry, StrengthByRankFile, StrengthEntry,
-    StrengthFile,
+    MapAffinityEntry, MapAffinityFile, PrevalenceEntry, PrevalenceFile, StrengthByRankEntry,
+    StrengthByRankFile, StrengthEntry, StrengthFile,
 };
 
 use crate::blizzard::BlizzardRates;
@@ -344,6 +344,115 @@ pub fn build(
             entries: by_rank,
         },
     )
+}
+
+/// Slots each role fills on a team, in the population Blizzard measured.
+///
+/// 5v5 competitive role queue, because that is the only thing the endpoint serves
+/// — see `blizzard::QUEUE`, which records that there is no open-queue or 6v6
+/// response to ask for. Deliberately **not** derived from
+/// `overwatch_core::Capacity`, which knows about formats these numbers were never
+/// measured over: a fair share divided by 6v6 slots would be a share of a
+/// population that did not produce them.
+const SLOTS_5V5: [(Role, f32); 3] = [(Role::Tank, 1.0), (Role::Damage, 2.0), (Role::Support, 2.0)];
+
+/// The band a hero's log-ratio to its fair share is stretched over, in octaves.
+///
+/// ±2 is "a quarter of its fair share up to four times it", and it is chosen so
+/// the clamp stays an exception rather than a feature: across the nine published
+/// columns it pins 8 of 477 cells and none at all at the all-ranks rung. `±1.0`
+/// would pin 19 of 53 heroes there, which is the scale describing the clamp
+/// rather than the roster. On the canonical scale the middle half of readings then
+/// lands between 18 and 61, so an ordinary hero occupies the middle of the range
+/// and the ends are left for the heroes that really are absent or everywhere.
+const PREVALENCE_BAND: f32 = 2.0;
+
+/// The pick rate a hero would have if its role's slots were shared out evenly.
+///
+/// The zero point of `prevalence.toml`, and it holds no data: summed over a role,
+/// pick rate comes to exactly `100 x slots(role)` at every rung, because role
+/// queue admits no duplicates and the column is P(hero is on a team). So the role
+/// mean *is* this number by construction, at every rung, and a hero above it is
+/// above it in a sense that does not shift when the patch does.
+fn fair_share(role: Role, in_role: usize) -> Option<f32> {
+    if in_role == 0 {
+        return None;
+    }
+    let slots = SLOTS_5V5
+        .iter()
+        .find(|(each, _)| *each == role)
+        .map(|(_, slots)| *slots)?;
+    Some(100.0 * slots / in_role as f32)
+}
+
+/// Puts one published pick rate onto the canonical scale, against its role.
+fn prevalence_to_value(pick: f32, share: f32) -> i8 {
+    if pick <= 0.0 {
+        // A hero nobody picked is a real reading of "as rare as it gets" rather
+        // than a missing one, but `log2(0)` is negative infinity, so the floor is
+        // stated instead of arrived at. No rung has ever published a zero — the
+        // lowest across all nine is 0.8.
+        return -100;
+    }
+    normalize((pick / share).log2(), -PREVALENCE_BAND, PREVALENCE_BAND)
+}
+
+/// Builds `prevalence.toml` from the pick rates Blizzard published.
+///
+/// A function of its own rather than a fourth thing [`build`] returns, because it
+/// shares none of that function's inputs except the roster and none of its
+/// outputs: it reads one source where `build` blends three, and it is the only
+/// thing here that needs to know a hero's role.
+///
+/// **The columns are deliberately not smoothed**, unlike [`rank_shift`]'s. That
+/// kernel exists because a per-rung *win rate* rests on a thin bucket of games and
+/// wobbles for want of sample, and none of that applies here: a pick rate is a
+/// proportion over every game played at a rung rather than one conditional on the
+/// outcome, so it is estimated far better. Only 11 of 53 heroes read monotone
+/// across the rungs, and that is the point — a hero genuinely popular in Diamond
+/// and not in Master is a fact about the ladder, not read noise. Applying
+/// [`smooth_across_rungs`] anyway moves 353 of 424 cells by up to 15 points and
+/// leaves mean |value| where it was: churn in the review diff, no change in what
+/// the column says.
+pub fn prevalence(
+    generated: &str,
+    blizzard: &BlizzardRates,
+    roles: &HashMap<String, Role>,
+) -> PrevalenceFile {
+    let mut in_role: HashMap<Role, usize> = HashMap::new();
+    for role in roles.values() {
+        *in_role.entry(*role).or_default() += 1;
+    }
+
+    let mut entries: Vec<PrevalenceEntry> = roles
+        .iter()
+        .filter_map(|(hero, role)| {
+            let share = fair_share(*role, in_role.get(role).copied().unwrap_or(0))?;
+
+            let mut entry = PrevalenceEntry {
+                hero: hero.clone(),
+                ..PrevalenceEntry::default()
+            };
+            for rank in Rank::CHOICES {
+                let pick = blizzard.pick_rate.get(&(rank, hero.clone())).copied();
+                entry.set(rank, pick.map(|pick| prevalence_to_value(pick, share)));
+            }
+
+            // A hero the source covered at no rung at all leaves no row, rather
+            // than a row of nine absences.
+            Rank::CHOICES
+                .iter()
+                .any(|rank| entry.value_for(*rank).is_some())
+                .then_some(entry)
+        })
+        .collect();
+
+    entries.sort_by(|a, b| a.hero.cmp(&b.hero));
+
+    PrevalenceFile {
+        generated: generated.to_owned(),
+        entries,
+    }
 }
 
 #[cfg(test)]

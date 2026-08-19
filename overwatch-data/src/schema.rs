@@ -136,6 +136,119 @@ pub struct MapAffinityEntry {
     pub value: i8,
 }
 
+/// How often each hero is actually picked, on each rung of the ladder and across
+/// all of them, on the canonical -100..=100 scale against that hero's role.
+///
+/// A separate file from `strength_by_rank.toml` for the reason `map_affinity.toml`
+/// is separate from `strength.toml`: `data/` splits by what a number *means*, not
+/// by which fetch produced it. It also buys a failure boundary that matters more
+/// here than anywhere else, because prevalence has exactly **one** source — folded
+/// into `StrengthByRankEntry`, a run where counterwatch answered and Blizzard did
+/// not would write the file and silently blank every prevalence column, which is
+/// the failure that file was split off to avoid.
+///
+/// **Nine columns, where the rank slices have eight.** See
+/// [`PrevalenceEntry::value_for`].
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PrevalenceFile {
+    #[serde(default)]
+    pub generated: String,
+    #[serde(default, rename = "prevalence")]
+    pub entries: Vec<PrevalenceEntry>,
+}
+
+/// One hero's pick rate across the ladder and on each rung of it.
+///
+/// Columns rather than one row per (hero, rung), for the reasons
+/// [`StrengthByRankEntry`] gives: a spurious single-rung reading is visible in a
+/// column of nine numbers and invisible when those nine are thirty lines apart,
+/// and it is a third of the bytes the wasm bundle carries.
+///
+/// The value is a comparison against the hero's **role fair share** — the pick
+/// rate a role's heroes would each have if the role's slots were shared out
+/// evenly — log-compressed and put on the canonical scale. Zero means "picked
+/// exactly as often as its share", positive means more, and the zero point holds
+/// no data at all: summed over a role, pick rate comes to `100 x slots(role)` by
+/// construction, so the role mean *is* the fair share at every rung. A roster
+/// median would have made the zero point a property of the patch, and the number
+/// would then mean something different in each column.
+///
+/// Role-relative on purpose, so it stays an answer about who turns up *inside* a
+/// role. A support competing for two slots among fourteen heroes is not more
+/// common than a tank competing for one among fifteen just because the raw
+/// percentage is larger.
+///
+/// Every column is optional and skipped when absent, and absent is **not** zero
+/// in the file: zero is a real reading meaning "picked at its fair share", while
+/// an omitted column means the source did not cover that rung.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct PrevalenceEntry {
+    pub hero: String,
+    /// The whole ladder at once.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub all: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bronze: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub silver: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gold: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub platinum: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub emerald: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub diamond: Option<i8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub master: Option<i8>,
+    /// Grandmaster and Champion together, as everywhere else. See
+    /// [`overwatch_core::Rank::label`].
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grandmaster: Option<i8>,
+}
+
+impl PrevalenceEntry {
+    /// The column for one rung, so the loader and the ingest walk
+    /// [`Rank::CHOICES`] instead of naming nine fields at every site.
+    ///
+    /// **This is the one line where this file and [`StrengthByRankEntry`] differ,
+    /// and the difference is the point.** There, [`Rank::All`] reads as no shift,
+    /// because the aggregate is the thing every rung is measured against and a
+    /// shift away from itself is zero by definition. Here it is a column like any
+    /// other: Blizzard publishes a pick rate for the whole ladder exactly as it
+    /// publishes one for Diamond, and it is the figure anyone who never opens the
+    /// rank picker should be reading.
+    pub fn value_for(&self, rank: Rank) -> Option<i8> {
+        match rank {
+            Rank::All => self.all,
+            Rank::Bronze => self.bronze,
+            Rank::Silver => self.silver,
+            Rank::Gold => self.gold,
+            Rank::Platinum => self.platinum,
+            Rank::Emerald => self.emerald,
+            Rank::Diamond => self.diamond,
+            Rank::Master => self.master,
+            Rank::Grandmaster => self.grandmaster,
+        }
+    }
+
+    /// The mirror of [`Self::value_for`], so the ingest builds a row by walking
+    /// the same list the loader reads it with.
+    pub fn set(&mut self, rank: Rank, value: Option<i8>) {
+        match rank {
+            Rank::All => self.all = value,
+            Rank::Bronze => self.bronze = value,
+            Rank::Silver => self.silver = value,
+            Rank::Gold => self.gold = value,
+            Rank::Platinum => self.platinum = value,
+            Rank::Emerald => self.emerald = value,
+            Rank::Diamond => self.diamond = value,
+            Rank::Master => self.master = value,
+            Rank::Grandmaster => self.grandmaster = value,
+        }
+    }
+}
+
 /// Pair synergies.
 ///
 /// The one file in `data/` that is both generated and hand-curated, which is
@@ -232,8 +345,10 @@ pub struct StrengthEntry {
 /// run that could not reach it leaves the committed file alone instead of
 /// needing merge logic to keep a failed fetch from blanking eight columns.
 ///
-/// **Only strength is sliced by rank**, and it is the one signal that can be:
-/// neither source publishes per-rung matchups or duos. See [`overwatch_core::Rank`].
+/// **Nothing about a pair is sliced by rank**, and nothing can be: neither source
+/// publishes per-rung matchups or duos. The two things that are sliced are the two
+/// published per hero per rung — this file and `prevalence.toml`, which differ in
+/// having eight columns and nine. See [`overwatch_core::Rank`].
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct StrengthByRankFile {
     #[serde(default)]

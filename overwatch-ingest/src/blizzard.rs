@@ -9,11 +9,13 @@
 //! saying `All`. The JSON behind it is what the page's own script asks for, and
 //! that is what this reads.
 //!
-//! It backs `strength_by_rank.toml` and nothing else: it publishes one row per
-//! hero and never a pair, so it says nothing about matchups or duos. It also
-//! publishes no sample sizes at all — `pickrate` is the only volume figure —
-//! which is why counterwatch's per-division `matches` column is worth reading
-//! beside it. See [`crate::stats`] for how the two are weighed.
+//! It backs `strength_by_rank.toml`, the Blizzard third of the win-rate blend in
+//! `strength.toml`, and `prevalence.toml`. What it cannot back is anything about
+//! a *pair*: it publishes one row per hero and never two, so it says nothing
+//! about matchups or duos. It also publishes no sample sizes at all — `pickrate`
+//! is the only volume figure — which is why counterwatch's per-division
+//! `matches` column is worth reading beside it. See [`crate::stats`] for how the
+//! sources are weighed.
 
 use std::collections::HashMap;
 
@@ -136,9 +138,14 @@ struct RateRow {
 #[derive(Debug, Deserialize)]
 struct Cells {
     winrate: f32,
-    /// Not written to `data/`. Kept because it is the only volume figure this
-    /// source publishes, and a rung resting on a 1% pick rate is worth naming in
-    /// the run report.
+    /// The only volume figure this source publishes, and the whole of
+    /// `prevalence.toml`.
+    ///
+    /// Worth knowing what it actually is, because "pick rate" undersells it:
+    /// summed over a role it comes to exactly `100 x slots(role)` at every rung,
+    /// because role queue admits no duplicates. So this is not popularity on some
+    /// arbitrary scale — it is P(this hero is on a team), and that is what gives
+    /// `prevalence.toml` an exact zero point rather than a fitted one.
     pickrate: f32,
     // `banrate` is deliberately not modelled. It swings enormously by rung —
     // Sombra runs 73.2% at Bronze and 0.1% at Grandmaster — but it measures who
@@ -153,7 +160,13 @@ pub struct BlizzardRates {
     pub baseline: HashMap<String, f32>,
     /// One map per rung, keyed by hero.
     pub by_rank: HashMap<Rank, HashMap<String, f32>>,
-    /// Pick rate at each rung, for the run report only.
+    /// Pick rate at every rung **and** at the baseline, so this map is nine
+    /// buckets wide where [`Self::by_rank`] is eight.
+    ///
+    /// That difference is the whole reason `prevalence.toml` is a nine-column
+    /// file: a win rate at `Rank::All` is what the rungs are measured *against*
+    /// and so has no column of its own, while a pick rate there is a published
+    /// figure in its own right. Keyed on [`Rank::All`] for the baseline.
     pub pick_rate: HashMap<(Rank, String), f32>,
 }
 
@@ -201,6 +214,11 @@ pub async fn scrape(fetcher: &mut Fetcher) -> Result<BlizzardRates> {
     let mut out = BlizzardRates::default();
 
     for row in fetch_tier(fetcher, Tier::Baseline).await? {
+        // The ninth pick-rate bucket. `Rank::All` has no *win rate* column of its
+        // own — it is the baseline every rung's shift is measured against — but it
+        // has a real pick rate, and `prevalence.toml` has a column for it.
+        out.pick_rate
+            .insert((Rank::All, row.id.clone()), row.cells.pickrate);
         out.baseline.insert(row.id, row.cells.winrate);
     }
 

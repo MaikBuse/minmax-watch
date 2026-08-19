@@ -4,14 +4,18 @@
 //! not of the board — which is why it lives here rather than in [`crate::hero`]
 //! or [`crate::format`].
 //!
-//! **Only patch strength is sliced this way.** The counter, synergy, map, side
-//! and shape terms read the same numbers at every rung, because no source
-//! publishes them any other way: counterwatch's rank filter is not
-//! URL-addressable and its counters and duos pages carry no per-division
-//! breakdown at all, and Blizzard's rates endpoint publishes one row per hero
-//! and never a pair. Rank-slicing the matchup matrix would also mean eight
-//! copies of a 322 KB file inside a wasm bundle built at `opt-level = "s"`.
+//! **Nothing about a *pair* is sliced this way, and nothing can be.** The
+//! counter, synergy, map, side and shape terms read the same numbers at every
+//! rung, because no source publishes them any other way: counterwatch's rank
+//! filter is not URL-addressable and its counters and duos pages carry no
+//! per-division breakdown at all, and Blizzard's rates endpoint publishes one row
+//! per hero and never a pair. Rank-slicing the matchup matrix would also mean
+//! eight copies of a 322 KB file inside a wasm bundle built at `opt-level = "s"`.
 //! Anything that makes it look like a rank changes a matchup is wrong.
+//!
+//! What *is* sliced is the two things published per hero per rung: patch strength
+//! (as a shift, on eight columns indexed by [`Rank::column`]) and prevalence (as a
+//! reading, on nine columns indexed by [`Rank::slot`]).
 
 use serde::{Deserialize, Serialize};
 
@@ -90,6 +94,25 @@ impl Rank {
         Rank::Master,
         Rank::Grandmaster,
     ];
+
+    /// Position in [`Rank::CHOICES`], for indexing a table that has a column for
+    /// the aggregate as well as the rungs. [`Rank::All`] is **0**.
+    ///
+    /// Deliberately a different index space from [`Self::column`], and the two
+    /// must never be crossed: a nine-wide table read with `column()` is off by
+    /// one for every rung and a shift table read with `slot()` runs off the end
+    /// of the last one. Both load, score and pass every count-based test.
+    ///
+    /// Which one a table wants follows from what its numbers *are*. A shift is
+    /// measured against the aggregate, so the aggregate cannot have a column and
+    /// `column()` returns `None` there. A pick rate at all ranks is a published
+    /// figure like any other rung's, so it gets a column and `slot()` names it.
+    pub const fn slot(self) -> usize {
+        match self.column() {
+            Some(column) => column + 1,
+            None => 0,
+        }
+    }
 
     /// Position in [`Rank::DIVISIONS`], for indexing per-rank tables. `None` for
     /// [`Rank::All`], which has no column of its own — it is what the table is
@@ -223,6 +246,28 @@ mod tests {
             );
         }
         assert_eq!(Rank::All.column(), None, "the aggregate has no column");
+    }
+
+    /// The two index spaces, pinned apart. Crossing them produces a table that is
+    /// off by one for every rung and passes every count-based test.
+    #[test]
+    fn the_nine_wide_slot_is_a_different_index_from_the_eight_wide_column() {
+        assert_eq!(
+            Rank::All.slot(),
+            0,
+            "the aggregate leads, and it has a slot"
+        );
+
+        for (index, rank) in Rank::CHOICES.iter().enumerate() {
+            assert_eq!(rank.slot(), index, "{rank:?} indexes its own slot");
+        }
+        for rank in Rank::DIVISIONS {
+            assert_eq!(
+                rank.slot(),
+                rank.column().expect("a division has a column") + 1,
+                "{rank:?} sits one along, because the aggregate took the first slot"
+            );
+        }
     }
 
     /// These strings are in every stored profile, on the session wire, and are

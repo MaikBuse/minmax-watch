@@ -24,7 +24,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
-use overwatch_core::Rank;
+use overwatch_core::{Rank, Role};
 use overwatch_data::schema::{
     HeroesFile, MapsFile, MatchupsFile, StrengthByRankFile, SynergyEntry, SynergyFile,
 };
@@ -308,6 +308,144 @@ fn report_rank_slices(by_rank: &StrengthByRankFile) {
             biggest.join(", ")
         },
     );
+}
+
+/// Warns when a role's pick rates stop summing to `100 x slots(role)`.
+///
+/// The guard the whole prevalence scale rests on. Summed over a role the column
+/// must come to exactly that, because role queue admits no duplicates and the
+/// figure is P(hero is on a team) — which is what gives `prevalence.toml` a zero
+/// point with no data in it. If Blizzard ever redefines the column into something
+/// else, every value shifts by a constant per role and nothing else here notices:
+/// the file still parses, still loads, and still passes every count-based test.
+/// Same class of failure as `tier=Bogus` being answered with HTTP 200.
+///
+/// Observed deviation has never exceeded 0.2 across the nine responses, so the
+/// tolerance below is generous by an order of magnitude and a warning means the
+/// meaning of the column moved rather than that rounding drifted.
+fn report_pick_rate_shape(rates: &blizzard::BlizzardRates, roles: &HashMap<String, Role>) {
+    const TOLERANCE: f32 = 1.0;
+
+    for rank in Rank::CHOICES {
+        for role in Role::ALL {
+            let slots = match role {
+                Role::Tank => 1.0,
+                Role::Damage | Role::Support => 2.0,
+            };
+            let sum: f32 = roles
+                .iter()
+                .filter(|(_, each)| **each == role)
+                .filter_map(|(hero, _)| rates.pick_rate.get(&(rank, hero.clone())))
+                .sum();
+            if sum <= 0.0 {
+                continue;
+            }
+            let expected = 100.0 * slots;
+            if (sum - expected).abs() > TOLERANCE {
+                eprintln!(
+                    "  warn: {} pick rates at {} sum to {sum:.1}, not {expected:.0} - \
+                     the column no longer means P(hero is on a team)",
+                    role.as_str(),
+                    rank.as_str(),
+                );
+            }
+        }
+    }
+}
+
+/// Cross-checks counterpickgg's own pick-rate column against Blizzard's.
+///
+/// In the shape [`blizzard::report_key_drift`] uses: the two agree at the time of
+/// writing, so this exists to notice the day they stop. counterpickgg is not an
+/// input and cannot be — it publishes no rank axis, so it could only fill one
+/// column of nine on a different instrument from the other eight, which is the
+/// error `rank_shift`'s doc forbids; and it rounds to an integer, so 1% and 2%
+/// collapse into one cell at exactly the tail this feature exists to demote.
+///
+/// It is worth reading anyway, because it is a second measurement of the same
+/// quantity: its column sums to 502 against Blizzard's 500, and it ranks the
+/// roster nearly the same way. This is also the only reader
+/// `HeroStats::pick_rate` has ever had.
+fn report_pick_rate_agreement(rates: &blizzard::BlizzardRates, stats: &[counterpickgg::HeroStats]) {
+    /// Points of disagreement worth naming. counterpickgg's rounding alone can
+    /// account for a point or two.
+    const NOISY: f32 = 10.0;
+
+    let mut worst: Vec<(f32, &str, f32, f32)> = stats
+        .iter()
+        .filter_map(|hero| {
+            let theirs = rates
+                .pick_rate
+                .get(&(Rank::All, hero.hero.clone()))
+                .copied()?;
+            let delta = (hero.pick_rate - theirs).abs();
+            (delta >= NOISY).then_some((delta, hero.hero.as_str(), hero.pick_rate, theirs))
+        })
+        .collect();
+    worst.sort_by(|a, b| b.0.total_cmp(&a.0));
+
+    let total: f32 = stats.iter().map(|hero| hero.pick_rate).sum();
+    eprintln!("  pick rates: counterpickgg's column sums to {total:.1}, blizzard's to 500");
+    for (_, hero, theirs, blizzard) in worst.iter().take(3) {
+        eprintln!(
+            "    note: {hero} reads {theirs:.1} at counterpickgg and {blizzard:.1} at blizzard"
+        );
+    }
+}
+
+/// Says enough about the prevalence columns to decide whether to trust the diff.
+///
+/// The same reasoning as [`report_rank_slices`], against the same failure: every
+/// way of getting a nine-column file wrong produces one that parses and loads.
+/// Coverage alone cannot tell nine readings from one reading written nine times,
+/// so this reports the spread as well — and the clamped count, because the band is
+/// only honest while the rail stays an exception.
+fn report_prevalence(file: &overwatch_data::schema::PrevalenceFile) {
+    let cells = file.entries.len() * Rank::CHOICES.len();
+    let present: usize = file
+        .entries
+        .iter()
+        .map(|entry| {
+            Rank::CHOICES
+                .iter()
+                .filter(|rank| entry.value_for(**rank).is_some())
+                .count()
+        })
+        .sum();
+    let clamped: usize = file
+        .entries
+        .iter()
+        .flat_map(|entry| Rank::CHOICES.map(|rank| entry.value_for(rank)))
+        .filter(|value| value.is_some_and(|value| value.abs() == 100))
+        .count();
+
+    let mut extremes: Vec<(i8, &str)> = file
+        .entries
+        .iter()
+        .filter_map(|entry| entry.all.map(|value| (value, entry.hero.as_str())))
+        .collect();
+    extremes.sort_by_key(|(value, _)| -i16::from(*value));
+
+    let named = |slice: &[(i8, &str)]| {
+        slice
+            .iter()
+            .map(|(value, hero)| format!("{hero} {value:+}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+
+    eprintln!(
+        "  prevalence: {} heroes x {} columns ({present}/{cells} cells, {clamped} clamped)",
+        file.entries.len(),
+        Rank::CHOICES.len(),
+    );
+    if extremes.len() >= 6 {
+        eprintln!(
+            "    most picked for their role: {} | least: {}",
+            named(&extremes[..3]),
+            named(&extremes[extremes.len() - 3..]),
+        );
+    }
 }
 
 /// Says enough about the published counter ratings to decide whether the parse
@@ -671,6 +809,42 @@ async fn main() -> Result<()> {
                         .await?
                     {
                         changed.push("strength_by_rank.toml");
+                    }
+                }
+
+                // Prevalence comes off responses already fetched above, which is
+                // why it belongs to this step rather than one of its own: pick
+                // rates move on the patch, on the same clock as the win rates.
+                let roles: HashMap<String, Role> = roster
+                    .heroes
+                    .iter()
+                    .filter_map(|hero| {
+                        Role::parse(&hero.role)
+                            .ok()
+                            .map(|role| (hero.key.clone(), role))
+                    })
+                    .collect();
+                let prevalence = stats::prevalence(&generated, &blizzard, &roles);
+
+                // Same failure shape as the rank slices, and for a sharper reason:
+                // this file has exactly one source, so a run that could not reach
+                // Blizzard has nothing at all to offer and must not overwrite
+                // nine columns with none.
+                if prevalence.entries.is_empty() {
+                    eprintln!(
+                        "  warn: no pick rates from blizzard; \
+                         leaving data/prevalence.toml alone"
+                    );
+                } else {
+                    report_pick_rate_shape(&blizzard, &roles);
+                    report_pick_rate_agreement(&blizzard, &stats);
+                    report_prevalence(&prevalence);
+
+                    let prevalence_toml = toml::to_string_pretty(&prevalence)
+                        .context("serialising prevalence.toml")?;
+                    if write_if_changed(&data_dir.join("prevalence.toml"), &prevalence_toml).await?
+                    {
+                        changed.push("prevalence.toml");
                     }
                 }
             }

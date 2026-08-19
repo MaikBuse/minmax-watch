@@ -26,10 +26,23 @@ pub struct Dataset {
     /// double-count. Zero is the common and correct reading: no rank effect
     /// measured, so choosing a rung moves nothing for that hero.
     ///
-    /// **Only strength is sliced this way.** No source publishes per-rung
+    /// **Nothing about a pair is sliced this way.** No source publishes per-rung
     /// matchups or duos, so `matchups` and `synergy` gain no third axis and
     /// nothing on screen may suggest they did. See [`Rank`].
     rank_shift: Vec<[i8; Rank::DIVISIONS.len()]>,
+    /// How often each hero is picked relative to its role's fair share, one row
+    /// per hero in [`Rank::CHOICES`] order.
+    ///
+    /// **Nine columns where `rank_shift` has eight**, indexed by [`Rank::slot`]
+    /// and not [`Rank::column`]. A shift is measured against the aggregate so the
+    /// aggregate has none of its own; a pick rate at all ranks is a published
+    /// reading like every other rung's. Crossing the two index spaces reads every
+    /// rung one column out and passes every count-based test.
+    ///
+    /// Zero means "picked exactly as often as its role's share", which is the
+    /// honest reading for an unremarkable hero and also what an absent row gives
+    /// — the two say the same thing to the one term that reads this.
+    prevalence: Vec<[i8; Rank::CHOICES.len()]>,
     /// The raw published win rate behind `base_strength`, as a percentage.
     ///
     /// Carried alongside rather than derived back out of it, because
@@ -75,6 +88,9 @@ pub struct DatasetParts {
     pub map_affinity: Vec<i8>,
     pub base_strength: Vec<i8>,
     pub rank_shift: Vec<[i8; Rank::DIVISIONS.len()]>,
+    /// One row per hero in [`Rank::CHOICES`] order — nine wide, indexed by
+    /// [`Rank::slot`]. See the field of the same name on [`Dataset`].
+    pub prevalence: Vec<[i8; Rank::CHOICES.len()]>,
     pub win_rate: Vec<Option<f32>>,
     pub side_lean: Vec<i8>,
     pub shape: Vec<[i8; 3]>,
@@ -118,6 +134,13 @@ impl Dataset {
                 what: "rank_shift",
                 expected: n,
                 actual: parts.rank_shift.len(),
+            });
+        }
+        if parts.prevalence.len() != n {
+            return Err(CoreError::RosterLengthMismatch {
+                what: "prevalence",
+                expected: n,
+                actual: parts.prevalence.len(),
             });
         }
         if parts.win_rate.len() != n {
@@ -172,6 +195,7 @@ impl Dataset {
             map_affinity: parts.map_affinity,
             base_strength: parts.base_strength,
             rank_shift: parts.rank_shift,
+            prevalence: parts.prevalence,
             win_rate: parts.win_rate,
             side_lean: parts.side_lean,
             shape: parts.shape,
@@ -256,6 +280,31 @@ impl Dataset {
         self.rank_shift
             .get(hero.index())
             .and_then(|row| row.get(column))
+            .copied()
+            .unwrap_or(0)
+    }
+
+    /// How often this hero is picked on one rung of the ladder, relative to its
+    /// role's fair share, on the same -100..=100 scale as everything else.
+    ///
+    /// Positive means picked more often than its role's slots divided evenly;
+    /// negative means less. Zero is the reading for an unremarkable hero, and also
+    /// what a hero the source never covered gets — unlike a matchup, the two are
+    /// the same answer to the only question anything asks of this: apply no
+    /// discount.
+    ///
+    /// Read at [`Rank::slot`], because this table has a column for the whole
+    /// ladder where [`Self::rank_shift`] cannot: a shift away from the aggregate
+    /// is zero by definition, and a pick rate at all ranks is a figure Blizzard
+    /// publishes.
+    ///
+    /// Out-of-range lookups read as neutral rather than panicking, as
+    /// [`Self::rank_shift`] does: a draft in progress must never take down the UI
+    /// over a bad index.
+    pub fn prevalence_at(&self, rank: Rank, hero: HeroId) -> i8 {
+        self.prevalence
+            .get(hero.index())
+            .and_then(|row| row.get(rank.slot()))
             .copied()
             .unwrap_or(0)
     }
@@ -394,6 +443,7 @@ mod tests {
             map_affinity: vec![0; n],
             base_strength: vec![0; n],
             rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
+            prevalence: vec![[0; Rank::CHOICES.len()]; n],
             win_rate: vec![None; n],
             side_lean: vec![0; n],
             shape: vec![[0; 3]; n],
