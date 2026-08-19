@@ -1037,14 +1037,120 @@ fn the_support_mirror_is_not_mostly_dead_even() {
         ));
     }
 
+    // Printed on a passing run too, under `-- --nocapture`: this is the measurement
+    // the curated lane is aimed at, and one nobody can read without breaking it
+    // first is not a measurement.
+    println!("the support mirror, per support:\n  {}", table.join("\n  "));
+
     // 5 today, Lifeweaver, out of 13 opponents each — down from 8 when reading
     // counterwatch's published swing replaced 641 rank interpolations. Every
     // reading added brings this down; tighten the bound when it does, because a
     // bound that never moves is a bound nobody is reading.
     assert!(
         worst <= 5,
-        "a support reads dead even against more than 8 of the other 13 supports, \
+        "a support reads dead even against more than 5 of the other {} supports, \
          which is more of the role than the counter data can honestly call a coin flip\n  {}",
+        supports.len() - 1,
+        table.join("\n  ")
+    );
+}
+/// Whether a support player is shown a support worth banning.
+///
+/// The reported bug in one line: no support ever appears on a support player's ban
+/// list. The ladder disagrees - at Grandmaster the most-banned hero in the game is
+/// a support (`data/ban_rate.toml`: Jetpack Cat 67.9%, Mizuki 20.4%, Kiriko 18.7%,
+/// Ana 14.4%) - so a support player shown eight tanks and damage heroes is a gap in
+/// the data rather than a reading of the game.
+///
+/// Bounds a *count of blind subjects* rather than demanding that every support list
+/// a support, because those are not the same claim. Candidates are ranked across all
+/// three roles and cross-role matchups are simply larger, so the fold a curated
+/// support pair would have to reach to enter the drawn eight runs from ~10 for
+/// Baptiste to ~65 for Ana. A hand-written +65 support-vs-support is not evidence,
+/// it is a number picked to pass a test. This measures the gap closing and asks no
+/// more of the curated lane than the curated lane can honestly give.
+///
+/// The companion measurement is `the_support_mirror_is_not_mostly_dead_even`, which
+/// reads the data this list is computed from.
+#[test]
+fn a_support_player_is_offered_a_support_to_ban() {
+    let ds = load().expect("committed data must load");
+
+    // What the panel draws. The core returns the whole list, and the number lives in
+    // `overwatch-web/src/main.rs` as `frame.bans.candidates.iter().take(8)` - a list
+    // whose tail nobody sees is not the list a player reads.
+    const DRAWN: usize = 8;
+
+    let is_support = |hero: HeroId| ds.hero(hero).is_ok_and(|h| h.role == Role::Support);
+
+    let mut blind = 0;
+    let mut absent = 0;
+    let mut table: Vec<String> = Vec::new();
+
+    for subject in ds.heroes_in_role(Role::Support) {
+        let ctx = UserContext::new(Role::Support, ds.hero_count());
+        let team = DefendedTeam {
+            members: vec![Defended {
+                who: "me".to_owned(),
+                is_me: true,
+                is_typed: false,
+                role: Role::Support,
+                knowledge: Knowledge::Locked(subject),
+                heroes: vec![subject],
+            }],
+        };
+
+        let board = ban_recommendations(&ds, &Draft::new(), &ctx, &team);
+        let drawn = board
+            .candidates
+            .iter()
+            .take(DRAWN)
+            .filter(|candidate| is_support(candidate.hero))
+            .count();
+        let anywhere = board
+            .candidates
+            .iter()
+            .filter(|candidate| is_support(candidate.hero))
+            .count();
+
+        if drawn == 0 {
+            blind += 1;
+        }
+        if anywhere == 0 {
+            absent += 1;
+        }
+
+        let name = ds
+            .hero(subject)
+            .map(|hero| hero.key.as_str())
+            .unwrap_or("?");
+        table.push(format!(
+            "{name}: {drawn} support(s) in the drawn {DRAWN}, {anywhere} on a list of {}",
+            board.candidates.len()
+        ));
+    }
+
+    // Printed on a passing run too, under `-- --nocapture`: a measurement nobody can
+    // read without breaking it first is not a measurement.
+    println!(
+        "support bans, per support player:\n  {}",
+        table.join("\n  ")
+    );
+
+    // 10 of 14 today. Every curated support pair takes one off this, so tighten the
+    // bound as they land - a bound that never moves is a bound nobody is reading.
+    assert!(
+        blind <= 10,
+        "{blind} of {} support players see no support at all in the drawn {DRAWN}\n  {}",
+        ds.heroes_in_role(Role::Support).count(),
+        table.join("\n  ")
+    );
+    // Moira today, and only Moira: the data has her favoured into 11 of the other 13
+    // supports and even against the last 2, so nothing in the role clears the
+    // `score <= 0` gate and her list has no support on it at any depth.
+    assert!(
+        absent <= 1,
+        "{absent} support players have no support anywhere on their ban list\n  {}",
         table.join("\n  ")
     );
 }
