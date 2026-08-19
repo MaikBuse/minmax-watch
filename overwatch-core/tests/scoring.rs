@@ -1587,11 +1587,17 @@ fn a_candidate_rated_against_one_member_of_two_scores_over_the_whole_team() {
         .find(|c| c.hero == W_BAPTISTE)
         .expect("Baptiste is the one candidate with an argument here");
 
-    // Mika alone: Ana is a support member, so the role weight for a support
-    // candidate is 0.6, and the reading is +0.60 of danger. Over both members the
-    // score is `1.0 * 0.6 * 0.60 / 2.0 = 0.18`; over the contributing member only
-    // it was `/ 1.0 = 0.36`, twice as large on the same single reading.
-    let expected = 0.6 * 0.60 / 2.0;
+    // Mika alone: Ana is a support member, so the ban weight for a support
+    // candidate is `0.6 / 0.8333 = 0.72`, and the reading is +0.60 of danger.
+    // Over both members the score is `1.0 * 0.72 * 0.60 / 2.0`; over the
+    // contributing member only it was `/ 1.0`, twice as large on the same single
+    // reading, which is what this test is about.
+    let expected = ctx
+        .weights
+        .enemy_roles
+        .ban_weight(Role::Support, Role::Support)
+        * 0.60
+        / 2.0;
     assert!(
         (baptiste.severity - 0.60 / 2.0).abs() < 1e-6,
         "severity should be the danger spread over the whole team, got {}",
@@ -1611,6 +1617,81 @@ fn a_candidate_rated_against_one_member_of_two_scores_over_the_whole_team() {
     assert!(
         baptiste.severity > 0.0 && baptiste.score > 0.0,
         "a real argument, just a smaller one"
+    );
+}
+
+/// The defect the ban weight exists for: the list has to rank by how much a
+/// candidate beats your team, not by which role it happens to be.
+///
+/// One tank teammate, two candidates. The support beats them by 60, the tank by
+/// only 40 — so the support is plainly the bigger problem. Reading the table's raw
+/// cell put the tank first anyway, because `[tank][tank]` is 2.2 against
+/// `[tank][support]` at 1.0: `2.2 x 0.40 = 0.88` against `1.0 x 0.60 = 0.60`. That
+/// is the whole bug, and it is not a close call — a 50% larger matchup lost to a
+/// column that is twice the size.
+///
+/// The ban weight divides each column by its own mean, so the comparison becomes
+/// `1.320 x 0.40 = 0.528` against `1.200 x 0.60 = 0.72` and the bigger problem
+/// wins. Note what is *not* claimed: the tank column still outweighs the support
+/// column for a tank teammate, 1.320 against 1.200. It just no longer outweighs it
+/// by enough to overturn the matchups.
+#[test]
+fn a_support_that_is_the_bigger_problem_outranks_a_tank_that_is_not() {
+    let heroes = vec![
+        hero("winston", "Winston", Role::Tank),
+        hero("sigma", "Sigma", Role::Tank),
+        hero("ana", "Ana", Role::Support),
+    ];
+    let n = heroes.len();
+    let (winston, sigma, ana) = (HeroId(0), HeroId(1), HeroId(2));
+
+    let mut matchups = Matrix::unrated(n);
+    for (attacker, defender, value) in [(sigma, winston, 40), (ana, winston, 60)] {
+        matchups.set(attacker, defender, value).expect("in range");
+        matchups.set(defender, attacker, -value).expect("in range");
+    }
+
+    let ds = Dataset::new(DatasetParts {
+        heroes,
+        maps: Vec::new(),
+        matchups,
+        synergy: Matrix::unrated(n),
+        map_affinity: Vec::new(),
+        base_strength: vec![0; n],
+        rank_shift: vec![[0; Rank::DIVISIONS.len()]; n],
+        prevalence: vec![[0; Rank::CHOICES.len()]; n],
+        win_rate: vec![None; n],
+        side_lean: vec![0; n],
+        shape: vec![[0; 3]; n],
+        reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
+        generated: "fixture".to_owned(),
+        patch: "fixture".to_owned(),
+    })
+    .expect("fixture is internally consistent");
+
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+    let board = ban_recommendations(
+        &ds,
+        &Draft::new(),
+        &ctx,
+        &team(vec![locked("me", true, Role::Tank, winston)]),
+    );
+
+    assert_eq!(
+        board.candidates.iter().map(|c| c.hero).collect::<Vec<_>>(),
+        vec![ana, sigma],
+        "the support beats this team by more, so it is the better ban"
+    );
+
+    // And the column now agrees with itself. `severity` is the unweighted mean
+    // danger and is what the panel prints, so a list sorted by `score` that put
+    // the smaller `severity` on top was visibly contradicting the number beside
+    // it.
+    let severities: Vec<f32> = board.candidates.iter().map(|c| c.severity).collect();
+    assert!(
+        (severities[0] - 0.60).abs() < 1e-6 && (severities[1] - 0.40).abs() < 1e-6,
+        "expected 0.60 then 0.40, got {severities:?}"
     );
 }
 
@@ -1764,11 +1845,19 @@ fn drafting_alone_still_scores_the_pool_through_your_own_role() {
     );
 
     // Ana beats Reinhardt by 60. One member, so the certainty average is a
-    // no-op and the score is exactly `severity * enemy_roles[tank][support]`.
+    // no-op and the score is exactly `severity * ban_weight[tank][support]`.
+    //
+    // The *ban* weight, not the raw cell: the ban list is the one caller that
+    // ranks candidates of different roles against each other, so it reads the
+    // table rescaled to make its columns comparable. Read from the context
+    // rather than written out, so this keeps holding if the table is retuned.
     let ana = board.candidates.first().expect("Ana is ranked");
     assert_eq!(ana.hero, W_ANA);
     assert!((ana.severity - 0.60).abs() < 1e-6);
-    let weight = ctx.weights.enemy_roles.get(Role::Tank, Role::Support);
+    let weight = ctx
+        .weights
+        .enemy_roles
+        .ban_weight(Role::Tank, Role::Support);
     assert!((ana.score - 0.60 * weight).abs() < 1e-6);
 }
 

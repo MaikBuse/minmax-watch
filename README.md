@@ -50,7 +50,10 @@ Four things about the arithmetic worth knowing before you trust a number:
   `[your role][their role]` — the enemy tank carries 2.2 against your tank, the
   enemy supports 0.6 against your support. It is the largest single lever in the
   scorer: flattening it to a plain average changes the top recommendation for
-  31% of tank drafts.
+  31% of tank drafts. The ban list reads the same table rescaled so its three
+  columns are comparable, because it is the one place heroes of *different* roles
+  are ranked against each other — without that, a support could not make the list
+  however badly your team lost to it.
 - **An unrated pair is left out of the mean, never folded in as zero.** "Nothing
   known" and "rated dead even" are different answers and the scorer keeps them
   apart, in the counter mean, the synergy mean, the ban list and the shape read

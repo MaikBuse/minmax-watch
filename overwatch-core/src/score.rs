@@ -68,6 +68,70 @@ impl EnemyRoleWeights {
     pub fn get(&self, yours: Role, theirs: Role) -> f32 {
         self.0[yours.index()][theirs.index()]
     }
+
+    /// The same table, rescaled so that the three columns are comparable — for
+    /// the one caller that compares them.
+    ///
+    /// [`Self::get`] is right wherever the thing being ranked shares a column:
+    /// `score_hero` normalises it into shares over one enemy board, and
+    /// [`threats`] orders the enemies themselves, which is the question these
+    /// numbers answer. `ban_recommendations` is the exception. Its candidates
+    /// span all three roles and its denominator sums only certainty, so the raw
+    /// cell survives into the score as a bare multiplier — and the columns are
+    /// not the same size. Weighted by the roles a 5v5 actually fields, they come
+    /// out at tank 1.56, damage 1.32 and support 0.80, so a support candidate was
+    /// read through a column worth **1.95x less than a tank's** and could not
+    /// reach the drawn top eight whatever the matchups said. Measured over 300
+    /// random legal comps: 0.67 supports per top eight against a roster-neutral
+    /// 2.0, and no support at all in half of them.
+    ///
+    /// That was never what the magnitudes were for. The doc comment above sizes
+    /// the 2.2 as buying the enemy tank "about a third of the counter signal
+    /// instead of a fifth" — a share of a mean, not a claim that a tank ban is
+    /// worth 2.2 of a support ban.
+    ///
+    /// Dividing by the column's own mean fixes exactly that and nothing else.
+    /// Every column then averages 1.0, so the cross-role scale is gone, while the
+    /// ratios *within* a column survive untouched — a tank teammate still counts
+    /// 1.200 against a support candidate where a support teammate counts 0.720,
+    /// which is the slot-multiplicity correction doing its real work.
+    ///
+    /// What that buys, on the committed data over the same 300 comps: the drawn
+    /// top eight goes from 3.25 tanks / 4.08 damage / 0.67 supports to
+    /// 2.44 / 3.92 / 1.64, against a roster-neutral 2.33 / 3.67 / 2.00, and the
+    /// share of drafts showing a support player no supports at all falls from
+    /// **49% to 12%**. It changes the top ban for **30%** of comps and the top-eight
+    /// set for 79% — the same order as this table's own headline figure, which is
+    /// the right size for correcting the largest lever in the scorer.
+    ///
+    /// **A flat mean of the three cells, deliberately, and not one weighted by
+    /// the team in front of you.** The alternative fix is to put the weight in
+    /// the denominator too, which normalises against the actual roster — and
+    /// that costs the property
+    /// `a_second_tank_on_the_team_raises_what_an_enemy_tank_is_worth` pins,
+    /// because a second tank then moves the reference as well as the numerator.
+    /// A fixed reference scales each column by a constant, so every comparison
+    /// of one candidate across team compositions is arithmetically unchanged:
+    /// that test rises on `b > 0.727a` before and after, where the denominator
+    /// fix would make it `b > a`. Only cross-role ordering moves, which is the
+    /// thing that was wrong.
+    ///
+    /// Derived from the table rather than tabulated, so editing `enemy_roles`
+    /// keeps the ban list consistent with the pick list.
+    pub fn ban_weight(&self, theirs: Role, candidate: Role) -> f32 {
+        let mean = self.column_mean(candidate);
+        if mean.abs() < f32::EPSILON {
+            return 1.0;
+        }
+        self.get(theirs, candidate) / mean
+    }
+
+    /// The mean of one column, over the three roles a teammate can be playing.
+    fn column_mean(&self, candidate: Role) -> f32 {
+        let column = candidate.index();
+        let total: f32 = self.0.iter().map(|row| row[column]).sum();
+        total / self.0.len() as f32
+    }
 }
 
 impl Default for EnemyRoleWeights {
@@ -1171,7 +1235,12 @@ pub fn ban_recommendations(
                 }
 
                 let danger = rated.iter().map(|(_, term)| term).sum::<f32>() / rated.len() as f32;
-                weighted += certainty * ctx.weights.enemy_roles.get(member.role, role) * danger;
+                // `ban_weight` and not `get`: this is the one place candidates of
+                // different roles are ranked against each other, and the raw cell
+                // carries a cross-role scale that was only ever meant to
+                // redistribute shares within one column. See `ban_weight`.
+                weighted +=
+                    certainty * ctx.weights.enemy_roles.ban_weight(member.role, role) * danger;
                 plain += certainty * danger;
 
                 // Only somebody who has actually said what they play can have a
