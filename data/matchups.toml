@@ -1357,6 +1357,8 @@ vs = "reaper"
 value = 0
 cpgg = 0
 opick = 0
+curated = 20
+note = "Immortality Field is the answer to a committed Death Blossom and to the close burst Reaper has to walk into range to land. Unreachable from the source: the lamp saves whoever Reaper picked, and a duel statistic only counts the two heroes in it."
 
 [[matchup]]
 hero = "baptiste"
@@ -1395,6 +1397,8 @@ vs = "sigma"
 value = 0
 cpgg = 0
 opick = 0
+curated = -20
+note = "Kinetic Grasp absorbs projectiles and turns them into health, and projectiles are Baptiste's entire output, Amplification Matrix included. Unreachable from the source: no site rates this pair, and an ability that eats a whole kit is not a kill trade."
 
 [[matchup]]
 hero = "baptiste"
@@ -2064,6 +2068,8 @@ vs = "junker-queen"
 value = 0
 cpgg = 0
 opick = -50
+curated = -25
+note = "Wounds are a heal block, and Brigitte's output is Inspire ticking on the whole team - the one kind of healing an anti-heal cancels outright. Unreachable from the source: it measures who dies, not whose healing stopped counting."
 
 [[matchup]]
 hero = "brigitte"
@@ -7228,6 +7234,8 @@ vs = "brigitte"
 value = 0
 cpgg = 0
 opick = 50
+curated = 25
+note = "Rampage wounds everything it hits, and constant small healing is what a heal block is worth the most against. Unreachable from the source: it measures who dies, not whose healing stopped counting."
 
 [[matchup]]
 hero = "junker-queen"
@@ -8565,6 +8573,8 @@ vs = "mei"
 value = 0
 cpgg = 0
 opick = -50
+curated = 25
+note = "Protection Suzu unfreezes a Blizzard, which is the whole of Mei's ultimate, and cleanses the slow her Endothermic Blaster builds. Unreachable from the source: Suzu is thrown at a teammate, so the interaction never appears in a duel between these two."
 
 [[matchup]]
 hero = "kiriko"
@@ -8650,6 +8660,8 @@ vs = "sigma"
 value = 0
 cpgg = 0
 opick = 0
+curated = 20
+note = "Accretion is a knockdown and Protection Suzu cleanses it, and Swift Step leaves the side of the fight Experimental Barrier is holding. Unreachable from the source: a cleanse spent on a teammate is invisible to a kill-traded statistic."
 
 [[matchup]]
 hero = "kiriko"
@@ -10125,6 +10137,8 @@ vs = "kiriko"
 value = 0
 cpgg = 0
 opick = 50
+curated = -25
+note = "Blizzard is a hold that Protection Suzu ends the moment it lands, and the freeze is what the ultimate is for. Unreachable from the source: Suzu is thrown at a teammate, so the interaction never appears in a duel between these two."
 
 [[matchup]]
 hero = "mei"
@@ -12604,6 +12618,8 @@ vs = "baptiste"
 value = 0
 cpgg = 0
 opick = 0
+curated = -20
+note = "Death Blossom needs the target to stay dead for the seconds it channels, which is exactly the window Immortality Field covers. Unreachable from the source: the lamp saves whoever Reaper picked, and a duel statistic only counts the two heroes in it."
 
 [[matchup]]
 hero = "reaper"
@@ -14575,6 +14591,8 @@ vs = "baptiste"
 value = 0
 cpgg = 0
 opick = 50
+curated = 20
+note = "Kinetic Grasp converts the burst it absorbs into extra health, and Experimental Barrier cuts the line an Amplification Matrix has to be shot through. Unreachable from the source: no site rates this pair, and an ability that eats a whole kit is not a kill trade."
 
 [[matchup]]
 hero = "sigma"
@@ -14717,6 +14735,8 @@ vs = "kiriko"
 value = 0
 cpgg = 0
 opick = 0
+curated = -20
+note = "Accretion picks one target and Suzu picks it back up, which spends the pick and not the cooldown that mattered. Unreachable from the source: a cleanse spent on a teammate is invisible to a kill-traded statistic."
 
 [[matchup]]
 hero = "sigma"
