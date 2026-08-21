@@ -441,6 +441,67 @@ fn the_attack_defend_leans_are_populated() {
     );
 }
 
+/// The other half of the guard above, and the half it cannot be: `leaning >= 10`
+/// counts *non-zero* leans, so a file holding 27 of 53 heroes with the other 26
+/// unread passes it exactly as comfortably as a complete one does.
+///
+/// The loader cannot see the difference either — `side_lean` is pre-filled with
+/// zeroes, so an absent row and a written `value = 0` load the same byte and
+/// score the same. Which is why this reads `SIDE_TOML` rather than the
+/// `Dataset`: the distinction between "somebody read this kit and found it
+/// neutral" and "nobody has looked at this hero" exists in the file and nowhere
+/// else, and the note is the only thing carrying it.
+#[test]
+fn every_hero_has_a_side_lean_written_down_even_when_it_is_zero() {
+    let ds = load().expect("committed data must load");
+    let file: overwatch_data::schema::SideFile =
+        toml::from_str(overwatch_data::SIDE_TOML).expect("committed side leans must parse");
+
+    assert_eq!(
+        file.entries.len(),
+        ds.hero_count(),
+        "side.toml holds {} of {} heroes",
+        file.entries.len(),
+        ds.hero_count()
+    );
+
+    // Each hero exactly once. The count above passes a file with one hero
+    // written twice and another missing, and `side.toml` gets no duplicate
+    // check from the loader the way `heroes.toml` does - the second row would
+    // silently win and the hero it displaced would read as neutral.
+    let written: HashSet<&str> = file.entries.iter().map(|e| e.hero.as_str()).collect();
+    assert_eq!(
+        written.len(),
+        file.entries.len(),
+        "side.toml names some hero more than once"
+    );
+    let missing: Vec<&str> = ds
+        .heroes()
+        .iter()
+        .map(|hero| hero.key.as_str())
+        .filter(|key| !written.contains(key))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "no side lean written down for: {}",
+        missing.join(" ")
+    );
+
+    // The note is the whole point of writing a zero down. Without one the row
+    // says nothing the absent row it replaced did not already say.
+    let silent: Vec<&str> = file
+        .entries
+        .iter()
+        .filter(|entry| entry.note.trim().is_empty())
+        .map(|entry| entry.hero.as_str())
+        .collect();
+    assert!(
+        silent.is_empty(),
+        "side lean with no note behind it: {}",
+        silent.join(" ")
+    );
+}
+
 /// Same guard for `archetype.toml`, which the ingest also never writes.
 ///
 /// Coverage matters more here than for the side leans: an unrated hero is left

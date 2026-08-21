@@ -268,8 +268,12 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     }
 
     // --- attack/defend lean -----------------------------------------------
-    // Absent from the file means zero, which is the honest answer for most of
-    // the roster rather than a gap to be filled.
+    // Absent from the file loads as zero, exactly as a written `value = 0`
+    // does, which is why the file carries all 53 heroes rather than only the
+    // ones that lean: the loader and the scorer cannot tell a hero nobody has
+    // read from one somebody read and found neutral, so the note beside the
+    // zero is the only thing that can. Guarded by
+    // `every_hero_has_a_side_lean_written_down_even_when_it_is_zero`.
     let mut side_lean = vec![0i8; n];
     for entry in &side_file.entries {
         let hero = hero_id("side.toml", &entry.hero)?;

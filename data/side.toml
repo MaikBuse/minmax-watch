@@ -8,9 +8,12 @@
 # These are judgement calls, not measurements. The bar for a non-zero value here
 # is that the hero's kit is built around something only one side gets — setup
 # time and held angles on defence, or the mobility to open a choke on attack.
-# Anything less clear-cut is left at zero rather than guessed at, which is why
-# most of the roster is absent from this file. It only applies on Escort and
-# Hybrid; every other mode starts both teams in the same posture.
+# Anything less clear-cut is written down as an explicit zero with a note, which
+# is why the whole roster is in this file. The loader cannot tell an absent row
+# from a zero and neither can the scorer, so a hero nobody had read looked
+# exactly like a hero somebody had read and found neutral — the note is the only
+# thing that separates them. It only applies on Escort and Hybrid; every other
+# mode starts both teams in the same posture.
 #
 # One piece of outside corroboration is worth having, since nothing else here
 # has any: the game's own Flanker sub-role is defined as striking a backline
@@ -159,3 +162,141 @@ note = "Lifeline tows a teammate over the choke the ground fight is stuck on. Ca
 hero = "kiriko"
 value = 20
 note = "Swift Step keeps a diving attacker alive past the point a hold would punish."
+
+# --- neutral: nothing in the kit is worth more on one side than the other -----
+
+# tanks
+
+[[side]]
+hero = "dmon"
+value = 0
+note = "Power Barrier marches rather than holds, which looks like an attack tool until you notice how narrow it is and that it is mostly covering her. Nothing behind it gets through a choke it was not already getting through."
+
+[[side]]
+hero = "hazard"
+value = 0
+note = "Violent Leap is an entry and Jagged Wall is a hold, and he needs both: he leaps in and then wants the fight to stay where he landed. The two argue for opposite ends of the scale and cancel."
+
+[[side]]
+hero = "junker-queen"
+value = 0
+note = "Wounds only pay out over a sustained fight, and neither side has a monopoly on those. Commanding Shout moves a stalled push and refuses a collapsing hold with equal enthusiasm."
+
+[[side]]
+hero = "mauga"
+value = 0
+note = "Overrun is an engage with no exit attached, which is a reason to be careful rather than a reason to be attacking. The guns only heal off a target that is already burning, and the defence supplies those too."
+
+[[side]]
+hero = "ramattra"
+value = 0
+note = "Void Barrier is a hold and Nemesis form is a walk-forward, and the kit is built to alternate between them. Annihilation stalls a push and breaks one."
+
+[[side]]
+hero = "reinhardt"
+value = 0
+note = "The shield is how a push survives a choke and how a hold denies one, which is the same object doing opposite work. Everything else happens within a hammer's length, and both sides can arrange that."
+
+[[side]]
+hero = "roadhog"
+value = 0
+note = "The hook drags a body out of position, and a position is a position on either side. Take a Breather rewards standing in damage rather than standing anywhere in particular."
+
+[[side]]
+hero = "zarya"
+value = 0
+note = "Bubbles charge fastest in a fight nobody can walk out of, and a choke supplies that to the side pushing through it and the side holding it alike. The beam has no range to care about sightlines with."
+
+# damage
+
+[[side]]
+hero = "ashe"
+value = 0
+note = "Dynamite across a choke is a defence argument, but Coach Gun boosts her onto an angle rather than keeping her on one, and B.O.B. arrives as an entry. Both sides, so neither."
+
+[[side]]
+hero = "cassidy"
+value = 0
+note = "Hitscan at range that does not need a held sightline, and a roll for when the range closes anyway. Magnetic Grenade finds a target rather than denying a choke, so nothing here is worth more for having set up first."
+
+[[side]]
+hero = "echo"
+value = 0
+note = "Flight takes an angle nothing on the ground can contest, which is worth as much over a defended choke as over the team pushing into it. Duplicate reads whatever is in front of her."
+
+[[side]]
+hero = "emre"
+value = 0
+note = "No dash, blink or gap-closer outside the ultimate, so he never opens a choke; Take Aim extends falloff without giving him the held sightline that would make him a defender. Siphon Blaster wins the close fight he did not choose, on either side."
+
+[[side]]
+hero = "freja"
+value = 0
+note = "The crossbow wants a sightline and the glide is a reposition rather than an entry, so she takes an angle on attack and keeps one on defence with the same two buttons."
+
+[[side]]
+hero = "sierra"
+value = 0
+note = "Helix Rifle tightens with sustained fire, which rewards standing still, while Anchor Drone is a two-step reposition that gets her somewhere new. One of each, and neither wins the argument."
+
+[[side]]
+hero = "sojourn"
+value = 0
+note = "Railgun charge is banked from chip and spent wherever she is standing, and Power Slide takes an angle rather than keeping one. Nothing in the kit is worth more for having arrived first."
+
+[[side]]
+hero = "soldier-76"
+value = 0
+note = "The biotic field is a reason to hold ground and Rocket Jump is a way to leave it. Helix rockets do not care which, and mid-range hitscan belongs to whoever has the sightline."
+
+# supports
+
+[[side]]
+hero = "ana"
+value = 0
+note = "No mobility at all, which sounds like a defender until you notice the sightline she needs is the one her own team is pushing along. Sleep and Nade answer a fight arriving at her, and it arrives on both sides."
+
+[[side]]
+hero = "baptiste"
+value = 0
+note = "Immortality Field is what a stalled push survives and what a collapsing hold refuses to lose, in equal measure. The window helps whoever is shooting through it."
+
+[[side]]
+hero = "brigitte"
+value = 0
+note = "Every point of healing comes from hitting somebody with a flail, so the fight has to be close — and a choke makes it close for the side pushing into it and the side holding it alike."
+
+[[side]]
+hero = "juno"
+value = 0
+note = "Glide Boost and the speed ring are for a team that is moving, which reads as attack until the defence needs to rotate. Pulsar Torpedoes lock on from wherever she ended up."
+
+[[side]]
+hero = "lifeweaver"
+value = 0
+note = "Petal Platform lifts a body over a held angle and out of one, and Life Grip pulls a diver home as readily as it saves an entry. Nothing in the kit prefers a direction."
+
+[[side]]
+hero = "mercy"
+value = 0
+note = "Guardian Angel makes her wherever her target is, so she inherits whatever posture the team already has instead of arguing for one."
+
+[[side]]
+hero = "mizuki"
+value = 0
+note = "Katashiro Return is a committed leap with a teleport home attached, and the teleport is what makes it as good a retreat as an entry. Remedy Aura is a radius either way."
+
+[[side]]
+hero = "moira"
+value = 0
+note = "Both beams are short enough that she goes wherever the fight already is, and Fade is an escape rather than an engage. Nothing here opens a choke or holds one."
+
+[[side]]
+hero = "wuyang"
+value = 0
+note = "The orb loses its empowered explosion inside 10m, so the weapon itself wants distance, while Rushing Torrent is speed without a teleport and cannot follow an entry. Neither of those is a side."
+
+[[side]]
+hero = "zenyatta"
+value = 0
+note = "Discord is applied from across a room, and it is the same room on both sides. No mobility to recover a position, and nothing that claims one first either."
