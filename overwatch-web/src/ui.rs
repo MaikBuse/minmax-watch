@@ -1126,10 +1126,7 @@ impl ThreatRow {
 
         Self {
             enemy: threat.enemy,
-            name: dataset
-                .hero(threat.enemy)
-                .map(|h| h.name.clone())
-                .unwrap_or_else(|_| "?".to_owned()),
+            name: hero_name(dataset, threat.enemy),
             icon: dataset
                 .hero(threat.enemy)
                 .map(|h| crate::icons::hero(&h.key))
@@ -1276,22 +1273,188 @@ pub struct ReasonLine {
     pub disputed: bool,
 }
 
+/// A hero's display name, or `?` for an id the roster cannot resolve.
+///
+/// A free function because three places need it — both row builders and
+/// [`phrasing`] — and a closure living inside one of them cannot be shared with
+/// the others.
+fn hero_name(ds: &Dataset, hero: HeroId) -> String {
+    ds.hero(hero)
+        .map(|h| h.name.clone())
+        .unwrap_or_else(|_| "?".to_owned())
+}
+
+/// A map's display name, or `?` for an id the map list cannot resolve.
+fn map_name(ds: &Dataset, map: MapId) -> String {
+    ds.map(map)
+        .map(|m| m.name.clone())
+        .unwrap_or_else(|_| "?".to_owned())
+}
+
+/// The published win rate, worded so a rung cannot be read off it.
+///
+/// Qualified once a rank is chosen, because from then on the list is ordered on
+/// that rung and this rate is still the whole ladder's — the per-rung win rate is
+/// not in the dataset, only the shift the scorer reads. The score column beside
+/// it *is* the sorted figure and does move with the rank, so the ordering is
+/// accounted for; what this must not do is let a ladder number pass for the
+/// bracket's.
+///
+/// One function rather than a `format!` at each site, because the ban panel and
+/// the pick list's patch-strength line both print this. A qualifier that reached
+/// one of them and not the other would be worse than one that reached neither.
+pub fn win_rate_text(rate: f32, rank: Rank) -> String {
+    if rank == Rank::All {
+        format!("{rate:.1}% win rate")
+    } else {
+        format!("{rate:.1}% win rate across the ladder")
+    }
+}
+
+/// One reason's wording, and whether it survives a leading minus.
+///
+/// The sign on a reason line is a CSS pseudo-element driven by the sign of the
+/// term's contribution, and it used to be the only thing that knew which way the
+/// term went: the words were fixed per kind, so all 22 heroes with a negative
+/// base term rendered it as `− strong in the current patch`. Returning this
+/// instead of a `String` is what turns forgetting into a compile error for
+/// whoever adds the next kind.
+enum Phrasing {
+    /// Reads under either sign, because it names a thing rather than claiming
+    /// one.
+    Symmetric(String),
+    /// Two wordings, because the phrase makes a claim of its own and the
+    /// negative one is not the positive one with a sign in front of it.
+    Signed { positive: String, negative: String },
+}
+
+impl Phrasing {
+    /// The wording the leading sign will not contradict.
+    fn under(self, positive: bool) -> String {
+        match self {
+            Phrasing::Symmetric(text) => text,
+            Phrasing::Signed {
+                positive: up,
+                negative: down,
+            } => {
+                if positive {
+                    up
+                } else {
+                    down
+                }
+            }
+        }
+    }
+}
+
+/// The app's own wording for one reason, for the rows where no source published
+/// a sentence of its own.
+///
+/// `hero` is the candidate the reason is about — [`ReasonKind::BaseStrength`]
+/// carries no payload and the win rate belongs to the hero, not to the kind.
+fn phrasing(kind: ReasonKind, hero: HeroId, rank: Rank, ds: &Dataset) -> Phrasing {
+    match kind {
+        // Four kinds whose direction is fixed by the *kind* rather than by the
+        // sign, so one wording is the whole answer. Deliberately not a third
+        // `Phrasing` variant: it would render identically to `Symmetric` and buy
+        // nothing except this comment. A minus can still reach them, but only
+        // through a negative `counter` weight in a stored profile — weights load
+        // unclamped — and no wording survives a reader who has inverted the term.
+        ReasonKind::BeatsEnemy(enemy) => {
+            Phrasing::Symmetric(format!("strong into {}", hero_name(ds, enemy)))
+        }
+        ReasonKind::LosesToEnemy(enemy) => {
+            Phrasing::Symmetric(format!("struggles against {}", hero_name(ds, enemy)))
+        }
+        // Their shape, not this hero's: the portrait beside the line already says
+        // what the candidate is.
+        ReasonKind::CountersShape(theirs) => {
+            Phrasing::Symmetric(format!("answers their {}", theirs.label()))
+        }
+        ReasonKind::LosesToShape(theirs) => {
+            Phrasing::Symmetric(format!("walks into their {}", theirs.label()))
+        }
+
+        // A figure rather than a claim, which is exactly why it reads under
+        // either sign — 22 of the 53 heroes have a negative base term, and this
+        // line called every one of them strong.
+        //
+        // The sign is the selection-corrected term while the figure is the rate
+        // as published, and today the two agree for all 53: no minus sits beside
+        // a figure above 50.0. That is measured, not structural. The ingest
+        // normalises around 50.0 while its selection shrink pulls toward role
+        // means of 50.04 to 50.22, so a lightly-picked damage hero at 49.9%
+        // would read `+ 49.9% win rate`. An oddity rather than a contradiction,
+        // which is the whole difference between the two variants above.
+        ReasonKind::BaseStrength => Phrasing::Symmetric(match ds.win_rate(hero) {
+            Some(rate) => win_rate_text(rate, rank),
+            // Unreachable on the committed data, where all 53 heroes carry a
+            // published rate. A label rather than a second pair of wordings: with
+            // no figure to show there is no claim left to hedge either.
+            None => "patch strength".to_owned(),
+        }),
+
+        // The one term that gains a real comparative, because a side has an
+        // opposite and a rung does not. That sentence is the whole reason this
+        // arm is `Signed` and `RankFit` below is not.
+        ReasonKind::SideFit(side) => Phrasing::Signed {
+            positive: format!("suits {}", side.as_str()),
+            negative: format!("leans {}", side.other().as_str()),
+        },
+
+        // Both of these negative arms are unreachable from the committed data —
+        // 159 map affinities and 441 duo ratings, not one of them below zero —
+        // and are written anyway. The worst-map figures the sources already
+        // publish would make the first of them reachable in the same commit that
+        // landed them, and the failure would be silent: a hero would simply be
+        // told it performs well on the map it is worst on.
+        ReasonKind::MapFit(map) => Phrasing::Signed {
+            positive: format!("performs well on {}", map_name(ds, map)),
+            negative: format!("a poor fit for {}", map_name(ds, map)),
+        },
+        ReasonKind::PairsWithAlly(ally) => Phrasing::Signed {
+            positive: format!("pairs well with {}", hero_name(ds, ally)),
+            negative: format!("a poor pair with {}", hero_name(ds, ally)),
+        },
+
+        // The only line on the whole screen that names a rung. Never produced at
+        // `Rank::All`, where the term is zero and a zero term is never explained
+        // — so an unset rank leaves the panel exactly as it has always read.
+        //
+        // Stays symmetric, and the reason is one sentence: a rung has no
+        // opposite. This term goes negative as often as positive — half the
+        // roster is worse at any given rung than across the ladder — and a
+        // comparative like "stronger at master" reads as a contradiction the
+        // moment it is prefixed with a minus, while "weaker at master" is not the
+        // same claim as anything the other direction says.
+        //
+        // "right now" is what keeps it about the patch. Without it the line reads
+        // as a claim about matchups at that rung, which nothing behind this
+        // feature measured.
+        ReasonKind::RankFit(rung) => {
+            Phrasing::Symmetric(format!("suits {} right now", rung.label()))
+        }
+
+        // Nothing in the UI writes a comfort override yet, so the negative arm
+        // needs a hand-edited stored profile to reach. Written now because the
+        // pool board is about to start writing them, and a level you set yourself
+        // is the last place a contradiction should turn up.
+        ReasonKind::Comfort => Phrasing::Signed {
+            positive: "one of your comfort picks".to_owned(),
+            negative: "one you rated down".to_owned(),
+        },
+    }
+}
+
 impl RecRow {
     /// Resolves one scored recommendation into display form.
-    pub fn build(rec: &Recommendation, dataset: &Dataset, swap_mode: bool, in_pool: bool) -> Self {
-        let name_of = |hero: HeroId| {
-            dataset
-                .hero(hero)
-                .map(|h| h.name.clone())
-                .unwrap_or_else(|_| "?".to_owned())
-        };
-        let map_name_of = |map: MapId| {
-            dataset
-                .map(map)
-                .map(|m| m.name.clone())
-                .unwrap_or_else(|_| "?".to_owned())
-        };
-
+    pub fn build(
+        rec: &Recommendation,
+        dataset: &Dataset,
+        swap_mode: bool,
+        in_pool: bool,
+        rank: Rank,
+    ) -> Self {
         // Once you are locked in, the absolute score is noise: the only
         // question is whether a swap gains you anything.
         let score = if swap_mode && !rec.is_locked {
@@ -1307,53 +1470,15 @@ impl RecRow {
             .reasons
             .iter()
             .map(|reason| {
+                // Read before the words are chosen, because half of them depend
+                // on it: the sign is a CSS pseudo-element and the wording it
+                // prefixes has to be the one it does not contradict.
+                let positive = reason.contribution >= 0.0;
                 let text = if reason.text.is_empty() {
                     // Only ~40% of matchups carry a scraped sentence; the rest
                     // get phrasing generated from the reason kind, because a
                     // bare number explains nothing.
-                    match reason.kind {
-                        ReasonKind::BeatsEnemy(hero) => format!("strong into {}", name_of(hero)),
-                        ReasonKind::LosesToEnemy(hero) => {
-                            format!("struggles against {}", name_of(hero))
-                        }
-                        ReasonKind::PairsWithAlly(hero) => {
-                            format!("pairs well with {}", name_of(hero))
-                        }
-                        ReasonKind::MapFit(map) => {
-                            format!("performs well on {}", map_name_of(map))
-                        }
-                        ReasonKind::SideFit(side) => {
-                            format!("suits {}", side.as_str())
-                        }
-                        // Their shape, not this hero's: the portrait beside the
-                        // line already says what the candidate is.
-                        ReasonKind::CountersShape(theirs) => {
-                            format!("answers their {}", theirs.label())
-                        }
-                        ReasonKind::LosesToShape(theirs) => {
-                            format!("walks into their {}", theirs.label())
-                        }
-                        ReasonKind::BaseStrength => "strong in the current patch".to_owned(),
-                        // The only line on the whole screen that names a rung.
-                        // Never produced at `Rank::All`, where the term is zero
-                        // and a zero term is never explained — so an unset rank
-                        // leaves the panel exactly as it has always read.
-                        //
-                        // Phrased like `SideFit` above, and for the same reason:
-                        // the leading sign has to carry it. This term goes
-                        // negative as often as positive — half the roster is
-                        // worse at any given rung than across the ladder — and a
-                        // comparative like "stronger at master" reads as a
-                        // contradiction the moment it is prefixed with a minus.
-                        //
-                        // "right now" is what keeps it about the patch. Without
-                        // it the line reads as a claim about matchups at that
-                        // rung, which nothing behind this feature measured.
-                        ReasonKind::RankFit(rank) => {
-                            format!("suits {} right now", rank.label())
-                        }
-                        ReasonKind::Comfort => "one of your comfort picks".to_owned(),
-                    }
+                    phrasing(reason.kind, rec.hero, rank, dataset).under(positive)
                 } else {
                     reason.text.clone()
                 };
@@ -1368,7 +1493,7 @@ impl RecRow {
                     _ => false,
                 };
                 ReasonLine {
-                    positive: reason.contribution >= 0.0,
+                    positive,
                     text,
                     disputed,
                 }
@@ -1377,7 +1502,7 @@ impl RecRow {
 
         Self {
             hero: rec.hero,
-            name: name_of(rec.hero),
+            name: hero_name(dataset, rec.hero),
             icon: dataset
                 .hero(rec.hero)
                 .map(|h| crate::icons::hero(&h.key))
@@ -1788,15 +1913,18 @@ pub fn SessionBar(
     }
 }
 
-/// The one part of this module that can be wrong in a way a test can catch.
+/// The two parts of this module that can be wrong in a way a test can catch.
 ///
 /// Everything else here is markup, but [`ThreatRow::build`] inverts a sign, and
 /// a silently un-inverted threat column would read as the exact opposite of what
-/// it means while looking entirely plausible.
+/// it means while looking entirely plausible. [`phrasing`] is the second, and it
+/// is where the same failure was actually shipped: the words were fixed per kind
+/// while the sign in front of them was not, so a hero the data called weak was
+/// described as strong with a minus in front of it.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use overwatch_core::{DatasetParts, Hero, Matrix, Reason};
+    use overwatch_core::{Archetype, DatasetParts, GameMap, GameMode, Hero, Matrix, Reason};
 
     const REINHARDT: HeroId = HeroId(0);
     const PHARAH: HeroId = HeroId(1);
@@ -1829,13 +1957,20 @@ mod tests {
     }
 
     fn dataset(matchups: Matrix, disputed: Vec<bool>) -> Dataset {
+        Dataset::new(parts(matchups, disputed)).expect("a two-hero dataset is valid")
+    }
+
+    /// The parts, unbuilt, so a fixture that needs one field different can set it
+    /// rather than every caller of [`dataset`] passing a value it does not care
+    /// about.
+    fn parts(matchups: Matrix, disputed: Vec<bool>) -> DatasetParts {
         let heroes = vec![
             hero("reinhardt", "Reinhardt", Role::Tank),
             hero("pharah", "Pharah", Role::Damage),
         ];
         let n = heroes.len();
 
-        Dataset::new(DatasetParts {
+        DatasetParts {
             heroes,
             maps: Vec::new(),
             matchups,
@@ -1851,8 +1986,25 @@ mod tests {
             disputed,
             generated: String::new(),
             patch: String::new(),
-        })
-        .expect("a two-hero dataset is valid")
+        }
+    }
+
+    /// A roster with a map and published win rates, which the shared fixture
+    /// deliberately has neither of. Reinhardt is above the ladder average and
+    /// Pharah below it, so one dataset covers both signs of the base term.
+    fn phrasing_fixture() -> Dataset {
+        let mut parts = parts(Matrix::unrated(2), vec![false; 4]);
+        parts.maps = vec![GameMap {
+            key: "kings-row".to_owned(),
+            name: "King's Row".to_owned(),
+            mode: GameMode::Hybrid,
+            aliases: Vec::new(),
+        }];
+        // One row per hero per map, and the values do not matter: the sign a
+        // wording is chosen under is passed in, not read back out of the data.
+        parts.map_affinity = vec![0; parts.maps.len() * parts.heroes.len()];
+        parts.win_rate = vec![Some(50.7), Some(45.6)];
+        Dataset::new(parts).expect("a two-hero dataset with a map is valid")
     }
 
     fn threat(enemy: HeroId, severity: f32, text: &str) -> Threat {
@@ -1997,12 +2149,228 @@ mod tests {
             ],
         };
 
-        let row = RecRow::build(&rec, &ds, false, false);
+        let row = RecRow::build(&rec, &ds, false, false, Rank::All);
         assert!(row.reasons[0].disputed, "the counter line reads the matrix");
         assert!(!row.reasons[0].positive);
         assert!(
             !row.reasons[1].disputed,
             "patch strength has one source and nothing to disagree with"
         );
+    }
+
+    /// Every kind, both signs. The compiler is the real guard — a kind added to
+    /// [`ReasonKind`] cannot skip the match — so what this catches is an arm
+    /// wired to the wrong variant: a claim left `Symmetric`, or a label given two
+    /// wordings it does not need.
+    #[test]
+    fn every_reason_kind_renders_a_line_under_both_signs() {
+        let ds = phrasing_fixture();
+        let map = MapId(0);
+
+        // `true` where the phrase makes a claim of its own and the negative
+        // reading is a different sentence rather than the same one negated.
+        let kinds = [
+            (ReasonKind::BeatsEnemy(PHARAH), false),
+            (ReasonKind::LosesToEnemy(PHARAH), false),
+            (ReasonKind::CountersShape(Archetype::Dive), false),
+            (ReasonKind::LosesToShape(Archetype::Dive), false),
+            (ReasonKind::BaseStrength, false),
+            (ReasonKind::RankFit(Rank::Master), false),
+            (ReasonKind::SideFit(Side::Attack), true),
+            (ReasonKind::MapFit(map), true),
+            (ReasonKind::PairsWithAlly(PHARAH), true),
+            (ReasonKind::Comfort, true),
+        ];
+
+        for (kind, signed) in kinds {
+            let up = phrasing(kind, REINHARDT, Rank::All, &ds).under(true);
+            let down = phrasing(kind, REINHARDT, Rank::All, &ds).under(false);
+
+            assert!(!up.is_empty(), "{kind:?} renders nothing when positive");
+            assert!(!down.is_empty(), "{kind:?} renders nothing when negative");
+            assert!(
+                !up.contains('?'),
+                "{kind:?} could not resolve a name: {up:?}"
+            );
+            if signed {
+                assert_ne!(
+                    up, down,
+                    "{kind:?} claims something, so the minus needs its own wording"
+                );
+            } else {
+                assert_eq!(
+                    up, down,
+                    "{kind:?} names a thing rather than claiming one, so both signs read it"
+                );
+            }
+        }
+    }
+
+    /// The reported bug. Twenty-two of the fifty-three heroes have a negative
+    /// base term, and every one of them was described as strong.
+    #[test]
+    fn a_hero_below_the_ladder_average_shows_its_win_rate_rather_than_being_called_strong() {
+        let ds = phrasing_fixture();
+
+        let line = phrasing(ReasonKind::BaseStrength, PHARAH, Rank::All, &ds).under(false);
+        assert_eq!(line, "45.6% win rate");
+        assert!(
+            !line.contains("strong"),
+            "a minus in front of 'strong' is the bug this closes"
+        );
+
+        // The figure is the hero's either way: the sign says what the term did to
+        // the score, not what the number is.
+        let above = phrasing(ReasonKind::BaseStrength, REINHARDT, Rank::All, &ds).under(true);
+        assert_eq!(above, "50.7% win rate");
+    }
+
+    /// The published rate is the whole ladder's at every rung, so a chosen rung
+    /// has to be told apart from it. Same words as the ban panel, from the same
+    /// function, because a qualifier on one of them and not the other would be
+    /// worse than neither.
+    #[test]
+    fn the_win_rate_on_a_reason_line_is_qualified_once_a_rank_is_chosen() {
+        let ds = phrasing_fixture();
+
+        assert_eq!(
+            phrasing(ReasonKind::BaseStrength, REINHARDT, Rank::Grandmaster, &ds).under(true),
+            "50.7% win rate across the ladder"
+        );
+        assert_eq!(
+            win_rate_text(50.7, Rank::Grandmaster),
+            phrasing(ReasonKind::BaseStrength, REINHARDT, Rank::Grandmaster, &ds).under(true),
+            "the ban panel and the reason line must print one string"
+        );
+    }
+
+    /// Unreachable on the committed data, where all 53 heroes carry a published
+    /// rate — but the field is an `Option` and every other fixture in this module
+    /// passes `None`, so the row still has to say something.
+    #[test]
+    fn a_hero_with_no_published_win_rate_still_gets_a_line() {
+        let ds = fixture();
+
+        for positive in [true, false] {
+            assert_eq!(
+                phrasing(ReasonKind::BaseStrength, REINHARDT, Rank::All, &ds).under(positive),
+                "patch strength",
+                "a label makes no claim, so it needs no second wording"
+            );
+        }
+    }
+
+    /// A rung has no opposite, which is why this one line may not become a
+    /// comparative however the sign in front of it reads. The argument is in
+    /// [`phrasing`] and this is what holds it.
+    #[test]
+    fn a_rung_is_never_phrased_as_a_comparative_because_a_rung_has_no_opposite() {
+        let ds = phrasing_fixture();
+        let kind = ReasonKind::RankFit(Rank::Master);
+
+        let up = phrasing(kind, REINHARDT, Rank::Master, &ds).under(true);
+        assert_eq!(
+            up,
+            phrasing(kind, REINHARDT, Rank::Master, &ds).under(false)
+        );
+        for word in ["stronger", "weaker", "better", "worse"] {
+            assert!(!up.contains(word), "{up:?} reads as a comparison");
+        }
+    }
+
+    /// A side does have an opposite, so the negative reading names it rather than
+    /// leaving the reader to work out that "not attack" is a place.
+    #[test]
+    fn a_hero_leaning_the_other_way_names_the_side_it_actually_wants() {
+        let ds = phrasing_fixture();
+
+        let on_attack = ReasonKind::SideFit(Side::Attack);
+        assert_eq!(
+            phrasing(on_attack, REINHARDT, Rank::All, &ds).under(true),
+            "suits attack"
+        );
+        assert_eq!(
+            phrasing(on_attack, REINHARDT, Rank::All, &ds).under(false),
+            "leans defend",
+            "a defend-leaning hero read on attack has to name defend"
+        );
+
+        // And symmetrically from the other side, because the payload is the side
+        // you are on rather than the one the kit wants.
+        assert_eq!(
+            phrasing(ReasonKind::SideFit(Side::Defend), REINHARDT, Rank::All, &ds).under(false),
+            "leans attack"
+        );
+    }
+
+    /// No committed map affinity is negative — 159 rows, all of them positive —
+    /// so this arm is unreachable from the data and testable only here. It stops
+    /// being unreachable the day the worst-map figures land.
+    #[test]
+    fn a_negative_map_affinity_would_read_as_a_poor_fit_rather_than_performing_well() {
+        let ds = phrasing_fixture();
+        let kind = ReasonKind::MapFit(MapId(0));
+
+        assert_eq!(
+            phrasing(kind, REINHARDT, Rank::All, &ds).under(true),
+            "performs well on King's Row"
+        );
+        assert_eq!(
+            phrasing(kind, REINHARDT, Rank::All, &ds).under(false),
+            "a poor fit for King's Row"
+        );
+    }
+
+    /// Same again for duos: all 441 committed synergy ratings are positive, so
+    /// only this can check the other half.
+    #[test]
+    fn a_negative_synergy_value_would_read_as_a_poor_pair_rather_than_pairing_well() {
+        let ds = phrasing_fixture();
+        let kind = ReasonKind::PairsWithAlly(PHARAH);
+
+        assert_eq!(
+            phrasing(kind, REINHARDT, Rank::All, &ds).under(true),
+            "pairs well with Pharah"
+        );
+        assert_eq!(
+            phrasing(kind, REINHARDT, Rank::All, &ds).under(false),
+            "a poor pair with Pharah"
+        );
+    }
+
+    /// Nothing writes a comfort override yet, so this needs a hand-edited stored
+    /// profile to reach today. Worth having in place first: a level you set
+    /// yourself is the last place the app should argue with itself.
+    #[test]
+    fn a_hero_you_rated_down_never_reads_as_one_of_your_comfort_picks() {
+        let ds = phrasing_fixture();
+
+        let line = phrasing(ReasonKind::Comfort, REINHARDT, Rank::All, &ds).under(false);
+        assert_eq!(line, "one you rated down");
+        assert!(!line.contains("comfort pick"));
+    }
+
+    /// The whole chain, once, through the real builder: a negative base term on a
+    /// row reaches the screen as the figure and as the `bad` tint that draws the
+    /// minus.
+    #[test]
+    fn a_negative_term_reaches_the_row_as_the_wording_its_sign_allows() {
+        let ds = phrasing_fixture();
+        let rec = Recommendation {
+            hero: PHARAH,
+            score: -0.2,
+            delta_vs_locked: None,
+            worth_swapping: false,
+            is_locked: false,
+            reasons: vec![Reason {
+                kind: ReasonKind::BaseStrength,
+                contribution: -0.2,
+                text: String::new(),
+            }],
+        };
+
+        let row = RecRow::build(&rec, &ds, false, false, Rank::All);
+        assert!(!row.reasons[0].positive, "the sign is what draws the minus");
+        assert_eq!(row.reasons[0].text, "45.6% win rate");
     }
 }

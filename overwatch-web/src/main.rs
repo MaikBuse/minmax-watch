@@ -832,6 +832,11 @@ fn App() -> Element {
     // to the foot of a phone. Built here rather than inline at either call site
     // so the two cannot end up ranking, formatting or truncating differently:
     // the strip takes its three from the front of this same list.
+    // Hoisted out of the closure: the patch-strength line prints a ladder-wide
+    // win rate and has to say so once a rung is chosen, and eight rows each
+    // taking their own read of the signal would be eight borrows for one value
+    // that cannot change between them.
+    let rank = profile.read().rank;
     let rec_rows: Vec<ui::RecRow> = frame
         .recommendations
         .iter()
@@ -842,6 +847,7 @@ fn App() -> Element {
                 &dataset,
                 draft.locked.is_some(),
                 pool.contains(rec.hero),
+                rank,
             )
         })
         .collect();
@@ -1166,24 +1172,14 @@ fn App() -> Element {
                                     worst_owner: ban.worst_owner.clone(),
                                     // The patch rung ranks on strength rather than
                                     // on any pair, so it shows a figure instead of
-                                    // a rationale there is none of.
-                                    //
-                                    // Qualified once a rank is chosen, because from
-                                    // then on the list is ordered on that rung and
-                                    // this rate is still the whole ladder's — the
-                                    // per-rung win rate is not in the dataset, only
-                                    // the shift the scorer reads. The score column
-                                    // beside it *is* the sorted figure and does move
-                                    // with the rank, so the ordering is accounted
-                                    // for; what this must not do is let a ladder
-                                    // number pass for the bracket's.
+                                    // a rationale there is none of. The wording,
+                                    // and the reason it is qualified once a rank is
+                                    // chosen, live in `ui::win_rate_text` — the
+                                    // pick list's patch-strength line prints the
+                                    // same figure and the two must not drift.
                                     text: match dataset.win_rate(ban.hero) {
                                         Some(rate) if patch_subject => {
-                                            if profile.read().rank == Rank::All {
-                                                format!("{rate:.1}% win rate")
-                                            } else {
-                                                format!("{rate:.1}% win rate across the ladder")
-                                            }
+                                            ui::win_rate_text(rate, profile.read().rank)
                                         }
                                         _ => ban.text.clone(),
                                     },

@@ -89,6 +89,18 @@ impl Side {
         }
     }
 
+    /// The half of the map this one is not.
+    ///
+    /// A side has an opposite where a rung does not, which is the whole reason a
+    /// side term can be phrased as a comparison — "leans defend" — and a rank
+    /// term cannot. See the phrasing table in `overwatch-web`'s `ui.rs`.
+    pub const fn other(self) -> Side {
+        match self {
+            Side::Attack => Side::Defend,
+            Side::Defend => Side::Attack,
+        }
+    }
+
     pub const fn as_str(self) -> &'static str {
         match self {
             Side::Attack => "attack",
@@ -118,6 +130,16 @@ mod tests {
     #[test]
     fn the_two_sides_read_one_scale_in_opposite_directions() {
         assert_eq!(Side::Attack.sign(), -Side::Defend.sign());
+    }
+
+    /// There being only two of them is what the phrasing relies on: "leans
+    /// {other}" names a real half of the map rather than "not this one".
+    #[test]
+    fn taking_the_other_side_twice_is_where_you_started() {
+        for side in Side::BOTH {
+            assert_ne!(side.other(), side);
+            assert_eq!(side.other().other(), side);
+        }
     }
 }
 
