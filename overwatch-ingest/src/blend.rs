@@ -14,7 +14,10 @@
 //! - **counterwatch** is duel-derived rather than opinion-derived, and it
 //!   independently agrees with counterpickgg (Pearson r = +0.51 forward,
 //!   -0.51 transposed, over the pairs both cover). It only ranks a fraction of
-//!   each row, so it refines rather than drives.
+//!   each row, so it refines rather than drives. It also **states a pair once**,
+//!   under whichever of the two heroes it filed the reading under, so a reading
+//!   with no mirror is read across the pair rather than dropped; see [`oriented`]
+//!   for the evidence and what that does not extend to.
 //!
 //! **overpicker is deliberately excluded from the average.** Its published
 //! matrix has no measurable relationship to either other source — r = -0.04
@@ -93,6 +96,13 @@ pub struct BlendReport {
     pub from_cpgg: usize,
     pub from_opick: usize,
     pub from_cwatch: usize,
+    /// Of [`Self::from_cwatch`], the directions that read the mirror because they
+    /// had no published reading of their own. See [`oriented`].
+    ///
+    /// Reported rather than buried, because the diff review is the curation step
+    /// and how much of a source's coverage is a reflection is exactly the kind of
+    /// thing a reviewer has to be able to see without reading the code.
+    pub reflected: usize,
     pub disagreements: usize,
     /// Pairs no source rated at all; these stay neutral in the matrix.
     pub unrated: usize,
@@ -113,12 +123,14 @@ impl BlendReport {
     pub fn render(&self) -> String {
         let mut out = format!(
             "  matrix: {} directed pairs\n\
-             \x20   counterpickgg {} | counterwatch {} | overpicker {} (recorded, not blended)\n\
+             \x20   counterpickgg {} | counterwatch {} ({} read across the pair) | \
+             overpicker {} (recorded, not blended)\n\
              \x20   {} with rationale text, {} flagged as disagreements, {} unrated\n\
              \x20   {} row(s) pulled toward even | |value| {}: {} -> {}",
             self.pairs,
             self.from_cpgg,
             self.from_cwatch,
+            self.reflected,
             self.from_opick,
             self.with_reason,
             self.disagreements,
@@ -212,6 +224,38 @@ fn doubled_mean(ab: Option<i8>, ba: Option<i8>) -> Option<i32> {
         (Some(x), None) => Some(2 * i32::from(x)),
         (None, Some(y)) => Some(-2 * i32::from(y)),
         (None, None) => None,
+    }
+}
+
+/// One source's reading for a direction, reflected off the mirror where this
+/// direction has none of its own.
+///
+/// The claim [`doubled_mean`] already makes one line above, now reaching the
+/// value rather than only the verdict. counterwatch states a pair once: all 869
+/// counter-impact swings on its counters pages appear on exactly one of the two
+/// heroes' pages, so a reading with no mirror is a reading about the pair that
+/// happens to have been filed under one of its heroes, and dropping it left the
+/// other direction to be blended out of counterpickgg alone. Of the 445 whose
+/// mirror carries a committed value the mirror is negative in all 445, and over
+/// the 258 pairs its stats pages rate from both sides the two readings are
+/// opposite in sign 258 times, exactly opposite in 73% of them and within two
+/// points in 94% — so the sign is the source's, not our inference.
+///
+/// A reading of its own always wins, which is what keeps the 516 rows
+/// counterwatch does state twice as it published them; see
+/// `a_pair_only_one_source_rated_is_never_shrunk`.
+///
+/// Only ever reached for counterwatch. counterpickgg publishes both directions of
+/// a pair or neither — zero one-sided rows in 2,472 — so it has nothing to
+/// reflect, and its two directions are the same number stated twice anyway.
+fn oriented(source: &SourceMap, key: &(String, String), mirror: &(String, String)) -> Option<i8> {
+    match source.get(key) {
+        Some(value) => Some(*value),
+        // Saturating because the negation of `i8::MIN` is not an `i8`. Every
+        // value here is `-100..=100` by construction, so it can never differ
+        // from a plain `-`, and this is the form that stays right if a source
+        // ever stops obeying the canonical scale.
+        None => source.get(mirror).map(|value| value.saturating_neg()),
     }
 }
 
@@ -343,8 +387,14 @@ pub fn blend(
 ///
 /// Split from [`blend`] so the same pass can run off the columns of a committed
 /// `matchups.toml` with no network — every value in that file is reproducible
-/// from the `cpgg` and `cwatch` columns beside it, which is what lets a change to
-/// the blend be reviewed as a diff of exactly the rows the blend moved.
+/// from the `cpgg` and `cwatch` columns of the pair's **two** rows, which is what
+/// lets a change to the blend be reviewed as a diff of exactly the rows the blend
+/// moved.
+///
+/// The pair and not the row, because [`oriented`] reads a lone counterwatch
+/// reading across the mirror. The round trip is still exact and still idempotent:
+/// the reflection is derived on every run and never written to the column, so
+/// `reblend` re-reads the same published readings it read the first time.
 pub fn blend_values(
     hero_keys: &[String],
     cpgg: &SourceMap,
@@ -381,12 +431,17 @@ pub fn blend_values(
             );
 
             // `orientation` flips the pair's means onto the row being written.
-            for (key, orientation) in [(&ab, 1), (&ba, -1)] {
+            for (key, mirror, orientation) in [(&ab, &ba, 1), (&ba, &ab, -1)] {
                 report.pairs += 1;
 
                 let cpgg_value = cpgg.get(key).copied();
                 let opick_value = opick.get(key).copied();
+                // Two readings, deliberately: what the page published for this
+                // direction, which is what the column records, and what the
+                // source says about the pair, which is what the average reads.
+                // They differ for the 703 counterwatch states from one side only.
                 let cwatch_value = cwatch.get(key).copied();
+                let cwatch_reading = oriented(cwatch, key, mirror);
 
                 // Only the trusted sources reach `weighted`; overpicker is
                 // recorded on the entry but takes no part in the value or the
@@ -396,9 +451,12 @@ pub fn blend_values(
                     weighted.push((WEIGHT_CPGG, v));
                     report.from_cpgg += 1;
                 }
-                if let Some(v) = cwatch_value {
+                if let Some(v) = cwatch_reading {
                     weighted.push((WEIGHT_CWATCH, v));
                     report.from_cwatch += 1;
+                    if cwatch_value.is_none() {
+                        report.reflected += 1;
+                    }
                 }
                 if opick_value.is_some() {
                     report.from_opick += 1;
@@ -547,14 +605,17 @@ mod tests {
         let entry = find(&entries, "reinhardt", "pharah");
 
         assert!(entry.disagreement, "-100 versus +50 is a contradiction");
-        assert_eq!(report.disagreements, 1);
+        // Two rows, from one scraped reading each: counterpickgg states both
+        // directions of a pair it rates, and `oriented` reads counterwatch's lone
+        // +50 across the mirror, so the pair no longer has a half nobody rated.
+        assert_eq!(report.disagreements, 2);
 
         // The value assertion, not only the flag: without it this test passes
         // just as happily through a shrink that is a complete no-op. -100 and
         // +50 blend to -63 and the spread of 150 keeps 100/280 of it. The
         // product is exactly -22.5, which is the pin on rounding away from zero.
         assert_eq!(entry.value, -23);
-        assert_eq!(report.moved, 1);
+        assert_eq!(report.moved, 2);
     }
 
     #[test]
@@ -663,8 +724,8 @@ mod tests {
         let mirror = find(&entries, "pharah", "reinhardt");
         assert_eq!(forward.value, -38, "-51 blended, then pulled toward even");
         assert_eq!(
-            mirror.value, 56,
-            "and +75 with no reading of its own moves by the same factor"
+            mirror.value, 38,
+            "and the mirror reads the same +20 the other way round, then the same factor"
         );
 
         assert!(forward.disagreement);
@@ -678,7 +739,11 @@ mod tests {
         // Coverage is still counted per direction. Reading it off the pair
         // instead would halve every figure the report prints.
         assert_eq!(report.from_cpgg, 2);
-        assert_eq!(report.from_cwatch, 1);
+        assert_eq!(
+            report.from_cwatch, 2,
+            "one published reading, read by both of the pair's directions"
+        );
+        assert_eq!(report.reflected, 1, "and one of the two is the reflection");
         assert_eq!(report.unrated, 4);
     }
 
@@ -701,7 +766,7 @@ mod tests {
         assert_eq!(
             find(&entries, "pharah", "reinhardt").value,
             0,
-            "and -100 scaled by nothing is 0, never a minus zero"
+            "and its mirror, +50 blended, scaled by nothing is 0 and never a minus zero"
         );
         assert!(entries.iter().all(|e| e.disagreement));
     }
@@ -757,5 +822,108 @@ mod tests {
         assert_eq!(find(&entries, "brigitte", "reinhardt").value, 70);
         assert_eq!(report.disagreements, 0);
         assert_eq!(report.from_cwatch, 2);
+    }
+
+    /// counterwatch files a reading under one of the pair's two heroes, so the
+    /// direction it landed on is a fact about the source's page layout and not
+    /// about the matchup. Reading it once left the other half of the pair to be
+    /// blended out of counterpickgg alone.
+    #[test]
+    fn a_reading_on_one_side_is_read_as_a_reading_about_the_pair() {
+        let cpgg = vec![
+            raw("reinhardt", "pharah", Some(6), ""),
+            raw("pharah", "reinhardt", Some(4), ""),
+        ];
+        let cwatch = HashMap::from([(pair("reinhardt", "pharah"), -40)]);
+
+        let (entries, report) = blend(&keys(), &cpgg, &SourceMap::new(), &cwatch);
+
+        // -25 at three quarters against -40 at one, and the mirror is the same
+        // sum with every sign flipped.
+        assert_eq!(find(&entries, "reinhardt", "pharah").value, -29);
+        assert_eq!(find(&entries, "pharah", "reinhardt").value, 29);
+
+        // The column records what the page published and nothing else, which is
+        // what keeps the round trip through the committed file exact.
+        assert_eq!(find(&entries, "reinhardt", "pharah").cwatch, Some(-40));
+        assert_eq!(
+            find(&entries, "pharah", "reinhardt").cwatch,
+            None,
+            "the reflection reaches the average, never the column"
+        );
+        assert_eq!(report.reflected, 1);
+    }
+
+    /// The 516 rows counterwatch does state from both pages keep the numbers it
+    /// published, disagreeing halves included.
+    #[test]
+    fn a_reading_of_its_own_is_never_replaced_by_the_mirrors() {
+        let cwatch = HashMap::from([
+            (pair("reinhardt", "brigitte"), 80),
+            (pair("brigitte", "reinhardt"), 70),
+        ]);
+
+        let (entries, report) = blend(&keys(), &[], &SourceMap::new(), &cwatch);
+
+        // Not 80 and -80, which is what reflecting over a reading that exists
+        // would have produced.
+        assert_eq!(find(&entries, "reinhardt", "brigitte").value, 80);
+        assert_eq!(find(&entries, "brigitte", "reinhardt").value, 70);
+        assert_eq!(report.reflected, 0);
+    }
+
+    /// The 72 directions that were reaching the matrix as nothing at all: no
+    /// counterpickgg card either way, and counterwatch rating only the other half
+    /// of the pair.
+    #[test]
+    fn a_direction_only_the_mirror_rates_still_reaches_the_matrix() {
+        let cwatch = HashMap::from([(pair("reinhardt", "pharah"), -60)]);
+
+        let (entries, report) = blend(&keys(), &[], &SourceMap::new(), &cwatch);
+
+        assert_eq!(find(&entries, "reinhardt", "pharah").value, -60);
+        assert_eq!(
+            find(&entries, "pharah", "reinhardt").value,
+            60,
+            "a pair one source rated is rated in both directions"
+        );
+        assert_eq!(
+            report.unrated, 4,
+            "and the other two pairs are still unrated"
+        );
+    }
+
+    /// The property that makes the reflection safe to add: [`doubled_mean`] was
+    /// already treating a lone reading as its own mirror, so filling the mirror in
+    /// cannot move a verdict. Without this, a later change to either half could
+    /// silently start shrinking rows that no source disagrees about.
+    #[test]
+    fn reflecting_a_reading_leaves_the_verdict_alone() {
+        let cpgg = vec![
+            raw("reinhardt", "pharah", Some(9), ""),
+            raw("pharah", "reinhardt", Some(1), ""),
+        ];
+        let one_sided = HashMap::from([(pair("reinhardt", "pharah"), 50)]);
+        let both = HashMap::from([
+            (pair("reinhardt", "pharah"), 50),
+            (pair("pharah", "reinhardt"), -50),
+        ]);
+
+        let (lone, lone_report) = blend(&keys(), &cpgg, &SourceMap::new(), &one_sided);
+        let (spelt, spelt_report) = blend(&keys(), &cpgg, &SourceMap::new(), &both);
+
+        for (hero, vs) in [("reinhardt", "pharah"), ("pharah", "reinhardt")] {
+            let inferred = find(&lone, hero, vs);
+            let published = find(&spelt, hero, vs);
+            assert_eq!(inferred.value, published.value, "{hero} vs {vs}");
+            assert_eq!(
+                inferred.disagreement, published.disagreement,
+                "{hero} vs {vs}"
+            );
+        }
+        assert_eq!(lone_report.disagreements, spelt_report.disagreements);
+        assert_eq!(lone_report.moved, spelt_report.moved);
+        // The one thing that does differ, and the only thing that should.
+        assert_eq!((lone_report.reflected, spelt_report.reflected), (1, 0));
     }
 }

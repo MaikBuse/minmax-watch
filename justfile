@@ -167,8 +167,10 @@ brand-icons:
 # Re-run the blend over the columns already in data/matchups.toml
 reblend:
     # No network. Every committed value is reproducible from the per-source
-    # columns beside it, so a change to the blend reviews as a diff of exactly
-    # the rows the blend moved. A second run must produce an empty diff.
+    # columns of the pair's two rows, so a change to the blend reviews as a diff
+    # of exactly the rows the blend moved - plus the rows it newly rates, since a
+    # counterwatch reading with no mirror is read across the pair and can rate a
+    # direction that had nothing. A second run must produce an empty diff.
     #
     # Curated rows survive this, and that is not free: the blend emits nothing at
     # all for a pair no source rated, so `merge_matchups` puts them back.

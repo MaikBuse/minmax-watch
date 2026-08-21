@@ -5,7 +5,7 @@
 //! silently starts returning nothing, or that transposes the matrix, fails
 //! here rather than in the middle of a hero select.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use overwatch_core::{
     ban_recommendations, recommend, threats, Archetype, BanSubject, Defended, DefendedTeam, Draft,
@@ -1138,12 +1138,13 @@ fn a_support_player_is_offered_a_support_to_ban() {
         table.join("\n  ")
     );
 
-    // 9 of 14, down from 10 before the first curated batch. Every curated support
-    // pair takes one off this, so tighten the bound as they land - a bound that never
-    // moves is a bound nobody is reading. It will not reach zero on curated values
-    // alone, for the reason in the doc comment above.
+    // 6 of 14: 10 before the curated batches, 9 after them, and 6 once a lone
+    // counterwatch reading started reaching both directions of its pair. Tighten the
+    // bound as readings land - a bound that never moves is a bound nobody is reading.
+    // It will not reach zero on curated values alone, for the reason in the doc
+    // comment above.
     assert!(
-        blind <= 9,
+        blind <= 6,
         "{blind} of {} support players see no support at all in the drawn {DRAWN}\n  {}",
         ds.heroes_in_role(Role::Support).count(),
         table.join("\n  ")
@@ -1197,6 +1198,68 @@ fn almost_none_of_the_counter_readings_saturate_the_scale() {
         "{saturated} of {} counterwatch readings are pinned at the rails - the \
          +-25 rating band no longer describes what the site publishes",
         readings.len()
+    );
+}
+
+/// The claim `blend::oriented` rests on, checked against the committed column.
+///
+/// A counterwatch reading with no mirror is read across the pair, negated, on the
+/// grounds that the source states one quantity per pair: its counters pages carry
+/// 869 counter-impact swings and no pair appears on both heroes' pages, and where
+/// its stats pages do rate a pair from both sides the two readings are opposite in
+/// sign every time. That second half is the checkable one, so this checks it.
+///
+/// If a scrape ever starts stating a pair twice in agreement - both heroes
+/// favoured, or both unfavoured - then the negation is wrong for those rows and
+/// every value derived from a lone reading becomes suspect. Nothing else in the
+/// repo would notice: the blend folds the two directions into a mean before
+/// comparing them to counterpickgg, which is exactly the arithmetic that hides it.
+///
+/// Reads the file rather than the loaded dataset, because the loader keeps only
+/// the blended `value` and the per-source columns are the evidence.
+#[test]
+fn the_counter_column_never_contradicts_itself_across_a_pair() {
+    let matchups: MatchupsFile =
+        toml::from_str(overwatch_data::MATCHUPS_TOML).expect("committed matchups must parse");
+
+    let readings: HashMap<(&str, &str), i8> = matchups
+        .matchups
+        .iter()
+        .filter_map(|entry| {
+            entry
+                .cwatch
+                .map(|value| ((entry.hero.as_str(), entry.vs.as_str()), value))
+        })
+        .collect();
+
+    let mut stated_twice = 0;
+    let mut agreeing = Vec::new();
+    for ((hero, vs), forward) in &readings {
+        // Once per pair, not twice: the pair is what is being checked.
+        if hero > vs {
+            continue;
+        }
+        let Some(reverse) = readings.get(&(*vs, *hero)) else {
+            continue;
+        };
+        stated_twice += 1;
+        if forward.signum() * reverse.signum() > 0 {
+            agreeing.push((*hero, *vs, *forward, *reverse));
+        }
+    }
+
+    // 258 pairs today, all of them off the stats pages, which are the only
+    // counterwatch document that rates a pair from both sides at all.
+    assert!(
+        stated_twice >= 100,
+        "counterwatch states only {stated_twice} pairs from both sides, which is too few \
+         for this to be evidence of anything"
+    );
+    assert!(
+        agreeing.is_empty(),
+        "{} pair(s) carry a counterwatch reading that favours the same hero from both \
+         sides, so reading a lone reading across the mirror is no longer safe: {agreeing:?}",
+        agreeing.len()
     );
 }
 

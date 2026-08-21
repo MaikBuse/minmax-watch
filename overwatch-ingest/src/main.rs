@@ -344,10 +344,13 @@ enum Command {
     /// Re-run the blend over the columns already in `matchups.toml`.
     ///
     /// Every committed `value` is reproducible from the `cpgg` and `cwatch`
-    /// columns beside it, so a change to the blend can be reviewed as a diff of
-    /// exactly the rows the blend moved. `Counters` would answer the same
-    /// question by re-fetching 107 pages, and the diff would then carry every
-    /// opinion the sites have changed since the last run mixed in with it.
+    /// columns of the pair's two rows, so a change to the blend can be reviewed as
+    /// a diff of exactly the rows the blend moved - and of the rows it newly
+    /// rates, because a lone `cwatch` reading is read across the mirror and can
+    /// rate a direction that was reaching the matrix as nothing at all.
+    /// `Counters` would answer the same question by re-fetching 107 pages, and the
+    /// diff would then carry every opinion the sites have changed since the last
+    /// run mixed in with it.
     ///
     /// Not part of `All`, for the same reason as `Brand`: no network, and nothing
     /// to do unless the blend itself has changed. Idempotent, because it derives
