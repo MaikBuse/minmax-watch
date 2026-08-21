@@ -9,7 +9,7 @@ value = -46
 cpgg = -50
 opick = 0
 cwatch = -32
-reason = "Anran can dodge Ana's Nade and Sleep with high mobility. *Before the update, Anran could cleanse Nade, but this was removed in an update."
+reason = "Anran can dodge Ana's Nade and Sleep with high mobility."
 
 [[matchup]]
 hero = "ana"
@@ -82,7 +82,7 @@ value = -42
 disagreement = true
 cpgg = -75
 opick = 50
-reason = "Her attacks are easily absorbed by D.Va's DM. Ana has great difficulty dealing with Boosters engages."
+reason = "Ana's attacks are easily absorbed by D.Va's DM. Ana has great difficulty dealing with Boosters engages."
 
 [[matchup]]
 hero = "ana"
@@ -99,7 +99,7 @@ disagreement = true
 cpgg = -75
 opick = -50
 cwatch = -4
-reason = "Ana has little mobility, so she easily takes damage from Freja's Freja:R-CLICK."
+reason = "Ana has little mobility, so she easily takes damage from Freja's Take Aim."
 
 [[matchup]]
 hero = "ana"
@@ -181,7 +181,7 @@ value = -43
 cpgg = -50
 opick = 0
 cwatch = -20
-reason = "Lucio can use speed boost to help teammates close in on Ana."
+reason = "Lúcio can use speed boost to help teammates close in on Ana."
 
 [[matchup]]
 hero = "ana"
@@ -417,7 +417,7 @@ value = 46
 cpgg = 50
 opick = 50
 cwatch = 32
-reason = "Anran can dodge Ana's Nade and Sleep with high mobility. *Before the update, Anran could cleanse Nade, but this was removed in an update."
+reason = "Anran can dodge Ana's Nade and Sleep with high mobility."
 
 [[matchup]]
 hero = "anran"
@@ -806,7 +806,7 @@ vs = "dva"
 value = -75
 cpgg = -75
 opick = 50
-reason = "Her attacks are easily absorbed by D.Va's DM. Even if Ashe uses Coach Gun against Boosters engages, Boosters has a very short cooldown, so D.Va can close the gap again."
+reason = "Ashe's attacks are easily absorbed by D.Va's DM. Even if Ashe uses Coach Gun against Boosters engages, Boosters has a very short cooldown, so D.Va can close the gap again."
 
 [[matchup]]
 hero = "ashe"
@@ -916,7 +916,7 @@ vs = "lucio"
 value = -50
 cpgg = -50
 opick = -50
-reason = "Lucio can use speed boost to help teammates close the gap on Ashe. Boop can displace Bob's position."
+reason = "Lúcio can use speed boost to help teammates close the gap on Ashe. Boop can displace Bob's position."
 
 [[matchup]]
 hero = "ashe"
@@ -1056,7 +1056,7 @@ vs = "torbjorn"
 value = 42
 cpgg = 50
 opick = 50
-reason = "Torbjorn's wide hitbox makes him easy to hit with Ashe's primary fire. Turret is easily destroyed by Ashe."
+reason = "Torbjörn's wide hitbox makes him easy to hit with Ashe's primary fire. Turret is easily destroyed by Ashe."
 
 [[matchup]]
 hero = "ashe"
@@ -1594,7 +1594,7 @@ vs = "domina"
 value = 41
 cpgg = 50
 opick = -100
-reason = "Bastion can easily break through Domina's Domina:R-CLICK. Domina has no defensive or mobility options besides Domina:R-CLICK, making her vulnerable once the shield is destroyed."
+reason = "Bastion can easily break through Domina's Barrier Array. Domina has no defensive or mobility options besides Barrier Array, making her vulnerable once the shield is destroyed."
 
 [[matchup]]
 hero = "bastion"
@@ -1634,7 +1634,7 @@ value = -40
 cpgg = -50
 opick = -50
 cwatch = -9
-reason = "Bastion's wide hitbox makes him easy to hit with Freja's Freja:R-CLICK attacks."
+reason = "Bastion's wide hitbox makes him easy to hit with Freja's Take Aim attacks."
 
 [[matchup]]
 hero = "bastion"
@@ -2287,7 +2287,7 @@ value = -42
 cpgg = -50
 opick = -50
 cwatch = -17
-reason = "Brigitte has difficulty destroying Torbjorn's Turret."
+reason = "Brigitte has difficulty destroying Torbjörn's Turret."
 
 [[matchup]]
 hero = "brigitte"
@@ -2544,7 +2544,7 @@ vs = "lucio"
 value = 50
 cpgg = 50
 opick = -50
-reason = "Cassidy's Flashbang can stop Lucio's wall riding."
+reason = "Cassidy's Flashbang can stop Lúcio's wall riding."
 
 [[matchup]]
 hero = "cassidy"
@@ -3203,7 +3203,7 @@ value = -41
 cpgg = -50
 opick = 100
 cwatch = -13
-reason = "Bastion can easily break through Domina's Domina:R-CLICK. Domina has no defensive or mobility options besides Domina:R-CLICK, making her vulnerable once the shield is destroyed."
+reason = "Bastion can easily break through Domina's Barrier Array. Domina has no defensive or mobility options besides Barrier Array, making her vulnerable once the shield is destroyed."
 
 [[matchup]]
 hero = "domina"
@@ -3278,7 +3278,7 @@ disagreement = true
 cpgg = 75
 opick = 0
 cwatch = -4
-reason = "Domina's Domina:L-CLICK is hitscan, making it easy to hit airborne targets."
+reason = "Domina's Photon Magnum is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "domina"
@@ -3321,7 +3321,7 @@ value = -33
 disagreement = true
 cpgg = -50
 opick = 0
-reason = "Lucio can speed boost allies to force close-range fights that Domina struggles with. Domina has less time to fight at her preferred range."
+reason = "Lúcio can speed boost allies to force close-range fights that Domina struggles with. Domina has less time to fight at her preferred range."
 
 [[matchup]]
 hero = "domina"
@@ -3337,7 +3337,7 @@ vs = "mei"
 value = -50
 cpgg = -50
 opick = -50
-reason = "Domina lacks mobility and has no survivability skills besides Domina:R-CLICK, making her vulnerable to being isolated by Mei's Wall."
+reason = "Domina lacks mobility and has no survivability skills besides Barrier Array, making her vulnerable to being isolated by Mei's Wall."
 
 [[matchup]]
 hero = "domina"
@@ -3381,7 +3381,7 @@ value = -42
 cpgg = -50
 opick = -50
 cwatch = -17
-reason = "Domina struggles in close-range combat. Domina has no survivability skills besides Domina:R-CLICK, making her vulnerable to Reaper's damage."
+reason = "Domina struggles in close-range combat. Domina has no survivability skills besides Barrier Array, making her vulnerable to Reaper's damage."
 
 [[matchup]]
 hero = "domina"
@@ -3427,7 +3427,7 @@ vs = "sojourn"
 value = -75
 cpgg = -75
 opick = -50
-reason = "Sojourn can break Domina's Domina:R-CLICK very quickly by using Disruptor Shot."
+reason = "Sojourn can break Domina's Barrier Array very quickly by using Disruptor Shot."
 
 [[matchup]]
 hero = "domina"
@@ -3441,7 +3441,7 @@ value = -66
 cpgg = -75
 opick = -50
 cwatch = -40
-reason = "Domina has difficulty destroying Symmetra's Turret. Domina's Domina:R-CLICK easily becomes a charge resource for Symmetra's primary fire."
+reason = "Domina has difficulty destroying Symmetra's Turret. Domina's Barrier Array easily becomes a charge resource for Symmetra's primary fire."
 
 [[matchup]]
 hero = "domina"
@@ -3449,7 +3449,7 @@ vs = "torbjorn"
 value = 41
 cpgg = 50
 opick = -100
-reason = "Domina can easily destroy Torbjorn's Turret with her abilities and primary fire."
+reason = "Domina can easily destroy Torbjörn's Turret with her abilities and primary fire."
 
 [[matchup]]
 hero = "domina"
@@ -3457,7 +3457,7 @@ vs = "tracer"
 value = -50
 cpgg = -50
 opick = -50
-reason = "Domina struggles in close-range combat. Domina has no survivability skills besides Domina:R-CLICK, making her vulnerable to Tracer's damage."
+reason = "Domina struggles in close-range combat. Domina has no survivability skills besides Barrier Array, making her vulnerable to Tracer's damage."
 
 [[matchup]]
 hero = "domina"
@@ -3737,7 +3737,7 @@ value = -41
 cpgg = -50
 opick = 0
 cwatch = -13
-reason = "Mizuki can negate Doomfist's punch with Mizuki:E or dodge it with Mizuki:Shift."
+reason = "Mizuki can negate Doomfist's punch with Binding Chain or dodge it with Katashiro Return."
 
 [[matchup]]
 hero = "doomfist"
@@ -3857,7 +3857,7 @@ value = -45
 cpgg = -50
 opick = -50
 cwatch = -31
-reason = "Doomfist's Hand Cannon has short range, making it difficult to destroy Torbjorn's Turret."
+reason = "Doomfist's Hand Cannon has short range, making it difficult to destroy Torbjörn's Turret."
 
 [[matchup]]
 hero = "doomfist"
@@ -3940,7 +3940,7 @@ disagreement = true
 cpgg = 75
 opick = 0
 cwatch = -13
-reason = "Her attacks are easily absorbed by D.Va's DM. Ana has great difficulty dealing with Boosters engages."
+reason = "Ana's attacks are easily absorbed by D.Va's DM. Ana has great difficulty dealing with Boosters engages."
 
 [[matchup]]
 hero = "dva"
@@ -3948,7 +3948,7 @@ vs = "ashe"
 value = 75
 cpgg = 75
 opick = 0
-reason = "Her attacks are easily absorbed by D.Va's DM. Even if Ashe uses Coach Gun against Boosters engages, Boosters has a very short cooldown, so D.Va can close the gap again."
+reason = "Ashe's attacks are easily absorbed by D.Va's DM. Even if Ashe uses Coach Gun against Boosters engages, Boosters has a very short cooldown, so D.Va can close the gap again."
 
 [[matchup]]
 hero = "dva"
@@ -4008,7 +4008,7 @@ vs = "echo"
 value = 50
 cpgg = 50
 opick = 50
-reason = "Her attacks are easily absorbed by D.Va's DM. D.Va can also commit to airborne targets."
+reason = "Echo's attacks are easily absorbed by D.Va's DM. D.Va can also commit to airborne targets."
 
 [[matchup]]
 hero = "dva"
@@ -4027,7 +4027,7 @@ value = 63
 cpgg = 75
 opick = -50
 cwatch = 25
-reason = "Her attacks are easily absorbed by D.Va's DM. Even if Freja uses Freja:E against Boosters engages, Boosters has a very short cooldown, so D.Va can close the gap again."
+reason = "Freja's attacks are easily absorbed by D.Va's DM. Even if Freja uses Updraft against Boosters engages, Boosters has a very short cooldown, so D.Va can close the gap again."
 
 [[matchup]]
 hero = "dva"
@@ -4043,7 +4043,7 @@ vs = "hanzo"
 value = 75
 cpgg = 75
 opick = 0
-reason = "His attacks are easily absorbed by D.Va's DM. Hanzo has difficulty dealing with Boosters engages."
+reason = "Hanzo's attacks are easily absorbed by D.Va's DM. Hanzo has difficulty dealing with Boosters engages."
 
 [[matchup]]
 hero = "dva"
@@ -4151,7 +4151,7 @@ value = -40
 cpgg = -50
 opick = 50
 cwatch = -9
-reason = "Mizuki can negate D.Va's dive with Mizuki:E or dodge it with Mizuki:Shift."
+reason = "Mizuki can negate D.Va's dive with Binding Chain or dodge it with Katashiro Return."
 
 [[matchup]]
 hero = "dva"
@@ -4174,7 +4174,7 @@ vs = "pharah"
 value = 62
 cpgg = 75
 opick = 100
-reason = "Her attacks are easily absorbed by D.Va's DM. D.Va can also commit to airborne targets."
+reason = "Pharah's attacks are easily absorbed by D.Va's DM. D.Va can also commit to airborne targets."
 
 [[matchup]]
 hero = "dva"
@@ -4246,7 +4246,7 @@ vs = "soldier-76"
 value = 75
 cpgg = 75
 opick = 0
-reason = "His attacks are easily absorbed by D.Va's DM. Soldier: 76 has difficulty dealing with Boosters engages."
+reason = "Soldier: 76's attacks are easily absorbed by D.Va's DM. Soldier: 76 has difficulty dealing with Boosters engages."
 
 [[matchup]]
 hero = "dva"
@@ -4344,7 +4344,7 @@ disagreement = true
 cpgg = 75
 opick = -50
 cwatch = -22
-reason = "His attacks are easily absorbed by D.Va's DM. Zenyatta has great difficulty dealing with Boosters engages."
+reason = "Zenyatta's attacks are easily absorbed by D.Va's DM. Zenyatta has great difficulty dealing with Boosters engages."
 
 [[matchup]]
 hero = "echo"
@@ -4439,7 +4439,7 @@ vs = "dva"
 value = -50
 cpgg = -50
 opick = 0
-reason = "Her attacks are easily absorbed by D.Va's DM. D.Va can also commit to airborne targets."
+reason = "Echo's attacks are easily absorbed by D.Va's DM. D.Va can also commit to airborne targets."
 
 [[matchup]]
 hero = "echo"
@@ -4694,7 +4694,7 @@ value = 61
 cpgg = 75
 opick = 50
 cwatch = 19
-reason = "Echo can easily destroy Torbjorn's Turret with primary fire and Sticky Bombs. Torbjorn's primary fire has difficulty hitting airborne targets."
+reason = "Echo can easily destroy Torbjörn's Turret with primary fire and Sticky Bombs. Torbjörn's primary fire has difficulty hitting airborne targets."
 
 [[matchup]]
 hero = "echo"
@@ -4913,7 +4913,7 @@ vs = "mei"
 value = 50
 cpgg = 50
 opick = -50
-reason = "Emre can attack from outside Mei's effective range. Mei lacks mobility, making her vulnerable to Emre's Emre:E."
+reason = "Emre can attack from outside Mei's effective range. Mei lacks mobility, making her vulnerable to Emre's Cyber Frag."
 
 [[matchup]]
 hero = "emre"
@@ -5004,7 +5004,7 @@ value = -60
 cpgg = -75
 opick = 0
 cwatch = -16
-reason = "Without Emre:Shift active, Emre is slow, and the 3-round burst creates predictable peeking patterns, making Emre vulnerable to Widowmaker's headshots."
+reason = "Without Siphon Blaster active, Emre is slow, and the 3-round burst creates predictable peeking patterns, making Emre vulnerable to Widowmaker's headshots."
 
 [[matchup]]
 hero = "emre"
@@ -5013,7 +5013,7 @@ value = -40
 cpgg = -50
 opick = 0
 cwatch = -9
-reason = "Emre has difficulty dealing with Winston closing in. Winston's attacks require no aim, making it easy to hit Emre even during Emre:Shift."
+reason = "Emre has difficulty dealing with Winston closing in. Winston's attacks require no aim, making it easy to hit Emre even during Siphon Blaster."
 
 [[matchup]]
 hero = "emre"
@@ -5042,7 +5042,7 @@ value = 53
 disagreement = true
 cpgg = 75
 opick = 50
-reason = "Ana has little mobility, so she easily takes damage from Freja's Freja:R-CLICK."
+reason = "Ana has little mobility, so she easily takes damage from Freja's Take Aim."
 
 [[matchup]]
 hero = "freja"
@@ -5065,7 +5065,7 @@ vs = "bastion"
 value = 40
 cpgg = 50
 opick = -50
-reason = "Bastion's wide hitbox makes him easy to hit with Freja's Freja:R-CLICK attacks."
+reason = "Bastion's wide hitbox makes him easy to hit with Freja's Take Aim attacks."
 
 [[matchup]]
 hero = "freja"
@@ -5114,7 +5114,7 @@ value = -63
 cpgg = -75
 opick = 50
 cwatch = -25
-reason = "Her attacks are easily absorbed by D.Va's DM. Even if Freja uses Freja:E against Boosters engages, Boosters has a very short cooldown, so D.Va can close the gap again."
+reason = "Freja's attacks are easily absorbed by D.Va's DM. Even if Freja uses Updraft against Boosters engages, Boosters has a very short cooldown, so D.Va can close the gap again."
 
 [[matchup]]
 hero = "freja"
@@ -5212,7 +5212,7 @@ vs = "lucio"
 value = -50
 cpgg = -50
 opick = -50
-reason = "Lucio can use speed boost to make teammates harder for Freja to hit. Teammates can approach Freja's position more easily."
+reason = "Lúcio can use speed boost to make teammates harder for Freja to hit. Teammates can approach Freja's position more easily."
 
 [[matchup]]
 hero = "freja"
@@ -5292,7 +5292,7 @@ vs = "roadhog"
 value = 50
 cpgg = 50
 opick = 0
-reason = "Freja's long Freja:R-CLICK range allows her to deal damage without entering Roadhog's effective range."
+reason = "Freja's long Take Aim range allows her to deal damage without entering Roadhog's effective range."
 
 [[matchup]]
 hero = "freja"
@@ -5415,7 +5415,7 @@ value = -41
 cpgg = -50
 opick = 50
 cwatch = -13
-reason = "Freja's primary fire during Freja:R-CLICK makes it very easy for Zarya to gain barrier charge."
+reason = "Freja's primary fire during Take Aim makes it very easy for Zarya to gain barrier charge."
 
 [[matchup]]
 hero = "freja"
@@ -5613,7 +5613,7 @@ vs = "lucio"
 value = -50
 cpgg = -50
 opick = -50
-reason = "Lucio can handle engaging Genji with Boop. Lucio can avoid Genji's attacks by using wall ride effectively."
+reason = "Lúcio can handle engaging Genji with Boop. Lúcio can avoid Genji's attacks by using wall ride effectively."
 
 [[matchup]]
 hero = "genji"
@@ -5761,7 +5761,7 @@ value = -31
 disagreement = true
 cpgg = -50
 opick = 50
-reason = "Torbjorn has high HP and Overload armor, making him hard for Genji to eliminate. Turret helps deal with Genji's flanks."
+reason = "Torbjörn has high HP and Overload armor, making him hard for Genji to eliminate. Turret helps deal with Genji's flanks."
 
 [[matchup]]
 hero = "genji"
@@ -5915,7 +5915,7 @@ vs = "dva"
 value = -75
 cpgg = -75
 opick = 0
-reason = "His attacks are easily absorbed by D.Va's DM. Hanzo has difficulty dealing with Boosters engages."
+reason = "Hanzo's attacks are easily absorbed by D.Va's DM. Hanzo has difficulty dealing with Boosters engages."
 
 [[matchup]]
 hero = "hanzo"
@@ -6019,7 +6019,7 @@ disagreement = true
 cpgg = -75
 opick = -50
 cwatch = -4
-reason = "Hanzo's projectiles have travel time, making it difficult to hit fast targets like Lucio. Lucio can use wall ride constantly to make it even harder for Hanzo to land headshots."
+reason = "Hanzo's projectiles have travel time, making it difficult to hit fast targets like Lúcio. Lúcio can use wall ride constantly to make it even harder for Hanzo to land headshots."
 
 [[matchup]]
 hero = "hanzo"
@@ -6160,7 +6160,7 @@ value = 43
 cpgg = 50
 opick = 100
 cwatch = 22
-reason = "Torbjorn's Turret is easily destroyed by Hanzo. Torbjorn's wide hitbox makes him easy to hit with Hanzo's primary fire."
+reason = "Torbjörn's Turret is easily destroyed by Hanzo. Torbjörn's wide hitbox makes him easy to hit with Hanzo's primary fire."
 
 [[matchup]]
 hero = "hanzo"
@@ -6554,7 +6554,7 @@ value = -44
 cpgg = -50
 opick = 0
 cwatch = -25
-reason = "Hazard has difficulty destroying Torbjorn's Turret. Torbjorn can survive Hazard's dive somewhat with Overload."
+reason = "Hazard has difficulty destroying Torbjörn's Turret. Torbjörn can survive Hazard's dive somewhat with Overload."
 
 [[matchup]]
 hero = "hazard"
@@ -7097,7 +7097,7 @@ value = -48
 disagreement = true
 cpgg = -75
 opick = 50
-reason = "Domina's Domina:L-CLICK is hitscan, making it easy to hit airborne targets."
+reason = "Domina's Photon Magnum is hitscan, making it easy to hit airborne targets."
 
 [[matchup]]
 hero = "jetpack-cat"
@@ -7567,7 +7567,7 @@ vs = "lucio"
 value = -75
 cpgg = -75
 opick = -50
-reason = "Lucio's speed boost and Boop make it difficult for Junker Queen to get into her effective range."
+reason = "Lúcio's speed boost and Boop make it difficult for Junker Queen to get into her effective range."
 
 [[matchup]]
 hero = "junker-queen"
@@ -7599,7 +7599,7 @@ vs = "mizuki"
 value = -50
 cpgg = -50
 opick = 0
-reason = "Even when Junker Queen closes in, Mizuki can easily create distance with Mizuki:E or Mizuki:Shift."
+reason = "Even when Junker Queen closes in, Mizuki can easily create distance with Binding Chain or Katashiro Return."
 
 [[matchup]]
 hero = "junker-queen"
@@ -9406,7 +9406,7 @@ vs = "ana"
 value = 43
 cpgg = 50
 opick = 0
-reason = "Lucio can use speed boost to help teammates close in on Ana."
+reason = "Lúcio can use speed boost to help teammates close in on Ana."
 
 [[matchup]]
 hero = "lucio"
@@ -9414,7 +9414,7 @@ vs = "ashe"
 value = 50
 cpgg = 50
 opick = 0
-reason = "Lucio can use speed boost to help teammates close the gap on Ashe. Boop can displace Bob's position."
+reason = "Lúcio can use speed boost to help teammates close the gap on Ashe. Boop can displace Bob's position."
 
 [[matchup]]
 hero = "lucio"
@@ -9444,7 +9444,7 @@ vs = "cassidy"
 value = -50
 cpgg = -50
 opick = 0
-reason = "Cassidy's Flashbang can stop Lucio's wall riding."
+reason = "Cassidy's Flashbang can stop Lúcio's wall riding."
 
 [[matchup]]
 hero = "lucio"
@@ -9462,7 +9462,7 @@ disagreement = true
 cpgg = 50
 opick = 50
 cwatch = -13
-reason = "Lucio can speed boost allies to force close-range fights that Domina struggles with. Domina has less time to fight at her preferred range."
+reason = "Lúcio can speed boost allies to force close-range fights that Domina struggles with. Domina has less time to fight at her preferred range."
 
 [[matchup]]
 hero = "lucio"
@@ -9493,7 +9493,7 @@ vs = "freja"
 value = 50
 cpgg = 50
 opick = 0
-reason = "Lucio can use speed boost to make teammates harder for Freja to hit. Teammates can approach Freja's position more easily."
+reason = "Lúcio can use speed boost to make teammates harder for Freja to hit. Teammates can approach Freja's position more easily."
 
 [[matchup]]
 hero = "lucio"
@@ -9501,7 +9501,7 @@ vs = "genji"
 value = 50
 cpgg = 50
 opick = -50
-reason = "Lucio can handle engaging Genji with Boop. Lucio can avoid Genji's attacks by using wall ride effectively."
+reason = "Lúcio can handle engaging Genji with Boop. Lúcio can avoid Genji's attacks by using wall ride effectively."
 
 [[matchup]]
 hero = "lucio"
@@ -9510,7 +9510,7 @@ value = 53
 disagreement = true
 cpgg = 75
 opick = 50
-reason = "Hanzo's projectiles have travel time, making it difficult to hit fast targets like Lucio. Lucio can use wall ride constantly to make it even harder for Hanzo to land headshots."
+reason = "Hanzo's projectiles have travel time, making it difficult to hit fast targets like Lúcio. Lúcio can use wall ride constantly to make it even harder for Hanzo to land headshots."
 
 [[matchup]]
 hero = "lucio"
@@ -9540,7 +9540,7 @@ vs = "junker-queen"
 value = 75
 cpgg = 75
 opick = 0
-reason = "Lucio's speed boost and Boop make it difficult for Junker Queen to get into her effective range."
+reason = "Lúcio's speed boost and Boop make it difficult for Junker Queen to get into her effective range."
 
 [[matchup]]
 hero = "lucio"
@@ -9581,7 +9581,7 @@ disagreement = true
 cpgg = -50
 opick = -100
 cwatch = 26
-reason = "Mauga's hitscan weapons make it easy to hit Lucio."
+reason = "Mauga's hitscan weapons make it easy to hit Lúcio."
 
 [[matchup]]
 hero = "lucio"
@@ -9609,7 +9609,7 @@ value = -40
 cpgg = -50
 opick = 0
 cwatch = -9
-reason = "Moira's primary fire requires no aim, allowing her to easily damage fast-moving Lucio."
+reason = "Moira's primary fire requires no aim, allowing her to easily damage fast-moving Lúcio."
 
 [[matchup]]
 hero = "lucio"
@@ -9647,7 +9647,7 @@ vs = "reinhardt"
 value = 100
 cpgg = 100
 opick = -50
-reason = "Lucio's speed boost and Boop make it difficult for Reinhardt to get into his effective range."
+reason = "Lúcio's speed boost and Boop make it difficult for Reinhardt to get into his effective range."
 
 [[matchup]]
 hero = "lucio"
@@ -9678,7 +9678,7 @@ vs = "sigma"
 value = 50
 cpgg = 50
 opick = 50
-reason = "Lucio can speed boost teammates to force close-range combat, which Sigma struggles with. Good wall-riding allows Lucio to dodge Sigma's attacks."
+reason = "Lúcio can speed boost teammates to force close-range combat, which Sigma struggles with. Good wall-riding allows Lúcio to dodge Sigma's attacks."
 
 [[matchup]]
 hero = "lucio"
@@ -9701,7 +9701,7 @@ value = -42
 disagreement = true
 cpgg = -75
 opick = 0
-reason = "Sombra can temporarily disable Lucio's wall riding by hacking him."
+reason = "Sombra can temporarily disable Lúcio's wall riding by hacking him."
 
 [[matchup]]
 hero = "lucio"
@@ -9747,7 +9747,7 @@ vs = "widowmaker"
 value = 50
 cpgg = 50
 opick = 0
-reason = "Lucio can use speed boost to make teammates harder for Widowmaker to hit."
+reason = "Lúcio can use speed boost to make teammates harder for Widowmaker to hit."
 
 [[matchup]]
 hero = "lucio"
@@ -9786,7 +9786,7 @@ value = 45
 cpgg = 50
 opick = 0
 cwatch = 30
-reason = "Lucio can use speed boost to help teammates close in on Zenyatta."
+reason = "Lúcio can use speed boost to help teammates close in on Zenyatta."
 
 [[matchup]]
 hero = "mauga"
@@ -9981,7 +9981,7 @@ disagreement = true
 cpgg = 50
 opick = 50
 cwatch = -26
-reason = "Mauga's hitscan weapons make it easy to hit Lucio."
+reason = "Mauga's hitscan weapons make it easy to hit Lúcio."
 
 [[matchup]]
 hero = "mauga"
@@ -10266,7 +10266,7 @@ vs = "domina"
 value = 50
 cpgg = 50
 opick = 50
-reason = "Domina lacks mobility and has no survivability skills besides Domina:R-CLICK, making her vulnerable to being isolated by Mei's Wall."
+reason = "Domina lacks mobility and has no survivability skills besides Barrier Array, making her vulnerable to being isolated by Mei's Wall."
 
 [[matchup]]
 hero = "mei"
@@ -10299,7 +10299,7 @@ vs = "emre"
 value = -50
 cpgg = -50
 opick = 0
-reason = "Emre can attack from outside Mei's effective range. Mei lacks mobility, making her vulnerable to Emre's Emre:E."
+reason = "Emre can attack from outside Mei's effective range. Mei lacks mobility, making her vulnerable to Emre's Cyber Frag."
 
 [[matchup]]
 hero = "mei"
@@ -11077,7 +11077,7 @@ vs = "doomfist"
 value = 41
 cpgg = 50
 opick = -100
-reason = "Mizuki can negate Doomfist's punch with Mizuki:E or dodge it with Mizuki:Shift."
+reason = "Mizuki can negate Doomfist's punch with Binding Chain or dodge it with Katashiro Return."
 
 [[matchup]]
 hero = "mizuki"
@@ -11085,7 +11085,7 @@ vs = "dva"
 value = 40
 cpgg = 50
 opick = -50
-reason = "Mizuki can negate D.Va's dive with Mizuki:E or dodge it with Mizuki:Shift."
+reason = "Mizuki can negate D.Va's dive with Binding Chain or dodge it with Katashiro Return."
 
 [[matchup]]
 hero = "mizuki"
@@ -11138,7 +11138,7 @@ vs = "junker-queen"
 value = 50
 cpgg = 50
 opick = 0
-reason = "Even when Junker Queen closes in, Mizuki can easily create distance with Mizuki:E or Mizuki:Shift."
+reason = "Even when Junker Queen closes in, Mizuki can easily create distance with Binding Chain or Katashiro Return."
 
 [[matchup]]
 hero = "mizuki"
@@ -11228,7 +11228,7 @@ vs = "reinhardt"
 value = 41
 cpgg = 50
 opick = 0
-reason = "Even when Reinhardt closes in, Mizuki can easily create distance with Mizuki:E or Mizuki:Shift."
+reason = "Even when Reinhardt closes in, Mizuki can easily create distance with Binding Chain or Katashiro Return."
 
 [[matchup]]
 hero = "mizuki"
@@ -11273,7 +11273,7 @@ vs = "vendetta"
 value = 50
 cpgg = 50
 opick = -50
-reason = "Even when Vendetta closes in, Mizuki can easily create distance with Mizuki:E or Mizuki:Shift."
+reason = "Even when Vendetta closes in, Mizuki can easily create distance with Binding Chain or Katashiro Return."
 
 [[matchup]]
 hero = "mizuki"
@@ -11481,7 +11481,7 @@ vs = "lucio"
 value = 40
 cpgg = 50
 opick = 50
-reason = "Moira's primary fire requires no aim, allowing her to easily damage fast-moving Lucio."
+reason = "Moira's primary fire requires no aim, allowing her to easily damage fast-moving Lúcio."
 
 [[matchup]]
 hero = "moira"
@@ -11621,7 +11621,7 @@ value = -45
 cpgg = -50
 opick = -50
 cwatch = -30
-reason = "Moira has difficulty destroying Torbjorn's Turret."
+reason = "Moira has difficulty destroying Torbjörn's Turret."
 
 [[matchup]]
 hero = "moira"
@@ -12005,7 +12005,7 @@ vs = "torbjorn"
 value = 50
 cpgg = 50
 opick = -50
-reason = "Torbjorn's Turret is easily destroyed by Orisa's primary fire."
+reason = "Torbjörn's Turret is easily destroyed by Orisa's primary fire."
 
 [[matchup]]
 hero = "orisa"
@@ -12173,7 +12173,7 @@ value = -62
 cpgg = -75
 opick = 0
 cwatch = -22
-reason = "Her attacks are easily absorbed by D.Va's DM. D.Va can also commit to airborne targets."
+reason = "Pharah's attacks are easily absorbed by D.Va's DM. D.Va can also commit to airborne targets."
 
 [[matchup]]
 hero = "pharah"
@@ -12436,7 +12436,7 @@ vs = "torbjorn"
 value = 44
 cpgg = 50
 opick = -50
-reason = "Torbjorn's Turret is easily destroyed by Pharah. Torbjorn's primary fire has travel time, making it hard to hit airborne targets."
+reason = "Torbjörn's Turret is easily destroyed by Pharah. Torbjörn's primary fire has travel time, making it hard to hit airborne targets."
 
 [[matchup]]
 hero = "pharah"
@@ -12823,7 +12823,7 @@ vs = "torbjorn"
 value = 50
 cpgg = 50
 opick = -50
-reason = "Ramattra can easily destroy Torbjorn's Turret."
+reason = "Ramattra can easily destroy Torbjörn's Turret."
 
 [[matchup]]
 hero = "ramattra"
@@ -12966,7 +12966,7 @@ vs = "domina"
 value = 42
 cpgg = 50
 opick = 50
-reason = "Domina struggles in close-range combat. Domina has no survivability skills besides Domina:R-CLICK, making her vulnerable to Reaper's damage."
+reason = "Domina struggles in close-range combat. Domina has no survivability skills besides Barrier Array, making her vulnerable to Reaper's damage."
 
 [[matchup]]
 hero = "reaper"
@@ -13219,7 +13219,7 @@ vs = "torbjorn"
 value = -50
 cpgg = -50
 opick = -50
-reason = "Torbjorn can place Turret to deal with approaching Reaper."
+reason = "Torbjörn can place Turret to deal with approaching Reaper."
 
 [[matchup]]
 hero = "reaper"
@@ -13473,7 +13473,7 @@ vs = "lucio"
 value = -100
 cpgg = -100
 opick = 50
-reason = "Lucio's speed boost and Boop make it difficult for Reinhardt to get into his effective range."
+reason = "Lúcio's speed boost and Boop make it difficult for Reinhardt to get into his effective range."
 
 [[matchup]]
 hero = "reinhardt"
@@ -13505,7 +13505,7 @@ value = -41
 cpgg = -50
 opick = 0
 cwatch = -13
-reason = "Even when Reinhardt closes in, Mizuki can easily create distance with Mizuki:E or Mizuki:Shift."
+reason = "Even when Reinhardt closes in, Mizuki can easily create distance with Binding Chain or Katashiro Return."
 
 [[matchup]]
 hero = "reinhardt"
@@ -13614,7 +13614,7 @@ value = -67
 cpgg = -75
 opick = -100
 cwatch = -43
-reason = "Reinhardt has difficulty destroying Torbjorn's Turret. Reinhardt's Shield is easily broken by Torbjorn's primary fire."
+reason = "Reinhardt has difficulty destroying Torbjörn's Turret. Reinhardt's Shield is easily broken by Torbjörn's primary fire."
 
 [[matchup]]
 hero = "reinhardt"
@@ -13788,7 +13788,7 @@ vs = "freja"
 value = -50
 cpgg = -50
 opick = 0
-reason = "Freja's long Freja:R-CLICK range allows her to deal damage without entering Roadhog's effective range."
+reason = "Freja's long Take Aim range allows her to deal damage without entering Roadhog's effective range."
 
 [[matchup]]
 hero = "roadhog"
@@ -15067,7 +15067,7 @@ vs = "lucio"
 value = -50
 cpgg = -50
 opick = -50
-reason = "Lucio can speed boost teammates to force close-range combat, which Sigma struggles with. Good wall-riding allows Lucio to dodge Sigma's attacks."
+reason = "Lúcio can speed boost teammates to force close-range combat, which Sigma struggles with. Good wall-riding allows Lúcio to dodge Sigma's attacks."
 
 [[matchup]]
 hero = "sigma"
@@ -15203,7 +15203,7 @@ vs = "torbjorn"
 value = 100
 cpgg = 100
 opick = -50
-reason = "Sigma can easily destroy Torbjorn's Turret. Sigma can stop Torbjorn's ultimate with his abilities."
+reason = "Sigma can easily destroy Torbjörn's Turret. Sigma can stop Torbjörn's ultimate with his abilities."
 
 [[matchup]]
 hero = "sigma"
@@ -15340,7 +15340,7 @@ vs = "domina"
 value = 75
 cpgg = 75
 opick = 50
-reason = "Sojourn can break Domina's Domina:R-CLICK very quickly by using Disruptor Shot."
+reason = "Sojourn can break Domina's Barrier Array very quickly by using Disruptor Shot."
 
 [[matchup]]
 hero = "sojourn"
@@ -15731,7 +15731,7 @@ vs = "dva"
 value = -75
 cpgg = -75
 opick = -50
-reason = "His attacks are easily absorbed by D.Va's DM. Soldier: 76 has difficulty dealing with Boosters engages."
+reason = "Soldier: 76's attacks are easily absorbed by D.Va's DM. Soldier: 76 has difficulty dealing with Boosters engages."
 
 [[matchup]]
 hero = "soldier-76"
@@ -16238,7 +16238,7 @@ disagreement = true
 cpgg = 75
 opick = -50
 cwatch = -13
-reason = "Sombra can temporarily disable Lucio's wall riding by hacking him."
+reason = "Sombra can temporarily disable Lúcio's wall riding by hacking him."
 
 [[matchup]]
 hero = "sombra"
@@ -16386,7 +16386,7 @@ vs = "torbjorn"
 value = -35
 cpgg = -50
 opick = 0
-reason = "Torbjorn can prepare for Sombra's flanks by placing Turret."
+reason = "Torbjörn can prepare for Sombra's flanks by placing Turret."
 
 [[matchup]]
 hero = "sombra"
@@ -16537,7 +16537,7 @@ value = 66
 cpgg = 75
 opick = 0
 cwatch = 40
-reason = "Domina has difficulty destroying Symmetra's Turret. Domina's Domina:R-CLICK easily becomes a charge resource for Symmetra's primary fire."
+reason = "Domina has difficulty destroying Symmetra's Turret. Domina's Barrier Array easily becomes a charge resource for Symmetra's primary fire."
 
 [[matchup]]
 hero = "symmetra"
@@ -16912,7 +16912,7 @@ value = -42
 cpgg = -50
 opick = 50
 cwatch = -17
-reason = "Torbjorn's wide hitbox makes him easy to hit with Ashe's primary fire. Turret is easily destroyed by Ashe."
+reason = "Torbjörn's wide hitbox makes him easy to hit with Ashe's primary fire. Turret is easily destroyed by Ashe."
 
 [[matchup]]
 hero = "torbjorn"
@@ -16936,7 +16936,7 @@ vs = "brigitte"
 value = 42
 cpgg = 50
 opick = 0
-reason = "Brigitte has difficulty destroying Torbjorn's Turret."
+reason = "Brigitte has difficulty destroying Torbjörn's Turret."
 
 [[matchup]]
 hero = "torbjorn"
@@ -16961,7 +16961,7 @@ value = -41
 cpgg = -50
 opick = 50
 cwatch = -13
-reason = "Domina can easily destroy Torbjorn's Turret with her abilities and primary fire."
+reason = "Domina can easily destroy Torbjörn's Turret with her abilities and primary fire."
 
 [[matchup]]
 hero = "torbjorn"
@@ -16970,7 +16970,7 @@ value = 45
 cpgg = 50
 opick = 0
 cwatch = 31
-reason = "Doomfist's Hand Cannon has short range, making it difficult to destroy Torbjorn's Turret."
+reason = "Doomfist's Hand Cannon has short range, making it difficult to destroy Torbjörn's Turret."
 
 [[matchup]]
 hero = "torbjorn"
@@ -16986,7 +16986,7 @@ value = -61
 cpgg = -75
 opick = 0
 cwatch = -17
-reason = "Echo can easily destroy Torbjorn's Turret with primary fire and Sticky Bombs. Torbjorn's primary fire has difficulty hitting airborne targets."
+reason = "Echo can easily destroy Torbjörn's Turret with primary fire and Sticky Bombs. Torbjörn's primary fire has difficulty hitting airborne targets."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17012,7 +17012,7 @@ disagreement = true
 cpgg = 50
 opick = -50
 cwatch = -17
-reason = "Torbjorn has high HP and Overload armor, making him hard for Genji to eliminate. Turret helps deal with Genji's flanks."
+reason = "Torbjörn has high HP and Overload armor, making him hard for Genji to eliminate. Turret helps deal with Genji's flanks."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17021,7 +17021,7 @@ value = -43
 cpgg = -50
 opick = -50
 cwatch = -22
-reason = "Torbjorn's Turret is easily destroyed by Hanzo. Torbjorn's wide hitbox makes him easy to hit with Hanzo's primary fire."
+reason = "Torbjörn's Turret is easily destroyed by Hanzo. Torbjörn's wide hitbox makes him easy to hit with Hanzo's primary fire."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17029,7 +17029,7 @@ vs = "hazard"
 value = 44
 cpgg = 50
 opick = 0
-reason = "Hazard has difficulty destroying Torbjorn's Turret. Torbjorn can survive Hazard's dive somewhat with Overload."
+reason = "Hazard has difficulty destroying Torbjörn's Turret. Torbjörn can survive Hazard's dive somewhat with Overload."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17121,7 +17121,7 @@ vs = "moira"
 value = 45
 cpgg = 50
 opick = 50
-reason = "Moira has difficulty destroying Torbjorn's Turret."
+reason = "Moira has difficulty destroying Torbjörn's Turret."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17129,7 +17129,7 @@ vs = "orisa"
 value = -50
 cpgg = -50
 opick = 100
-reason = "Torbjorn's Turret is easily destroyed by Orisa's primary fire."
+reason = "Torbjörn's Turret is easily destroyed by Orisa's primary fire."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17138,7 +17138,7 @@ value = -44
 cpgg = -50
 opick = 100
 cwatch = -26
-reason = "Torbjorn's Turret is easily destroyed by Pharah. Torbjorn's primary fire has travel time, making it hard to hit airborne targets."
+reason = "Torbjörn's Turret is easily destroyed by Pharah. Torbjörn's primary fire has travel time, making it hard to hit airborne targets."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17146,7 +17146,7 @@ vs = "ramattra"
 value = -50
 cpgg = -50
 opick = -50
-reason = "Ramattra can easily destroy Torbjorn's Turret."
+reason = "Ramattra can easily destroy Torbjörn's Turret."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17154,7 +17154,7 @@ vs = "reaper"
 value = 50
 cpgg = 50
 opick = 0
-reason = "Torbjorn can place Turret to deal with approaching Reaper."
+reason = "Torbjörn can place Turret to deal with approaching Reaper."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17163,7 +17163,7 @@ value = 67
 cpgg = 75
 opick = 50
 cwatch = 43
-reason = "Reinhardt has difficulty destroying Torbjorn's Turret. Reinhardt's Shield is easily broken by Torbjorn's primary fire."
+reason = "Reinhardt has difficulty destroying Torbjörn's Turret. Reinhardt's Shield is easily broken by Torbjörn's primary fire."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17195,7 +17195,7 @@ vs = "sigma"
 value = -100
 cpgg = -100
 opick = 50
-reason = "Sigma can easily destroy Torbjorn's Turret. Sigma can stop Torbjorn's ultimate with his abilities."
+reason = "Sigma can easily destroy Torbjörn's Turret. Sigma can stop Torbjörn's ultimate with his abilities."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17221,7 +17221,7 @@ value = 35
 cpgg = 50
 opick = 50
 cwatch = -9
-reason = "Torbjorn can prepare for Sombra's flanks by placing Turret."
+reason = "Torbjörn can prepare for Sombra's flanks by placing Turret."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17237,7 +17237,7 @@ vs = "tracer"
 value = 75
 cpgg = 75
 opick = 0
-reason = "Torbjorn can place Turret to prepare for Tracer's flanks."
+reason = "Torbjörn can place Turret to prepare for Tracer's flanks."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17252,7 +17252,7 @@ vs = "venture"
 value = 50
 cpgg = 50
 opick = 0
-reason = "Torbjorn can place Turret to prepare for Venture's flanks. Torbjorn has higher HP than most heroes and Overload, making him resilient against Venture's burst."
+reason = "Torbjörn can place Turret to prepare for Venture's flanks. Torbjörn has higher HP than most heroes and Overload, making him resilient against Venture's burst."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17270,7 +17270,7 @@ disagreement = true
 cpgg = 100
 opick = -50
 cwatch = 32
-reason = "Winston has difficulty destroying Torbjorn's Turret. Torbjorn's high DPS can easily break Winston's barrier. Torbjorn can survive Winston's dives with Overload."
+reason = "Winston has difficulty destroying Torbjörn's Turret. Torbjörn's high DPS can easily break Winston's barrier. Torbjörn can survive Winston's dives with Overload."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17278,7 +17278,7 @@ vs = "wrecking-ball"
 value = 44
 cpgg = 50
 opick = 100
-reason = "Torbjorn's presence forces Wrecking Ball to watch out for Turret, preventing easy dives."
+reason = "Torbjörn's presence forces Wrecking Ball to watch out for Turret, preventing easy dives."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17295,7 +17295,7 @@ vs = "zarya"
 value = -50
 cpgg = -50
 opick = -50
-reason = "Torbjorn's primary fire and Turret make it easy for Zarya to gain barrier charge."
+reason = "Torbjörn's primary fire and Turret make it easy for Zarya to gain barrier charge."
 
 [[matchup]]
 hero = "torbjorn"
@@ -17368,7 +17368,7 @@ vs = "domina"
 value = 50
 cpgg = 50
 opick = 0
-reason = "Domina struggles in close-range combat. Domina has no survivability skills besides Domina:R-CLICK, making her vulnerable to Tracer's damage."
+reason = "Domina struggles in close-range combat. Domina has no survivability skills besides Barrier Array, making her vulnerable to Tracer's damage."
 
 [[matchup]]
 hero = "tracer"
@@ -17631,7 +17631,7 @@ vs = "torbjorn"
 value = -75
 cpgg = -75
 opick = 0
-reason = "Torbjorn can place Turret to prepare for Tracer's flanks."
+reason = "Torbjörn can place Turret to prepare for Tracer's flanks."
 
 [[matchup]]
 hero = "tracer"
@@ -17910,7 +17910,7 @@ vs = "mizuki"
 value = -50
 cpgg = -50
 opick = 50
-reason = "Even when Vendetta closes in, Mizuki can easily create distance with Mizuki:E or Mizuki:Shift."
+reason = "Even when Vendetta closes in, Mizuki can easily create distance with Binding Chain or Katashiro Return."
 
 [[matchup]]
 hero = "vendetta"
@@ -18429,7 +18429,7 @@ vs = "torbjorn"
 value = -50
 cpgg = -50
 opick = 50
-reason = "Torbjorn can place Turret to prepare for Venture's flanks. Torbjorn has higher HP than most heroes and Overload, making him resilient against Venture's burst."
+reason = "Torbjörn can place Turret to prepare for Venture's flanks. Torbjörn has higher HP than most heroes and Overload, making him resilient against Venture's burst."
 
 [[matchup]]
 hero = "venture"
@@ -18602,7 +18602,7 @@ vs = "emre"
 value = 60
 cpgg = 75
 opick = 0
-reason = "Without Emre:Shift active, Emre is slow, and the 3-round burst creates predictable peeking patterns, making Emre vulnerable to Widowmaker's headshots."
+reason = "Without Siphon Blaster active, Emre is slow, and the 3-round burst creates predictable peeking patterns, making Emre vulnerable to Widowmaker's headshots."
 
 [[matchup]]
 hero = "widowmaker"
@@ -18706,7 +18706,7 @@ vs = "lucio"
 value = -50
 cpgg = -50
 opick = 50
-reason = "Lucio can use speed boost to make teammates harder for Widowmaker to hit."
+reason = "Lúcio can use speed boost to make teammates harder for Widowmaker to hit."
 
 [[matchup]]
 hero = "widowmaker"
@@ -19031,7 +19031,7 @@ vs = "emre"
 value = 40
 cpgg = 50
 opick = -50
-reason = "Emre has difficulty dealing with Winston closing in. Winston's attacks require no aim, making it easy to hit Emre even during Emre:Shift."
+reason = "Emre has difficulty dealing with Winston closing in. Winston's attacks require no aim, making it easy to hit Emre even during Siphon Blaster."
 
 [[matchup]]
 hero = "winston"
@@ -19273,7 +19273,7 @@ disagreement = true
 cpgg = -100
 opick = 50
 cwatch = -37
-reason = "Winston has difficulty destroying Torbjorn's Turret. Torbjorn's high DPS can easily break Winston's barrier. Torbjorn can survive Winston's dives with Overload."
+reason = "Winston has difficulty destroying Torbjörn's Turret. Torbjörn's high DPS can easily break Winston's barrier. Torbjörn can survive Winston's dives with Overload."
 
 [[matchup]]
 hero = "winston"
@@ -19676,7 +19676,7 @@ value = -44
 cpgg = -50
 opick = -100
 cwatch = -25
-reason = "Torbjorn's presence forces Wrecking Ball to watch out for Turret, preventing easy dives."
+reason = "Torbjörn's presence forces Wrecking Ball to watch out for Turret, preventing easy dives."
 
 [[matchup]]
 hero = "wrecking-ball"
@@ -20234,7 +20234,7 @@ vs = "freja"
 value = 41
 cpgg = 50
 opick = 0
-reason = "Freja's primary fire during Freja:R-CLICK makes it very easy for Zarya to gain barrier charge."
+reason = "Freja's primary fire during Take Aim makes it very easy for Zarya to gain barrier charge."
 
 [[matchup]]
 hero = "zarya"
@@ -20464,7 +20464,7 @@ vs = "torbjorn"
 value = 50
 cpgg = 50
 opick = 50
-reason = "Torbjorn's primary fire and Turret make it easy for Zarya to gain barrier charge."
+reason = "Torbjörn's primary fire and Turret make it easy for Zarya to gain barrier charge."
 
 [[matchup]]
 hero = "zarya"
@@ -20610,7 +20610,7 @@ value = -38
 disagreement = true
 cpgg = -75
 opick = 50
-reason = "His attacks are easily absorbed by D.Va's DM. Zenyatta has great difficulty dealing with Boosters engages."
+reason = "Zenyatta's attacks are easily absorbed by D.Va's DM. Zenyatta has great difficulty dealing with Boosters engages."
 
 [[matchup]]
 hero = "zenyatta"
@@ -20724,7 +20724,7 @@ value = -45
 cpgg = -50
 opick = -50
 cwatch = -30
-reason = "Lucio can use speed boost to help teammates close in on Zenyatta."
+reason = "Lúcio can use speed boost to help teammates close in on Zenyatta."
 
 [[matchup]]
 hero = "zenyatta"

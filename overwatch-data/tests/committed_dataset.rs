@@ -130,6 +130,146 @@ fn rationale_text_is_attached_to_real_matchups() {
     );
 }
 
+/// The sentences are counterpickgg's, quoted exactly, and the site leaves four
+/// kinds of template residue behind in them: an unresolved keybind placeholder
+/// (`Freja's Freja:R-CLICK`), a hero spelled without its accents, a
+/// sentence-initial pronoun whose antecedent was elsewhere on the page, and a
+/// footnote marker. `overwatch-ingest`'s `prose` module strips all four; this is
+/// the guard that a stale ingest, or a scrape of a page whose template changed,
+/// cannot put them back.
+///
+/// The checks are restated here rather than shared with the cleaner. `overwatch-
+/// data` cannot depend on the ingest, and that is just as well: a guard built out
+/// of the implementation it guards passes on the implementation's own bugs.
+#[test]
+fn no_committed_reason_carries_a_site_artefact() {
+    let ds = load().expect("committed data must load");
+    let matchups: MatchupsFile =
+        toml::from_str(overwatch_data::MATCHUPS_TOML).expect("committed matchups must parse");
+
+    // Every other colon in this prose is followed by a space — `Soldier: 76`,
+    // `Configuration: Assault` — and a placeholder's never is.
+    const KEYS: [&str; 5] = ["R-CLICK", "L-CLICK", "Shift", "E", "Q"];
+    // Sentence-initial only: "so her Nade lands late" is ordinary English.
+    const PRONOUNS: [&str; 8] = [
+        "He ", "She ", "It ", "They ", "His ", "Her ", "Its ", "Their ",
+    ];
+
+    // The accented spellings the roster uses, against the ASCII forms the site
+    // sometimes writes instead. Derived from the roster so a new accented hero is
+    // covered without an edit.
+    let folded: Vec<(String, String)> = ds
+        .heroes()
+        .iter()
+        .map(|hero| (deaccent(&hero.name), hero.name.clone()))
+        .filter(|(ascii, name)| ascii != name)
+        .collect();
+
+    let mut offenders: Vec<String> = Vec::new();
+    for entry in &matchups.matchups {
+        let reason = &entry.reason;
+        if reason.is_empty() {
+            continue;
+        }
+        let row = format!("{} vs {}", entry.hero, entry.vs);
+
+        for (at, _) in reason.match_indices(':') {
+            let after = &reason[at + 1..];
+            if KEYS.iter().any(|key| {
+                after.strip_prefix(key).is_some_and(|rest| {
+                    !rest.starts_with(|c: char| c.is_alphanumeric() || c == '-')
+                })
+            }) {
+                offenders.push(format!("{row}: unresolved keybind placeholder"));
+                break;
+            }
+        }
+        for (ascii, name) in &folded {
+            if reason.contains(ascii.as_str()) {
+                offenders.push(format!("{row}: {ascii:?} should be {name:?}"));
+            }
+        }
+        if PRONOUNS.iter().any(|word| reason.starts_with(word)) {
+            offenders.push(format!("{row}: opens on a pronoun with no antecedent"));
+        }
+        if reason.contains('*') {
+            offenders.push(format!("{row}: footnote marker"));
+        }
+    }
+
+    assert!(
+        offenders.is_empty(),
+        "{} row(s) carry template residue - run `just reblend`: {offenders:#?}",
+        offenders.len()
+    );
+}
+
+/// Accents stripped, case and punctuation kept, so `Lúcio` becomes exactly the
+/// `Lucio` the site writes rather than a lowercased comparison key.
+fn deaccent(text: &str) -> String {
+    text.chars()
+        .map(|c| match c {
+            'á' | 'à' | 'â' | 'ä' | 'ã' | 'å' => 'a',
+            'é' | 'è' | 'ê' | 'ë' => 'e',
+            'í' | 'ì' | 'î' | 'ï' => 'i',
+            'ó' | 'ò' | 'ô' | 'ö' | 'õ' => 'o',
+            'ú' | 'ù' | 'û' | 'ü' => 'u',
+            'ñ' => 'n',
+            'ç' => 'c',
+            other => other,
+        })
+        .collect()
+}
+
+/// A pair's rationale is one sentence about one fight, so both directions of it
+/// say the same thing — all 1,066 reasoned rows do today.
+///
+/// Nothing in the pipeline enforces this. counterpickgg publishes a pair's card
+/// on both heroes' pages and the scraper keys each page's rows to that page's
+/// subject, so the two copies arrive independently and `blend_values` writes each
+/// one where it found it. The prose cleaner is the first thing capable of
+/// splitting them: a rule that resolved a dangling pronoun from the *subject*
+/// rather than from the pair would answer differently on each row, and the two
+/// halves of sixteen rows would quietly stop agreeing.
+#[test]
+fn a_pair_states_its_rationale_the_same_way_from_both_sides() {
+    let matchups: MatchupsFile =
+        toml::from_str(overwatch_data::MATCHUPS_TOML).expect("committed matchups must parse");
+
+    let reasons: HashMap<(&str, &str), &str> = matchups
+        .matchups
+        .iter()
+        .filter(|entry| !entry.reason.is_empty())
+        .map(|entry| {
+            (
+                (entry.hero.as_str(), entry.vs.as_str()),
+                entry.reason.as_str(),
+            )
+        })
+        .collect();
+
+    let split: Vec<String> = reasons
+        .iter()
+        .filter(|((hero, vs), reason)| {
+            reasons
+                .get(&(*vs, *hero))
+                .is_some_and(|mirror| mirror != *reason)
+        })
+        .map(|((hero, vs), _)| format!("{hero} vs {vs}"))
+        .collect();
+
+    assert!(
+        split.is_empty(),
+        "{} row(s) disagree with their own mirror: {split:#?}",
+        split.len()
+    );
+    assert!(
+        reasons.len() >= 1000,
+        "only {} reasoned rows - the rationale text is going stale",
+        reasons.len()
+    );
+}
+
 /// The flag the blend writes has to survive the loader, because for a long time
 /// it did not: `disagreement` was written into `matchups.toml`, deserialized by
 /// `MatchupEntry`, and then read by nothing at all, while the README and the

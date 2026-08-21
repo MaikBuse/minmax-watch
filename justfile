@@ -164,13 +164,17 @@ brand-icons:
     # diff empty. Run it after editing either SVG.
     cargo run -p overwatch-ingest -- brand
 
-# Re-run the blend over the columns already in data/matchups.toml
+# Re-blend and re-clean the prose over data/matchups.toml as committed
 reblend:
     # No network. Every committed value is reproducible from the per-source
     # columns of the pair's two rows, so a change to the blend reviews as a diff
     # of exactly the rows the blend moved - plus the rows it newly rates, since a
     # counterwatch reading with no mirror is read across the pair and can rate a
     # direction that had nothing. A second run must produce an empty diff.
+    #
+    # Also re-runs the prose cleaner, so this is how a change to it lands too:
+    # the diff is then nothing but `reason` lines, which is worth checking with
+    # `git diff data/matchups.toml | grep '^[+-].*value'` coming back empty.
     #
     # Curated rows survive this, and that is not free: the blend emits nothing at
     # all for a pair no source rated, so `merge_matchups` puts them back.

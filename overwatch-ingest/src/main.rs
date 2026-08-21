@@ -17,6 +17,7 @@ mod counterpickgg;
 mod counterwatch;
 mod overfast;
 mod overpicker;
+mod prose;
 mod slugs;
 mod stats;
 
@@ -355,6 +356,12 @@ enum Command {
     /// Not part of `All`, for the same reason as `Brand`: no network, and nothing
     /// to do unless the blend itself has changed. Idempotent, because it derives
     /// `value` from the source columns rather than from `value`.
+    ///
+    /// It also runs [`prose::clean_file`], which makes it the no-network way to
+    /// normalise the rationale text: the sentences come off the committed rows and
+    /// go back with the site's template residue removed, while every `value` is
+    /// still derived from the columns beside it. So a change to the cleaner reviews
+    /// as a diff of nothing but `reason` lines.
     Reblend,
 }
 
@@ -672,6 +679,14 @@ async fn main() -> Result<()> {
     if args.command == Command::Reblend {
         let roster = load_roster(&data_dir).await?;
         let hero_keys: Vec<String> = roster.heroes.iter().map(|h| h.key.clone()).collect();
+        // Key to display name, for the prose pass below: it puts a hero's own
+        // spelling back and resolves a dangling pronoun to whichever of the pair
+        // the sentence does not already name.
+        let names: HashMap<String, String> = roster
+            .heroes
+            .iter()
+            .map(|h| (h.key.clone(), h.name.clone()))
+            .collect();
 
         let path = data_dir.join("matchups.toml");
         let text = tokio::fs::read_to_string(&path)
@@ -716,8 +731,13 @@ async fn main() -> Result<()> {
         // Through `merge_matchups` for the curated column: this path harvests
         // only the source columns above, so serialising the blend directly would
         // drop every hand-written override with no network round trip to blame.
-        let file = merge_matchups(&existing.generated, &existing.patch, &existing, matchups);
+        let mut file = merge_matchups(&existing.generated, &existing.patch, &existing, matchups);
         report_curated_matchups(&file);
+        // The same pass the `counters` path runs, which is what makes this the
+        // no-network way to normalise the prose: the sentences come off the
+        // committed rows above and go back cleaned, with every `value` still
+        // derived from the per-source columns beside them.
+        eprintln!("{}", prose::clean_file(&mut file, &names)?.render());
         let toml = toml::to_string_pretty(&file).context("serialising matchups.toml")?;
         if write_if_changed(&path, &toml).await? {
             eprintln!("reblend: updated matchups.toml");
@@ -873,8 +893,12 @@ async fn main() -> Result<()> {
         // blended rows for a handful of curated ones. Refusing to write is what
         // keeps the curated rows safe here, so they must not license the write.
         let existing = load_matchups(&data_dir).await?;
-        let file = merge_matchups(&generated, &patch_label(&generated), &existing, matchups);
+        let mut file = merge_matchups(&generated, &patch_label(&generated), &existing, matchups);
         report_curated_matchups(&file);
+        // After the merge, so it runs over exactly the rows about to be written,
+        // and in both write paths, because either one rebuilds `reason` from the
+        // sources and a cleaner in only one of them regresses through the other.
+        eprintln!("{}", prose::clean_file(&mut file, &subject_names)?.render());
         let toml = toml::to_string_pretty(&file).context("serialising matchups.toml")?;
         if write_if_changed(&data_dir.join("matchups.toml"), &toml).await? {
             changed.push("matchups.toml");
