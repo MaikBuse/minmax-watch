@@ -10,8 +10,8 @@
 
 use overwatch_core::{
     ban_recommendations, difficulty_to_value, recommend, threats, Archetype, BanBoard, BanSubject,
-    Dataset, DatasetParts, Defended, DefendedTeam, Draft, EnemyRoleWeights, GameMap, GameMode,
-    Hero, HeroId, Knowledge, MapId, Matrix, Rank, ReasonKind, Role, Side, UserContext,
+    ComfortStep, Dataset, DatasetParts, Defended, DefendedTeam, Draft, EnemyRoleWeights, GameMap,
+    GameMode, Hero, HeroId, Knowledge, MapId, Matrix, Rank, ReasonKind, Role, Side, UserContext,
 };
 
 const REINHARDT: HeroId = HeroId(0);
@@ -255,8 +255,19 @@ fn swap_mode_stays_quiet_on_a_marginal_gain() {
     assert!(!dva.worth_swapping, "so no swap is suggested");
 }
 
+/// The top of the ladder against a counter argument, and the claim the whole
+/// term exists to make: a hero you actually play beats the technically correct
+/// pick you cannot.
+///
+/// Reads `ComfortStep::Main.value()` rather than a literal `100` so the ladder
+/// and the scorer cannot drift apart — if the top step ever moves, this is where
+/// it is felt rather than somewhere downstream.
+///
+/// Against Widowmaker, Reinhardt reads -0.50 and Sigma 0.00 on the fixture's own
+/// numbers, so 0.60 of comfort clears the gap by 0.10. That margin is the reason
+/// the top step stays a *claim*: two counter losses of this size still beat it.
 #[test]
-fn comfort_can_outweigh_a_bad_matchup() {
+fn the_top_comfort_step_outranks_a_hero_you_are_countered_by() {
     let ds = fixture();
     let mut ctx = tank_context(&ds);
 
@@ -266,11 +277,108 @@ fn comfort_can_outweigh_a_bad_matchup() {
     let neutral = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
     assert!(rank_of(&neutral, REINHARDT) > rank_of(&neutral, SIGMA));
 
-    // Max out comfort on Reinhardt: a hero you actually play well beats the
-    // technically correct pick you cannot.
-    ctx.overrides[REINHARDT.index()] = 100;
+    ctx.overrides[REINHARDT.index()] = ComfortStep::Main.value();
     let tuned = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
     assert!(rank_of(&tuned, REINHARDT) < rank_of(&tuned, SIGMA));
+}
+
+/// The margin the ladder rests on, and the property that makes Slice 15's
+/// migration safe to run unattended: every legacy pool entry becomes `ok`, and
+/// `ok` alone must never tell somebody to abandon a hero that is working.
+///
+/// **This must fail loudly if either number moves**, which is why it names both
+/// rather than asserting a hard-coded 0.12. `comfort.rs` carries the arithmetic
+/// half beside the values; this is the behavioural half, through the real
+/// scorer, and the two are deliberately not one test.
+///
+/// The closest neighbour is `swap_mode_stays_quiet_on_a_marginal_gain` above,
+/// which does this at `10` and calls the result "well under". This is the
+/// tightest the ladder ever gets: 0.12 against 0.15.
+#[test]
+fn the_lowest_comfort_step_cannot_on_its_own_argue_for_a_swap() {
+    let ds = fixture();
+    let mut ctx = tank_context(&ds);
+
+    let contribution = f32::from(ComfortStep::Ok.value()) / 100.0 * ctx.weights.personal;
+    assert!(
+        contribution < ctx.weights.swap_threshold,
+        "the lowest step is worth {contribution} against a swap threshold of {}",
+        ctx.weights.swap_threshold
+    );
+
+    // No enemies, so comfort is the only thing separating anybody.
+    ctx.overrides[DVA.index()] = ComfortStep::Ok.value();
+    let mut draft = Draft::new();
+    draft.locked = Some(REINHARDT);
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    let dva = &recs[rank_of(&recs, DVA)];
+
+    let delta = dva.delta_vs_locked.expect("locked hero present");
+    assert!(delta > 0.0, "marking a hero does move it up the list");
+    assert!(
+        !dva.worth_swapping,
+        "but never far enough to abandon a working pick: {delta} would have to          clear {}",
+        ctx.weights.swap_threshold
+    );
+}
+
+/// The middle step, sized against the counter term rather than against the other
+/// two steps: it should win a close matchup argument and lose a decisive one.
+///
+/// Both figures come off the fixture's own difficulty table and have to be
+/// re-derived if it changes. With one enemy the share is 1.0, and Reinhardt reads
+/// -0.50 into Widowmaker against Sigma's 0.00 — a 0.50 gap that 0.33 of comfort
+/// does not close. Adding Ana halves both shares without adding a term, because
+/// she is unrated against every tank here and an unrated enemy still counts in
+/// the denominator. That leaves a 0.25 gap, which 0.33 does close.
+#[test]
+fn the_middle_comfort_step_loses_to_a_decisive_counter_and_wins_a_close_one() {
+    let ds = fixture();
+    let mut ctx = tank_context(&ds);
+    ctx.overrides[REINHARDT.index()] = ComfortStep::Good.value();
+
+    let mut decisive = Draft::new();
+    decisive.add_enemy(WIDOWMAKER);
+    let recs = recommend(&ds, &decisive, &ctx).expect("scoring succeeds");
+    assert!(
+        rank_of(&recs, REINHARDT) > rank_of(&recs, SIGMA),
+        "a 0.50 counter gap outlasts 0.33 of comfort"
+    );
+
+    let mut close = decisive.clone();
+    close.add_enemy(ANA);
+    let recs = recommend(&ds, &close, &ctx).expect("scoring succeeds");
+    assert!(
+        rank_of(&recs, REINHARDT) < rank_of(&recs, SIGMA),
+        "a 0.25 gap does not"
+    );
+}
+
+/// The payload has to be the value the player set, not something plausible
+/// derived from the contribution. Dividing `personal` back out would read wrong
+/// the moment a stored profile carries a different weight.
+#[test]
+fn a_comfort_reason_carries_the_value_that_produced_it() {
+    let ds = fixture();
+    let mut ctx = tank_context(&ds);
+    ctx.overrides[REINHARDT.index()] = ComfortStep::Good.value();
+
+    let recs = recommend(&ds, &Draft::new(), &ctx).expect("scoring succeeds");
+    let rein = &recs[rank_of(&recs, REINHARDT)];
+
+    let comfort = rein
+        .reasons
+        .iter()
+        .find(|r| matches!(r.kind, ReasonKind::Comfort(_)))
+        .expect("a declared comfort produces a line");
+
+    assert_eq!(comfort.kind, ReasonKind::Comfort(55));
+    assert!(
+        (comfort.contribution - 0.33).abs() < 1e-5,
+        "0.55 * 0.60, and it came out {}",
+        comfort.contribution
+    );
 }
 
 #[test]

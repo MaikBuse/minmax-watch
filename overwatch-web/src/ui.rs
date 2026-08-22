@@ -1661,7 +1661,11 @@ fn phrasing(kind: ReasonKind, hero: HeroId, rank: Rank, ds: &Dataset) -> Phrasin
         // needs a hand-edited stored profile to reach. Written now because the
         // pool board is about to start writing them, and a level you set yourself
         // is the last place a contradiction should turn up.
-        ReasonKind::Comfort => Phrasing::Signed {
+        //
+        // The value is carried on the kind and deliberately not read here yet:
+        // naming the level a player chose ("one of your mains") is a separate
+        // change to the wording, and this slice only made the number reachable.
+        ReasonKind::Comfort(_) => Phrasing::Signed {
             positive: "one of your comfort picks".to_owned(),
             negative: "one you rated down".to_owned(),
         },
@@ -2211,7 +2215,9 @@ pub fn SessionBar(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use overwatch_core::{Archetype, DatasetParts, GameMap, GameMode, Hero, Matrix, Reason};
+    use overwatch_core::{
+        Archetype, ComfortStep, DatasetParts, GameMap, GameMode, Hero, Matrix, Reason,
+    };
 
     const REINHARDT: HeroId = HeroId(0);
     const PHARAH: HeroId = HeroId(1);
@@ -2742,7 +2748,7 @@ mod tests {
             ReasonKind::SideFit(Side::Attack),
             ReasonKind::MapFit(map),
             ReasonKind::PairsWithAlly(PHARAH),
-            ReasonKind::Comfort,
+            ReasonKind::Comfort(ComfortStep::Main.value()),
         ];
 
         let mut lines: Vec<String> = Vec::new();
@@ -2788,7 +2794,7 @@ mod tests {
             (ReasonKind::SideFit(Side::Attack), true),
             (ReasonKind::MapFit(map), true),
             (ReasonKind::PairsWithAlly(PHARAH), true),
-            (ReasonKind::Comfort, true),
+            (ReasonKind::Comfort(ComfortStep::Main.value()), true),
         ];
 
         for (kind, signed) in kinds {
@@ -3011,7 +3017,9 @@ mod tests {
     fn a_hero_you_rated_down_never_reads_as_one_of_your_comfort_picks() {
         let ds = phrasing_fixture();
 
-        let line = phrasing(ReasonKind::Comfort, REINHARDT, Rank::All, &ds).under(false);
+        // A negative is off the ladder by construction - there is no negative
+        // step - so this is the hand-edited stored profile the arm exists for.
+        let line = phrasing(ReasonKind::Comfort(-40), REINHARDT, Rank::All, &ds).under(false);
         assert_eq!(line, "one you rated down");
         assert!(!line.contains("comfort pick"));
     }

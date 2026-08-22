@@ -404,8 +404,17 @@ impl UserContext {
         }
     }
 
+    /// The declared comfort for one hero, on the canonical -100..=100 scale.
+    ///
+    /// Split out from [`Self::override_for`] because the reason line carries the
+    /// value the player set and the score carries it scaled, and multiplying the
+    /// scaled one back up would be a lossy round trip through a weight.
+    fn comfort_for(&self, hero: HeroId) -> i8 {
+        self.overrides.get(hero.index()).copied().unwrap_or(0)
+    }
+
     fn override_for(&self, hero: HeroId) -> f32 {
-        f32::from(self.overrides.get(hero.index()).copied().unwrap_or(0)) / 100.0
+        f32::from(self.comfort_for(hero)) / 100.0
     }
 }
 
@@ -438,7 +447,16 @@ pub enum ReasonKind {
     /// terms read the same numbers at every rung, so a second line implying
     /// otherwise would be a claim no source behind this supports.
     RankFit(Rank),
-    Comfort,
+    /// You said you can play this hero, carrying the value you said it with.
+    ///
+    /// The payload is the declared comfort on the canonical -100..=100 scale, not
+    /// the contribution — same precedent as [`ReasonKind::RankFit`] and
+    /// [`ReasonKind::SideFit`]. Deriving the level back out of `contribution`
+    /// would mean dividing [`Weights::personal`] out again in the view layer, on
+    /// a weight a stored profile can have changed underneath it.
+    ///
+    /// [`crate::ComfortStep::of`] names it where the ladder has a word for it.
+    Comfort(i8),
 }
 
 /// One line of the "why" panel, already weighted so the UI can sort by impact.
@@ -924,7 +942,7 @@ fn score_hero(
     let personal = ctx.override_for(hero);
     if personal != 0.0 {
         reasons.push(Reason {
-            kind: ReasonKind::Comfort,
+            kind: ReasonKind::Comfort(ctx.comfort_for(hero)),
             contribution: w.personal * personal,
             text: String::new(),
         });
