@@ -11,7 +11,8 @@
 use overwatch_core::{
     ban_recommendations, difficulty_to_value, recommend, threats, Archetype, BanBoard, BanSubject,
     ComfortStep, Dataset, DatasetParts, Defended, DefendedTeam, Draft, EnemyRoleWeights, GameMap,
-    GameMode, Hero, HeroId, Knowledge, MapId, Matrix, Rank, ReasonKind, Role, Side, UserContext,
+    GameMode, Hero, HeroId, Knowledge, MapId, Matrix, Rank, ReasonKind, Role, Side, TermKind,
+    UserContext,
 };
 
 const REINHARDT: HeroId = HeroId(0);
@@ -2462,4 +2463,291 @@ fn the_ban_lists_patch_rung_ranks_on_the_bracket_you_chose() {
         Some(0),
         "and at Bronze it is the one that is strongest at Bronze"
     );
+}
+
+// ---------------------------------------------------------------------------
+// The breakdown: every term at once, and the arithmetic adding up.
+// ---------------------------------------------------------------------------
+
+// Reinhardt is first in the roster and last in the answer, deliberately: a list
+// whose sorted order is already its roster order cannot tell `place` assigned
+// after the sort from `place` assigned before it.
+const A_REINHARDT: HeroId = HeroId(0);
+const A_WINSTON: HeroId = HeroId(1);
+const A_PHARAH: HeroId = HeroId(2);
+const A_WIDOWMAKER: HeroId = HeroId(3);
+const A_LUCIO: HeroId = HeroId(4);
+
+/// The one fixture where **all eight terms are live at once**.
+///
+/// Every other fixture in this file deliberately zeroes everything but the term
+/// it is about, which is right for testing a term and useless for testing a sum:
+/// a total that drops a term nothing populated is still correct. Winston is the
+/// hero carrying all eight; Reinhardt is beside him carrying most but not all,
+/// which is what makes the zero rows visible.
+///
+/// A new fixture rather than an extension of an existing one. `sparse_fixture`,
+/// `shape_fixture` and `rank_fixture` each carry goldens keyed to their exact
+/// contents, so adding a hero or an axis to any of them moves numbers in tests
+/// that are about something else entirely.
+fn every_term_fixture() -> Dataset {
+    let heroes = vec![
+        hero("reinhardt", "Reinhardt", Role::Tank),
+        hero("winston", "Winston", Role::Tank),
+        hero("pharah", "Pharah", Role::Damage),
+        hero("widowmaker", "Widowmaker", Role::Damage),
+        hero("lucio", "Lúcio", Role::Support),
+    ];
+    let n = heroes.len();
+
+    // Hybrid, because a side term needs a map that has sides at all.
+    let maps = vec![GameMap {
+        key: "kings-row".to_owned(),
+        name: "King's Row".to_owned(),
+        mode: GameMode::Hybrid,
+        aliases: Vec::new(),
+    }];
+
+    // Winston is rated against one of the two enemies and not the other, so the
+    // counter coverage on his row is a real fraction rather than a full house.
+    let mut matchups = Matrix::unrated(n);
+    matchups.set(A_WINSTON, A_PHARAH, 60).expect("in range");
+    matchups.set(A_PHARAH, A_WINSTON, -60).expect("in range");
+    matchups.set(A_REINHARDT, A_PHARAH, -40).expect("in range");
+    matchups.set(A_PHARAH, A_REINHARDT, 40).expect("in range");
+
+    let mut synergy = Matrix::unrated(n);
+    synergy.set(A_WINSTON, A_LUCIO, 50).expect("in range");
+    synergy.set(A_LUCIO, A_WINSTON, 50).expect("in range");
+
+    let mut map_affinity = vec![0i8; maps.len() * n];
+    map_affinity[A_WINSTON.index()] = 40;
+    // Reinhardt's is left at zero on purpose: it is the row that proves a term
+    // can be in the ledger and absent from the panel at the same time.
+
+    let mut side_lean = vec![0i8; n];
+    side_lean[A_WINSTON.index()] = 50; // attack
+
+    let mut base_strength = vec![0i8; n];
+    base_strength[A_WINSTON.index()] = 40;
+    base_strength[A_REINHARDT.index()] = -20;
+
+    let mut rank_shift = vec![[0i8; Rank::DIVISIONS.len()]; n];
+    rank_shift[A_WINSTON.index()] = [30; Rank::DIVISIONS.len()];
+    rank_shift[A_REINHARDT.index()] = [-10; Rank::DIVISIONS.len()];
+
+    Dataset::new(DatasetParts {
+        heroes,
+        maps,
+        matchups,
+        synergy,
+        map_affinity,
+        base_strength,
+        rank_shift,
+        prevalence: vec![[0; Rank::CHOICES.len()]; n],
+        win_rate: vec![None; n],
+        side_lean,
+        side_note: vec![String::new(); n],
+        // Both enemies poke, so their shape has a leader well clear of
+        // MIXED_MARGIN and the term has an axis to name.
+        shape: vec![
+            [0, 0, 95], // reinhardt: brawl, which walks into poke
+            [95, 0, 0], // winston: dive, which answers it
+            [0, 95, 0], // pharah: poke
+            [0, 95, 0], // widowmaker: poke
+            [0, 0, 0],  // lucio: nobody has read this one
+        ],
+        shape_note: vec![String::new(); n],
+        reasons: vec![String::new(); n * n],
+        disputed: vec![false; n * n],
+        generated: "fixture".to_owned(),
+        patch: "fixture".to_owned(),
+    })
+    .expect("fixture is internally consistent")
+}
+
+/// A draft and a context that light every term up at once.
+fn every_term_draft(ds: &Dataset) -> (Draft, UserContext) {
+    let mut draft = Draft::new();
+    draft.map = Some(KINGS_ROW);
+    draft.side = Some(Side::Attack);
+    draft.add_enemy(A_PHARAH);
+    draft.add_enemy(A_WIDOWMAKER);
+    draft.add_ally(A_LUCIO);
+
+    let mut ctx = ranked_context(ds, Rank::Master);
+    ctx.overrides[A_WINSTON.index()] = ComfortStep::Good.value();
+    ctx.overrides[A_REINHARDT.index()] = ComfortStep::Ok.value();
+
+    (draft, ctx)
+}
+
+/// The headline. Every term the panel can show is in the ledger, and the ledger
+/// is the number on the row — not close to it.
+///
+/// `assert_eq!` on `f32` and not a tolerance, deliberately. This is exact by
+/// construction: `recommend` sets `score` to `breakdown.total()` and nothing
+/// else computes it, and `total()` adds the eight in declaration order the way
+/// the hand-written chain it replaced did. The test exists to keep it that way —
+/// a tolerance here would pass a re-associated sum, which is the one thing worth
+/// catching.
+#[test]
+fn the_terms_shown_add_up_to_the_score() {
+    let ds = every_term_fixture();
+    let (draft, ctx) = every_term_draft(&ds);
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    assert!(!recs.is_empty());
+
+    for rec in &recs {
+        assert_eq!(
+            rec.breakdown.total(),
+            rec.score,
+            "the ledger for {:?} does not come to its own score",
+            rec.hero
+        );
+    }
+
+    // And the fixture is doing its job: on Winston, not one of the eight is
+    // silent. Without this the assertion above would hold on an empty draft.
+    let winston = &recs[rank_of(&recs, A_WINSTON)].breakdown;
+    for kind in TermKind::ALL {
+        assert!(
+            winston.term(kind).contribution() != 0.0,
+            "{kind:?} came to nothing, so this fixture no longer tests a full sum"
+        );
+    }
+}
+
+/// The whole reason the ledger exists beside the reasons rather than inside
+/// them. Reinhardt has no affinity for this map, and a zero term is a real
+/// reading with no sentence to it — so it belongs in the arithmetic and not in
+/// the panel.
+#[test]
+fn a_term_that_came_to_nothing_is_in_the_breakdown_but_never_in_the_reasons() {
+    let ds = every_term_fixture();
+    let (draft, ctx) = every_term_draft(&ds);
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    let rein = &recs[rank_of(&recs, A_REINHARDT)];
+
+    assert_eq!(rein.breakdown.term(TermKind::Map).value, 0.0);
+    assert!(
+        !rein
+            .reasons
+            .iter()
+            .any(|reason| matches!(reason.kind, ReasonKind::MapFit(_))),
+        "a zero map affinity is not a reason to say the hero performs well there"
+    );
+    // Present in the ledger all the same, in its own slot rather than missing.
+    assert_eq!(rein.breakdown.term(TermKind::Map).kind, TermKind::Map);
+}
+
+/// The term that moves a score while saying nothing at all, which no test could
+/// see before there was a ledger to look in.
+///
+/// `a_mixed_enemy_team_ranks_every_shape_the_same` puts one pure axis on each of
+/// three enemies, so the triangle cancels to exactly zero and the test passes
+/// without ever distinguishing "no term" from "a term that came to zero". Two
+/// dive and two poke is the case it cannot reach: the axes tie, so `leading()`
+/// is `None` and there is no archetype for `CountersShape` to name — and yet the
+/// candidate's own axes still have something to say about the half of the team
+/// they answer.
+#[test]
+fn the_shape_a_mixed_enemy_team_produces_still_counts_and_still_has_no_reason_line() {
+    let ds = shape_fixture();
+    let mut draft = Draft::new();
+    draft.add_enemy(T_WINSTON); // dive
+    draft.add_enemy(T_TRACER); // dive
+    draft.add_enemy(T_SIGMA); // poke
+    draft.add_enemy(T_WIDOWMAKER); // poke
+
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    let rec = &recs[rank_of(&recs, T_WINSTON)];
+
+    assert!(
+        rec.breakdown.shape.is_mixed(),
+        "the fixture no longer produces a mixed read, so this tests nothing"
+    );
+    assert!(
+        rec.breakdown.term(TermKind::Shape).value != 0.0,
+        "the term cancelled, which is the case the older test already covers"
+    );
+    assert!(
+        !rec.reasons.iter().any(|reason| matches!(
+            reason.kind,
+            ReasonKind::CountersShape(_) | ReasonKind::LosesToShape(_)
+        )),
+        "a mixed team has no axis to name, so there is no sentence to be had"
+    );
+}
+
+/// What Slice 21's coverage line is built on: the counter mean divides by every
+/// enemy, so how many of them actually fed it is not recoverable from the number.
+#[test]
+fn the_breakdown_counts_how_many_enemies_actually_fed_the_counter_term() {
+    let ds = sparse_fixture();
+    let mut draft = Draft::new();
+    draft.add_enemy(C_PHARAH); // rated against both tanks
+    draft.add_enemy(C_MIZUKI); // nothing rates anyone against this one
+
+    let ctx = UserContext::new(Role::Tank, ds.hero_count());
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    let dva = &recs[rank_of(&recs, C_DVA)].breakdown;
+
+    assert_eq!(dva.counter.entered, 2, "both enemies are on the board");
+    assert_eq!(dva.counter.rated, 1, "only one of them has been rated");
+    assert_eq!(dva.synergy.entered, 0, "nobody has picked an ally");
+}
+
+/// The cap moved to the view, so the scorer hands over everything it worked out
+/// and the `why` panel can show the rest. The sort stays here, because that is a
+/// claim about the terms rather than about a column.
+#[test]
+fn every_reason_survives_the_sort_rather_than_the_first_three() {
+    let ds = every_term_fixture();
+    let (draft, ctx) = every_term_draft(&ds);
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    let winston = &recs[rank_of(&recs, A_WINSTON)];
+
+    assert!(
+        winston.reasons.len() > 3,
+        "got {} reasons, so the truncation is still somewhere",
+        winston.reasons.len()
+    );
+    let mut previous = f32::INFINITY;
+    for reason in &winston.reasons {
+        let size = reason.contribution.abs();
+        assert!(size <= previous, "reasons are out of order at {size}");
+        previous = size;
+    }
+}
+
+/// Two screens render this list and both used to number it by their own position
+/// in their own copy of it. The number is a property of the answer now.
+#[test]
+fn the_place_on_each_recommendation_is_the_position_the_list_sorted_it_into() {
+    let ds = every_term_fixture();
+    let (draft, ctx) = every_term_draft(&ds);
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+    assert!(recs.len() > 1, "one row cannot be out of order");
+
+    // The fixture puts the winner second in the roster, so this is the assertion
+    // that separates "numbered after the sort" from "numbered before it". Without
+    // it the test passes on any list whose roster order is already its answer.
+    assert_ne!(
+        recs[0].hero, A_REINHARDT,
+        "the answer is in roster order, so this test cannot see the bug it is for"
+    );
+
+    for (index, rec) in recs.iter().enumerate() {
+        assert_eq!(rec.place, index, "{:?} is numbered wrong", rec.hero);
+    }
+    // And the order it is numbering is the sorted one.
+    for pair in recs.windows(2) {
+        assert!(pair[0].score >= pair[1].score, "the list is not sorted");
+    }
 }

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::archetype::{shape_of, Archetype, Shape};
+use crate::breakdown::{Breakdown, Coverage, Term, TermKind};
 use crate::dataset::Dataset;
 use crate::draft::Draft;
 use crate::error::CoreError;
@@ -479,6 +480,16 @@ pub struct Recommendation {
     /// True only in swap mode, and only when the gain clears `swap_threshold`.
     pub worth_swapping: bool,
     pub is_locked: bool,
+    /// Every term behind `score`, including the ones that came to nothing.
+    ///
+    /// `reasons` is the sorted, worded, incomplete half; this is the ledger. See
+    /// [`crate::breakdown`] for why they are two things.
+    pub breakdown: Breakdown,
+    /// 0-based position in this list, assigned after the sort.
+    ///
+    /// `place` rather than `rank`, because [`Rank`] is the rung of the ladder and
+    /// this screen shows both at once.
+    pub place: usize,
     pub reasons: Vec<Reason>,
 }
 
@@ -676,8 +687,6 @@ pub struct BanBoard {
     pub candidates: Vec<BanCandidate>,
 }
 
-const MAX_REASONS: usize = 3;
-
 /// Averaged matchup value for `hero` against `enemy`, on -1.0..=1.0, or `None`
 /// when no source has rated the pair in either direction.
 ///
@@ -746,7 +755,7 @@ fn score_hero(
     ctx: &UserContext,
     enemy_shape: &Shape,
     hero: HeroId,
-) -> (f32, Vec<Reason>) {
+) -> (Breakdown, Vec<Reason>) {
     let w = &ctx.weights;
     let mut reasons: Vec<Reason> = Vec::new();
 
@@ -962,26 +971,84 @@ fn score_hero(
         });
     }
 
-    let score = base_contribution
-        + rank_contribution
-        + w.counter * counter_total
-        + w.synergy * synergy_total
-        + w.map * map_term
-        + w.side * side
-        + w.shape * shape
-        + w.personal * personal;
+    // The ledger, and the only place the score is assembled. There used to be a
+    // hand-written chain of eight `+` here, which meant a new term had to be
+    // added in two places and was one forgotten line away from being scored but
+    // never shown — or shown but never scored.
+    //
+    // Every row is written whether or not it came to anything. A zero term is a
+    // real reading with no sentence to it, and the whole reason this sits beside
+    // `reasons` rather than inside it is that the reason list is forbidden from
+    // saying so.
+    let breakdown = Breakdown {
+        terms: [
+            Term {
+                kind: TermKind::Base,
+                weight: w.base,
+                value: base,
+            },
+            Term {
+                kind: TermKind::Rank,
+                weight: w.rank,
+                value: rank_shift,
+            },
+            Term {
+                kind: TermKind::Counter,
+                weight: w.counter,
+                value: counter_total,
+            },
+            Term {
+                kind: TermKind::Synergy,
+                weight: w.synergy,
+                value: synergy_total,
+            },
+            Term {
+                kind: TermKind::Map,
+                weight: w.map,
+                value: map_term,
+            },
+            Term {
+                kind: TermKind::Side,
+                weight: w.side,
+                value: side,
+            },
+            Term {
+                kind: TermKind::Shape,
+                weight: w.shape,
+                value: shape,
+            },
+            Term {
+                kind: TermKind::Personal,
+                weight: w.personal,
+                value: personal,
+            },
+        ],
+        // Both counts fall out of work already done above: the rated lists are
+        // built to compute the means, and the boards are right there.
+        counter: Coverage {
+            rated: rated.len(),
+            entered: draft.enemies.len(),
+        },
+        synergy: Coverage {
+            rated: rated_allies.len(),
+            entered: draft.allies.len(),
+        },
+        shape: *enemy_shape,
+    };
 
     // Biggest movers first, in either direction — being told what is about to
     // go wrong matters as much as being told what works.
+    //
+    // Not truncated here. How many lines fit a 62-character column is a question
+    // about a column, and the `why` panel wants every one of them.
     reasons.sort_by(|a, b| {
         b.contribution
             .abs()
             .partial_cmp(&a.contribution.abs())
             .unwrap_or(core::cmp::Ordering::Equal)
     });
-    reasons.truncate(MAX_REASONS);
 
-    (score, reasons)
+    (breakdown, reasons)
 }
 
 /// Ranks every eligible hero for the current draft, best first.
@@ -1006,7 +1073,7 @@ pub fn recommend(
 
     let locked_score = draft
         .locked
-        .map(|hero| score_hero(ds, draft, ctx, &enemy_shape, hero).0);
+        .map(|hero| score_hero(ds, draft, ctx, &enemy_shape, hero).0.total());
 
     let mut out: Vec<Recommendation> = ds
         .heroes_in_role(ctx.role)
@@ -1014,7 +1081,8 @@ pub fn recommend(
         // may field the same hero, and mirroring is often the right answer.
         .filter(|hero| !draft.allies.contains(hero))
         .map(|hero| {
-            let (score, reasons) = score_hero(ds, draft, ctx, &enemy_shape, hero);
+            let (breakdown, reasons) = score_hero(ds, draft, ctx, &enemy_shape, hero);
+            let score = breakdown.total();
             let delta = locked_score.map(|locked| score - locked);
             Recommendation {
                 hero,
@@ -1023,6 +1091,9 @@ pub fn recommend(
                 worth_swapping: draft.locked.is_some_and(|l| l != hero)
                     && delta.is_some_and(|d| d > ctx.weights.swap_threshold),
                 is_locked: draft.locked == Some(hero),
+                breakdown,
+                // Filled in below, once there is an order to be in.
+                place: 0,
                 reasons,
             }
         })
@@ -1033,6 +1104,14 @@ pub fn recommend(
             .partial_cmp(&a.score)
             .unwrap_or(core::cmp::Ordering::Equal)
     });
+
+    // After the sort and nowhere else. Two screens render this list and both used
+    // to number it by their own position in their own copy, so nothing said they
+    // agreed; now the number is a property of the answer rather than of the
+    // rendering of it.
+    for (place, rec) in out.iter_mut().enumerate() {
+        rec.place = place;
+    }
 
     Ok(out)
 }

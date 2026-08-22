@@ -1483,6 +1483,16 @@ pub fn ThreatPanel(
     }
 }
 
+/// How many reason lines a row shows.
+///
+/// Here rather than in the scorer, which is where it used to live. How many
+/// sentences fit beside a portrait in a 62-character column is a question about
+/// this column, and core answering it meant the `why` panel could not have the
+/// rest of them. The scorer still sorts by impact — that ordering is a claim
+/// about the terms, and it is what makes taking the front of the list the right
+/// three to take.
+const MAX_REASONS: usize = 3;
+
 /// A recommendation with every name and number already resolved.
 ///
 /// Components stay purely presentational and comparable, which is what lets
@@ -1496,6 +1506,14 @@ pub struct RecRow {
     pub score: String,
     pub is_locked: bool,
     pub worth_swapping: bool,
+    /// Where the scorer sorted this hero, 0-based.
+    ///
+    /// Carried rather than taken from the loop index, because this list is
+    /// rendered twice — the pick column and the answer strip — and both are
+    /// components that take a `Vec<RecRow>` from outside. Numbering by position
+    /// in your own copy is only right for as long as the two copies agree, and
+    /// nothing said they did.
+    pub place: usize,
     /// How well you have said you play this hero, on the canonical -100..=100
     /// scale. Zero for a hero you have said nothing about.
     ///
@@ -1831,6 +1849,7 @@ impl RecRow {
         let reasons = rec
             .reasons
             .iter()
+            .take(MAX_REASONS)
             .map(|reason| {
                 // Read before the words are chosen, because half of them depend
                 // on it: the sign is a CSS pseudo-element and the wording it
@@ -1892,6 +1911,7 @@ impl RecRow {
             score,
             is_locked: rec.is_locked,
             worth_swapping: rec.worth_swapping,
+            place: rec.place,
             comfort,
             reasons,
         }
@@ -1942,7 +1962,7 @@ pub fn Recommendations(
             if items.is_empty() {
                 p { class: "empty", "every hero in this role is already on your team" }
             }
-            for (index, rec) in items.iter().enumerate() {
+            for rec in items.iter() {
                 div {
                     key: "{rec.hero.0}",
                     class: format!(
@@ -1955,7 +1975,7 @@ pub fn Recommendations(
                         let hero = rec.hero;
                         move |_| on_lock.call(hero)
                     },
-                    span { class: "rank", "{index + 1}" }
+                    span { class: "rank", "{rec.place + 1}" }
                     // The portrait spans the name and its reasons, so a row
                     // reads as one block rather than two stacked lines.
                     span { class: "rec-portrait", style: art(&rec.icon) }
@@ -2072,7 +2092,7 @@ pub fn AnswerStrip(
                 if items.is_empty() {
                     p { class: "strip-empty", "every hero in this role is already on your team" }
                 }
-                for (index, rec) in items.iter().take(3).enumerate() {
+                for rec in items.iter().take(3) {
                     button {
                         key: "{rec.hero.0}",
                         class: format!(
@@ -2084,7 +2104,7 @@ pub fn AnswerStrip(
                         // The rank is the reading order here rather than a
                         // column of its own — there is no room for one, and
                         // three items left to right is already an order.
-                        aria_label: "{index + 1}. {rec.name}, {rec.score}",
+                        aria_label: "{rec.place + 1}. {rec.name}, {rec.score}",
                         onclick: {
                             let hero = rec.hero;
                             move |evt: Event<MouseData>| {
@@ -2353,7 +2373,7 @@ pub fn SessionBar(
 mod tests {
     use super::*;
     use overwatch_core::{
-        Archetype, ComfortStep, DatasetParts, GameMap, GameMode, Hero, Matrix, Reason,
+        Archetype, Breakdown, ComfortStep, DatasetParts, GameMap, GameMode, Hero, Matrix, Reason,
     };
 
     const REINHARDT: HeroId = HeroId(0);
@@ -2642,13 +2662,10 @@ mod tests {
     fn only_a_counter_line_can_be_marked_as_disputed() {
         let ds = disputed_fixture();
 
-        let rec = Recommendation {
-            hero: REINHARDT,
-            score: -0.3,
-            delta_vs_locked: None,
-            worth_swapping: false,
-            is_locked: false,
-            reasons: vec![
+        let rec = scored(
+            REINHARDT,
+            -0.3,
+            vec![
                 Reason {
                     kind: ReasonKind::LosesToEnemy(PHARAH),
                     contribution: -0.3,
@@ -2660,7 +2677,7 @@ mod tests {
                     text: String::new(),
                 },
             ],
-        };
+        );
 
         let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
         assert!(row.reasons[0].disputed, "the counter line reads the matrix");
@@ -2769,13 +2786,10 @@ mod tests {
     fn a_scraped_sentence_is_marked_as_quoted_and_a_generated_line_is_not() {
         let ds = phrasing_fixture();
 
-        let rec = Recommendation {
-            hero: REINHARDT,
-            score: 0.2,
-            delta_vs_locked: None,
-            worth_swapping: false,
-            is_locked: false,
-            reasons: vec![
+        let rec = scored(
+            REINHARDT,
+            0.2,
+            vec![
                 Reason {
                     kind: ReasonKind::LosesToEnemy(PHARAH),
                     contribution: -0.3,
@@ -2787,7 +2801,7 @@ mod tests {
                     text: String::new(),
                 },
             ],
-        };
+        );
 
         let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
         assert!(row.reasons[0].cited, "the site wrote that sentence");
@@ -2813,18 +2827,15 @@ mod tests {
     fn a_hand_written_note_is_not_attributed_to_the_site_that_did_not_write_it() {
         let ds = phrasing_fixture();
 
-        let rec = Recommendation {
-            hero: REINHARDT,
-            score: 0.2,
-            delta_vs_locked: None,
-            worth_swapping: false,
-            is_locked: false,
-            reasons: vec![Reason {
+        let rec = scored(
+            REINHARDT,
+            0.2,
+            vec![Reason {
                 kind: ReasonKind::SideFit(Side::Attack),
                 contribution: 0.1,
                 text: "Wall denies a choke the attackers must clear.".to_owned(),
             }],
-        };
+        );
 
         let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
         assert_eq!(
@@ -2842,18 +2853,15 @@ mod tests {
     /// and the sign, and spelling `Recommendation` out three times would bury
     /// that.
     fn one_reason(hero: HeroId, kind: ReasonKind, contribution: f32, ds: &Dataset) -> String {
-        let rec = Recommendation {
+        let rec = scored(
             hero,
-            score: contribution,
-            delta_vs_locked: None,
-            worth_swapping: false,
-            is_locked: false,
-            reasons: vec![Reason {
+            contribution,
+            vec![Reason {
                 kind,
                 contribution,
                 text: String::new(),
             }],
-        };
+        );
         RecRow::build(&rec, ds, false, 0, Rank::All)
             .reasons
             .remove(0)
@@ -3321,7 +3329,7 @@ mod tests {
     #[test]
     fn a_comfort_value_the_ladder_cannot_name_still_marks_the_row_as_yours() {
         let ds = phrasing_fixture();
-        let rec = comfort_rec();
+        let rec = scored(REINHARDT, 0.4, Vec::new());
 
         assert!(RecRow::build(&rec, &ds, false, 21, Rank::All).claimed());
         assert!(!RecRow::build(&rec, &ds, false, 0, Rank::All).claimed());
@@ -3362,7 +3370,7 @@ mod tests {
         let ds = phrasing_fixture();
 
         let row = RecRow::build(
-            &comfort_rec(),
+            &scored(REINHARDT, 0.4, Vec::new()),
             &ds,
             false,
             ComfortStep::Good.value(),
@@ -3372,16 +3380,25 @@ mod tests {
         assert!(row.claimed());
     }
 
-    /// A row with no reasons on it, because the two tests above are about the
-    /// header and the comfort value reaches it without passing through the panel.
-    fn comfort_rec() -> Recommendation {
+    /// One scored recommendation, for the tests that are about how a row is
+    /// rendered rather than about how it was ranked.
+    ///
+    /// Six of these differed only in the hero, the number and the reasons, and
+    /// spelling out the four fields that never varied buried the three that did.
+    /// It is also what made `breakdown` and `place` one edit instead of six.
+    ///
+    /// `Breakdown::default()` because none of these rows is about the arithmetic:
+    /// the ledger is exercised where it is built, in the scorer's own tests.
+    fn scored(hero: HeroId, score: f32, reasons: Vec<Reason>) -> Recommendation {
         Recommendation {
-            hero: REINHARDT,
-            score: 0.4,
+            hero,
+            score,
             delta_vs_locked: None,
             worth_swapping: false,
             is_locked: false,
-            reasons: Vec::new(),
+            breakdown: Breakdown::default(),
+            place: 0,
+            reasons,
         }
     }
 
@@ -3391,18 +3408,15 @@ mod tests {
     #[test]
     fn a_negative_term_reaches_the_row_as_the_wording_its_sign_allows() {
         let ds = phrasing_fixture();
-        let rec = Recommendation {
-            hero: PHARAH,
-            score: -0.2,
-            delta_vs_locked: None,
-            worth_swapping: false,
-            is_locked: false,
-            reasons: vec![Reason {
+        let rec = scored(
+            PHARAH,
+            -0.2,
+            vec![Reason {
                 kind: ReasonKind::BaseStrength,
                 contribution: -0.2,
                 text: String::new(),
             }],
-        };
+        );
 
         let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
         assert!(!row.reasons[0].positive, "the sign is what draws the minus");

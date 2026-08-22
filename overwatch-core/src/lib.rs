@@ -11,6 +11,7 @@
 #![forbid(unsafe_code)]
 
 pub mod archetype;
+pub mod breakdown;
 pub mod comfort;
 pub mod dataset;
 pub mod draft;
@@ -27,6 +28,7 @@ pub mod search;
 pub mod session;
 
 pub use archetype::{shape_of, Archetype, Shape};
+pub use breakdown::{Breakdown, Coverage, Term, TermKind};
 pub use comfort::ComfortStep;
 pub use dataset::{Dataset, DatasetParts};
 pub use draft::{enemies_in_role, fit_to_format, Draft};
