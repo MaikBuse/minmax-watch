@@ -772,7 +772,8 @@ fn an_unrated_enemy_produces_no_reasoning_and_no_threat() {
     let rein = recs.iter().find(|r| r.hero == C_REINHARDT).expect("ranked");
 
     // The old arithmetic gave this a term of exactly 0.0, which classified as
-    // `BeatsEnemy` and rendered as "strong into Mizuki" on no evidence at all.
+    // `BeatsEnemy` and rendered as "rated ahead of Mizuki" — a line naming a
+    // reading, on a pair no source has rated at all.
     assert!(
         !rein
             .reasons
@@ -802,7 +803,8 @@ fn a_rated_even_matchup_stays_in_the_mean_but_claims_nothing() {
         "the even matchup dropped out of the mean"
     );
     // It says nothing: a 0.0 is not an argument for the pick, and rendering it
-    // as one puts "strong into D.Va" under D.Va's own portrait.
+    // as one puts "rated ahead of D.Va" under D.Va's own portrait, over a
+    // reading that says neither hero is.
     assert!(
         !dva.reasons
             .iter()

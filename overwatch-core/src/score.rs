@@ -728,9 +728,10 @@ fn score_hero(
     // Enemies this candidate has no reading against contribute **nothing to the
     // numerator but their weight to the denominator**, and the difference between
     // that and dropping them from both is the whole point. An unrated pair still
-    // says nothing about this hero — no term, and no "strong into X" reason for a
-    // matchup nobody has an opinion on. What it must not do is make the readings
-    // that *do* exist count for more.
+    // says nothing about this hero — no term, and no "rated ahead of X" reason
+    // for a matchup nobody has rated. That line names its own evidence, so
+    // producing one here would not be an overstatement, it would be false. What
+    // this must not do is make the readings that *do* exist count for more.
     //
     // Normalising over the rated enemies only, as this did, is unbiased for the
     // mean and wrong for the ranking. Measured over 300 random five-enemy drafts:
@@ -762,10 +763,15 @@ fn score_hero(
             let share = enemy_weight(ds, ctx, *enemy) / total_weight;
             counter_total += share * term;
 
-            // A rated dead even is a real reading, but "strong into X" is not
-            // what it says — and neither is the `Some(0.0)` a mirror match
-            // returns. Both stay in the mean and out of the panel, which is the
-            // same rule every term below follows.
+            // A rated dead even is a real reading, but neither "rated ahead of
+            // X" nor "rated behind X" is what it says — and neither is the
+            // `Some(0.0)` a mirror match returns. Both stay in the mean and out
+            // of the panel, which is the same rule every term below follows.
+            //
+            // The gate got stricter when those lines stopped saying "strong
+            // into" and started naming the reading: a claim about the size of an
+            // edge is merely unsupported on a dead even, where a claim that the
+            // sources put this hero ahead is wrong.
             if *term != 0.0 {
                 let contribution = w.counter * share * term;
                 let kind = if *term > 0.0 {

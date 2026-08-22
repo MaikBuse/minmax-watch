@@ -1567,11 +1567,26 @@ fn phrasing(kind: ReasonKind, hero: HeroId, rank: Rank, ds: &Dataset) -> Phrasin
         // nothing except this comment. A minus can still reach them, but only
         // through a negative `counter` weight in a stored profile — weights load
         // unclamped — and no wording survives a reader who has inverted the term.
+        //
+        // These two used to read `strong into X` and `struggles against X`, and
+        // the verb was wrong on every row it ever appeared on. A template is
+        // rendered only where no source published a sentence, and published
+        // coverage tracks magnitude almost exactly: over the committed matrix,
+        // folded the way `matchup_term` folds a pair, the 1,416 rows that reach a
+        // template run |term| p50 17, p90 25, **max 47**, while every one of the
+        // 530 rows at 50 or more carries a sentence that replaces the template.
+        // So the app claimed strength on precisely the set of matchups that have
+        // none of it, and structurally could not have said it anywhere else.
+        //
+        // `rated` is the verb the app can support: it has a number from a source,
+        // not an opinion about the fight. It is also true at any magnitude, which
+        // is why this is a rewording rather than a threshold — nothing here has
+        // to stay under 47 for the line to keep being honest.
         ReasonKind::BeatsEnemy(enemy) => {
-            Phrasing::Symmetric(format!("strong into {}", hero_name(ds, enemy)))
+            Phrasing::Symmetric(format!("rated ahead of {}", hero_name(ds, enemy)))
         }
         ReasonKind::LosesToEnemy(enemy) => {
-            Phrasing::Symmetric(format!("struggles against {}", hero_name(ds, enemy)))
+            Phrasing::Symmetric(format!("rated behind {}", hero_name(ds, enemy)))
         }
         // Their shape, not this hero's: the portrait beside the line already says
         // what the candidate is.
@@ -2800,6 +2815,63 @@ mod tests {
         }
     }
 
+    /// The counter templates are rendered *only* where no source published a
+    /// sentence, and that is overwhelmingly where the edge is smallest: over the
+    /// committed matrix the 1,416 rows reaching a template top out at |term| 47,
+    /// while all 530 rows at 50 or more carry prose that replaces it. So the app
+    /// called a matchup strong on exactly the set that has no strength in it.
+    ///
+    /// The absent words are asserted rather than only the new string, because
+    /// they are what the slice is about: a future rewording should have to meet
+    /// this argument again rather than slip past a string comparison.
+    #[test]
+    fn a_slim_matchup_edge_is_not_described_as_strong() {
+        let ds = phrasing_fixture();
+
+        for kind in [
+            ReasonKind::BeatsEnemy(PHARAH),
+            ReasonKind::LosesToEnemy(PHARAH),
+        ] {
+            let line = phrasing(kind, REINHARDT, Rank::All, &ds).under(true);
+            assert!(
+                line.contains("Pharah"),
+                "{kind:?} has to name the enemy: {line:?}"
+            );
+            assert!(
+                !line.contains("strong"),
+                "{kind:?} claims a size the reading behind it never reaches: {line:?}"
+            );
+            assert!(
+                !line.contains("struggles"),
+                "{kind:?} claims a size the reading behind it never reaches: {line:?}"
+            );
+            assert!(
+                line.starts_with("rated "),
+                "the app has a number from a source, and the verb should say so: {line:?}"
+            );
+        }
+    }
+
+    /// Dropping the claim must not drop the direction. The number beside the row
+    /// is the candidate's whole score rather than this pair's, so the line is the
+    /// only thing on screen saying which way one matchup goes.
+    #[test]
+    fn a_matchup_with_no_published_note_still_says_which_way_it_goes() {
+        let ds = phrasing_fixture();
+
+        let ahead = one_reason(REINHARDT, ReasonKind::BeatsEnemy(PHARAH), 0.2, &ds);
+        let behind = one_reason(REINHARDT, ReasonKind::LosesToEnemy(PHARAH), -0.2, &ds);
+
+        assert_eq!(ahead, "rated ahead of Pharah");
+        assert_eq!(behind, "rated behind Pharah");
+        assert_ne!(
+            ahead, behind,
+            "the two kinds have to read differently, or the row says nothing at all"
+        );
+    }
+
+    /// The reported bug. Twenty-two of the fifty-three heroes have a negative
+    /// base term, and every one of them was described as strong.
     /// The reported bug. Twenty-two of the fifty-three heroes have a negative
     /// base term, and every one of them was described as strong.
     #[test]
