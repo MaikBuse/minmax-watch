@@ -6,8 +6,8 @@
 
 use dioxus::prelude::*;
 use overwatch_core::{
-    ComfortStep, Coverage, Dataset, Format, HeroId, MapId, Queue, Rank, ReasonKind, Recommendation,
-    Role, Side, TeamSize, Threat,
+    ComfortStep, Coverage, Dataset, Format, HeroId, MapId, Queue, Rank, Reason, ReasonKind,
+    Recommendation, Role, Side, TeamSize, TermKind, Threat,
 };
 
 /// A reset that asks first, for the ones that throw away configuration rather
@@ -1609,6 +1609,187 @@ pub struct ReasonLine {
     pub cited: bool,
 }
 
+impl ReasonLine {
+    /// Resolves one reason into the words and the markers it will show.
+    ///
+    /// Extracted so the pick row and the `why` panel cannot disagree about a
+    /// sentence — and, more sharply, about whose sentence it is. The two markers
+    /// are resolved from the reason's *kind*, so a panel that assembled its own
+    /// lines would be one forgotten `matches!` away from printing a
+    /// counterpickgg sentence with no attribution on it, on the same screen as
+    /// the legend explaining what the attribution means.
+    pub fn build(reason: &Reason, hero: HeroId, rank: Rank, ds: &Dataset) -> Self {
+        // Read before the words are chosen, because half of them depend on it:
+        // the sign is a CSS pseudo-element and the wording it prefixes has to be
+        // the one it does not contradict.
+        let positive = reason.contribution >= 0.0;
+        let text = if reason.text.is_empty() {
+            // Only ~40% of matchups carry a scraped sentence; the rest get
+            // phrasing generated from the reason kind, because a bare number
+            // explains nothing.
+            let head = phrasing(reason.kind, hero, rank, ds).under(positive);
+            match hand_written_note(reason.kind, hero, ds) {
+                // The head has to survive rather than be replaced, and the shape
+                // kinds are why: the head names *their* leading axis while the
+                // note is about *this* kit. "answers their dive" alone says what
+                // the portrait already said, and the note alone answers a
+                // question nobody asked.
+                Some(note) => format!("{head} \u{2014} {note}"),
+                None => head,
+            }
+        } else {
+            reason.text.clone()
+        };
+        // Only the counter terms read the matchup matrix, so only they can be in
+        // dispute. Asked of the pair rather than of the row the scorer happened
+        // to average, which is what `sources_disagree` is for.
+        let disputed = match reason.kind {
+            ReasonKind::BeatsEnemy(enemy) | ReasonKind::LosesToEnemy(enemy) => {
+                ds.sources_disagree(hero, enemy)
+            }
+            _ => false,
+        };
+        // Gated on the *kind* and not merely on the text being there.
+        // `!text.is_empty()` alone answers correctly today and becomes a false
+        // attribution the moment a term other than the counter ones carries
+        // prose: the notes in `side.toml` and `archetype.toml` are this
+        // repository's own words, and marking them `counterpickgg` would credit
+        // a site that never saw them.
+        let cited = matches!(
+            reason.kind,
+            ReasonKind::BeatsEnemy(_) | ReasonKind::LosesToEnemy(_)
+        ) && !reason.text.is_empty();
+
+        Self {
+            positive,
+            text,
+            disputed,
+            cited,
+        }
+    }
+}
+
+/// One term of the ledger, resolved to what it will show.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhyTerm {
+    pub label: &'static str,
+    /// Already signed, because the sign is what carries the direction and the
+    /// colour only reinforces it.
+    pub value: String,
+    pub positive: bool,
+    /// A dead flat `+0`, which is neither. Takes no tint at all — the rule
+    /// `ThreatRow` established: "+0" is not an argument in either direction.
+    pub even: bool,
+}
+
+/// The whole arithmetic behind one row, and the admissions the row has no space
+/// for.
+///
+/// The pick row shows three sentences chosen by impact, and by deliberate rule
+/// they can never add up: a zero term produces none, and the shape term against
+/// an enemy board that commits to nothing moves the score with no archetype for
+/// a sentence to name. This is where the eight terms, their zeros, the coverage
+/// and every reason are shown together, summing to the number on the row.
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhyView {
+    pub hero: HeroId,
+    pub name: String,
+    /// Eight, in [`TermKind::ALL`] order and **never** sorted by contribution.
+    /// The sorted view is the reason list below it; a table whose rows move
+    /// between heroes is one you re-read every time.
+    pub terms: Vec<WhyTerm>,
+    pub total: String,
+    /// Stated always here, complete or not, unlike the row's deliberate silence
+    /// on a full read. The row is a list to scan; this is the answer to
+    /// "how much of this did you actually know".
+    pub coverage: String,
+    pub allies: Option<String>,
+    /// Their shape, when it reads mixed. The one term that can move a score with
+    /// no reason line behind it, so this is the only place it can be said.
+    pub shape: Option<String>,
+    pub tie: Option<String>,
+    /// Every one of them, which is what dropping `take(MAX_REASONS)` buys.
+    pub reasons: Vec<ReasonLine>,
+}
+
+impl WhyView {
+    /// Resolves one recommendation into its full explanation.
+    ///
+    /// `tied` is how many rows the scorer could not separate, and it is here for
+    /// one reason: the top hero is inside the band of itself, so `tied_with_top`
+    /// alone would print a tie on every leading row.
+    ///
+    /// `rank` for the reason [`RecRow::build`] takes it: the patch-strength
+    /// sentence prints a ladder-wide win rate and has to say so once a rung is
+    /// chosen.
+    pub fn build(
+        rec: &Recommendation,
+        tied: usize,
+        tie_band: f32,
+        rank: Rank,
+        ds: &Dataset,
+    ) -> Self {
+        let breakdown = &rec.breakdown;
+        let terms = TermKind::ALL
+            .into_iter()
+            .map(|kind| {
+                let points = (breakdown.term(kind).contribution() * 100.0).round() as i32;
+                WhyTerm {
+                    label: kind.label(),
+                    value: format!("{points:+}"),
+                    positive: points > 0,
+                    even: points == 0,
+                }
+            })
+            .collect();
+
+        let counter = breakdown.counter;
+        let coverage = match counter.entered {
+            0 => "nothing on their side yet".to_owned(),
+            entered => coverage_note(counter)
+                .unwrap_or_else(|| format!("read against all {entered} of their picks")),
+        };
+        let allies = match breakdown.synergy.entered {
+            0 => None,
+            entered => Some(format!(
+                "paired with {} of your {} allies in the duo table",
+                breakdown.synergy.rated, entered
+            )),
+        };
+
+        // `is_mixed` and not `!leading().is_some()`: an unrated board is a
+        // question nobody has answered and its term is zero anyway, while a
+        // mixed one is an answer that no reason line can carry.
+        let shape = breakdown.shape.is_mixed().then(|| {
+            "their shape reads mixed \u{2014} no axis leads, so the term counts with nothing to name"
+                .to_owned()
+        });
+
+        let tie = (tied >= 2 && rec.tied_with_top).then(|| {
+            format!(
+                "picks within {:.0} of the top are too close to call",
+                (tie_band * 100.0).round()
+            )
+        });
+
+        Self {
+            hero: rec.hero,
+            name: hero_name(ds, rec.hero),
+            terms,
+            total: format!("{:+.0}", rec.score * 100.0),
+            coverage,
+            allies,
+            shape,
+            tie,
+            reasons: rec
+                .reasons
+                .iter()
+                .map(|reason| ReasonLine::build(reason, rec.hero, rank, ds))
+                .collect(),
+        }
+    }
+}
+
 /// A hero's display name, or `?` for an id the roster cannot resolve.
 ///
 /// A free function because three places need it — both row builders and
@@ -2079,59 +2260,14 @@ impl RecRow {
             format!("{:+.0}", rec.score * 100.0)
         };
 
+        // `take` here and not inside the builder: the cut to three is a fact
+        // about this column's width, and the `why` panel wanting every line is
+        // then one missing call rather than a second implementation.
         let reasons = rec
             .reasons
             .iter()
             .take(MAX_REASONS)
-            .map(|reason| {
-                // Read before the words are chosen, because half of them depend
-                // on it: the sign is a CSS pseudo-element and the wording it
-                // prefixes has to be the one it does not contradict.
-                let positive = reason.contribution >= 0.0;
-                let text = if reason.text.is_empty() {
-                    // Only ~40% of matchups carry a scraped sentence; the rest
-                    // get phrasing generated from the reason kind, because a
-                    // bare number explains nothing.
-                    let head = phrasing(reason.kind, rec.hero, rank, dataset).under(positive);
-                    match hand_written_note(reason.kind, rec.hero, dataset) {
-                        // The head has to survive rather than be replaced, and
-                        // the shape kinds are why: the head names *their* leading
-                        // axis while the note is about *this* kit. "answers their
-                        // dive" alone says what the portrait already said, and
-                        // the note alone answers a question nobody asked.
-                        Some(note) => format!("{head} \u{2014} {note}"),
-                        None => head,
-                    }
-                } else {
-                    reason.text.clone()
-                };
-                // Only the counter terms read the matchup matrix, so only they
-                // can be in dispute. Asked of the pair rather than of the row
-                // the scorer happened to average, which is what
-                // `sources_disagree` is for.
-                let disputed = match reason.kind {
-                    ReasonKind::BeatsEnemy(enemy) | ReasonKind::LosesToEnemy(enemy) => {
-                        dataset.sources_disagree(rec.hero, enemy)
-                    }
-                    _ => false,
-                };
-                // Gated on the *kind* and not merely on the text being there.
-                // `!text.is_empty()` alone answers correctly today and becomes a
-                // false attribution the moment a term other than the counter
-                // ones carries prose: the notes in `side.toml` and
-                // `archetype.toml` are this repository's own words, and marking
-                // them `counterpickgg` would credit a site that never saw them.
-                let cited = matches!(
-                    reason.kind,
-                    ReasonKind::BeatsEnemy(_) | ReasonKind::LosesToEnemy(_)
-                ) && !reason.text.is_empty();
-                ReasonLine {
-                    positive,
-                    text,
-                    disputed,
-                    cited,
-                }
-            })
+            .map(|reason| ReasonLine::build(reason, rec.hero, rank, dataset))
             .collect();
 
         Self {
@@ -2164,6 +2300,97 @@ impl RecRow {
     }
 }
 
+/// The whole arithmetic behind one row, at the foot of the list.
+///
+/// One panel, not eight anchored sheets. Per row would mean eight always-mounted
+/// panels for `aria-controls` to resolve against, and a sheet anchored to row two
+/// covers rows three through eight — the rows it was opened to compare with. In
+/// normal flow below the last row it opens without moving a single aim target,
+/// because there is nothing beneath it.
+///
+/// Rendered whether or not anything is open, which is `RankPicker`'s rule: the id
+/// `aria-controls` names has to resolve to a real element, and the panel is then
+/// a class away from visible rather than a mount away.
+///
+/// This is not the rule about nothing appearing mid-draft. What that forbids is
+/// something a *draft* can reveal or remove; this opens on an explicit click on a
+/// control that is always there, and no pick, role change or rotation can add or
+/// take away either the control or the panel.
+#[component]
+fn WhyPanel(view: Option<WhyView>) -> Element {
+    rsx! {
+        div {
+            id: "why",
+            class: if view.is_some() { "why open" } else { "why" },
+            role: "group",
+            if let Some(view) = &view {
+                h3 { class: "why-head", "why \u{b7} {view.name}" }
+                p { class: "why-lede", "all eight terms, and they add up to the score" }
+                div { class: "why-terms",
+                    for term in view.terms.iter() {
+                        div { key: "{term.label}", class: "why-term",
+                            span { class: "why-term-label", "{term.label}" }
+                            span {
+                                // The even case takes neither tint, which is the
+                                // rule the threat column set: "+0" is not an
+                                // argument in either direction. The sign carries
+                                // the direction; the colour only reinforces it.
+                                class: if term.even {
+                                    "score"
+                                } else if term.positive {
+                                    "score good"
+                                } else {
+                                    "score bad"
+                                },
+                                "{term.value}"
+                            }
+                        }
+                    }
+                    div { class: "why-term why-total",
+                        span { class: "why-term-label", "total" }
+                        span { class: "score", "{view.total}" }
+                    }
+                }
+                p { class: "why-note", "{view.coverage}" }
+                if let Some(allies) = &view.allies {
+                    p { class: "why-note", "{allies}" }
+                }
+                if let Some(shape) = &view.shape {
+                    p { class: "why-note", "{shape}" }
+                }
+                if let Some(tie) = &view.tie {
+                    p { class: "why-note", "{tie}" }
+                }
+                // The same markup the row uses, so the sentences, their signs and
+                // both markers cannot read differently in the two places.
+                ul { class: "reasons",
+                    for (index, line) in view.reasons.iter().enumerate() {
+                        li {
+                            key: "{index}",
+                            class: if line.positive { "reason good" } else { "reason bad" },
+                            "{line.text}"
+                            if line.disputed {
+                                span {
+                                    class: "caveat",
+                                    title: "the two sources disagree about this matchup, so the reading has been pulled toward even",
+                                    "disputed"
+                                }
+                            }
+                            if line.cited {
+                                span {
+                                    class: "cite",
+                                    title: "quoted from counterpickgg",
+                                    "counterpickgg"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 #[component]
 pub fn Recommendations(
     items: Vec<RecRow>,
@@ -2175,6 +2402,10 @@ pub fn Recommendations(
     /// already formatted those into strings, so the numbers it needs cannot be
     /// reached from inside this component.
     note: String,
+    /// The row whose arithmetic is open, already resolved. `None` closes the
+    /// panel — including when the hero it named has left the list, which is why
+    /// the caller derives this from the rows rather than trusting a stored id.
+    why: Option<WhyView>,
     /// The rung patch strength is read on. The control lives here rather than in
     /// the header because this is the list it reorders: selecting one changes the
     /// top row for a fifth to well over a quarter of drafts, depending on the
@@ -2182,6 +2413,7 @@ pub fn Recommendations(
     rank: Rank,
     rank_open: bool,
     on_lock: EventHandler<HeroId>,
+    on_why: EventHandler<HeroId>,
     on_rank: EventHandler<Rank>,
     on_rank_open: EventHandler<()>,
 ) -> Element {
@@ -2191,6 +2423,10 @@ pub fn Recommendations(
     // anywhere else. Two candidates that both clear the bar and cannot be told
     // apart is the moment this is most worth drawing.
     let tied = items.iter().filter(|row| row.tied_with_top).count();
+    // Read once for the whole list rather than per row, and off the resolved
+    // view rather than a second signal: the panel and the eight carets have to
+    // agree about which row is open.
+    let open_why = why.as_ref().map(|view| view.hero);
 
     rsx! {
         section { class: "panel recommendations",
@@ -2285,6 +2521,26 @@ pub fn Recommendations(
                                     "★"
                                 }
                             }
+                            // Deliberately not the score, however much better
+                            // that would be for density: tapping the number
+                            // already locks the hero, and re-pointing a gesture
+                            // the hand has learned is the break the rule about
+                            // nothing moving mid-draft exists to prevent.
+                            button {
+                                class: if open_why == Some(rec.hero) { "rec-why open" } else { "rec-why" },
+                                r#type: "button",
+                                aria_expanded: "{open_why == Some(rec.hero)}",
+                                aria_controls: "why",
+                                onclick: {
+                                    let hero = rec.hero;
+                                    move |evt: Event<MouseData>| {
+                                        evt.stop_propagation();
+                                        on_why.call(hero);
+                                    }
+                                },
+                                "why"
+                                span { class: "rec-why-caret", aria_hidden: "true", "\u{25be}" }
+                            }
                         }
                         ul { class: "reasons",
                             for (index, line) in rec.reasons.iter().enumerate() {
@@ -2337,6 +2593,7 @@ pub fn Recommendations(
             // meets after the thing it explains; at the foot because it is about
             // the lines, which is the mirror of `.rank-note` above sitting with
             // the control it qualifies.
+            WhyPanel { view: why.clone() }
             p { class: "cite-legend",
                 "lines marked counterpickgg are quoted from that site \u{00b7} everything else is this app's own words"
             }
@@ -2755,6 +3012,11 @@ mod tests {
             "A held barrier is what a dive has to go through or around.".to_owned(),
             String::new(),
         ];
+        // One axis each, so a board of both ties them — rated, and committed to
+        // nothing, which is the `mixed` read the `why` panel exists to name.
+        // Reaches nothing else here: every other test passes an `Archetype` to
+        // `phrasing` directly rather than deriving one from a board.
+        parts.shape = vec![[0, 0, 95], [0, 95, 0]];
         Dataset::new(parts).expect("a two-hero dataset with a map is valid")
     }
 
@@ -3812,6 +4074,220 @@ mod tests {
             assert!(!note.ends_with('.'), "{note}");
             assert!(!note.contains("  "), "double space in {note:?}");
         }
+    }
+
+    /// The claim the panel's own subtitle makes out loud, and the reason the
+    /// ledger exists at all: the three sentences on the row never could.
+    #[test]
+    fn the_breakdown_rows_add_up_to_the_number_on_the_row() {
+        let ds = phrasing_fixture();
+        let rec = ledger_rec();
+
+        let view = WhyView::build(&rec, 0, 0.15, Rank::All, &ds);
+        let summed: i32 = view
+            .terms
+            .iter()
+            .map(|term| term.value.parse::<i32>().expect("a signed integer"))
+            .sum();
+
+        assert_eq!(format!("{summed:+}"), view.total);
+        assert_eq!(
+            view.total,
+            RecRow::build(&rec, &ds, false, 0, Rank::All).score
+        );
+    }
+
+    /// Showing the zeros is the entire point. A term at nothing is a real reading
+    /// with no sentence to it, and the row is forbidden from mentioning it.
+    #[test]
+    fn a_term_that_came_to_nothing_is_still_a_row_and_takes_neither_tint() {
+        let ds = phrasing_fixture();
+        let view = WhyView::build(&ledger_rec(), 0, 0.15, Rank::All, &ds);
+
+        let side = view
+            .terms
+            .iter()
+            .find(|term| term.label == TermKind::Side.label())
+            .expect("every term is a row");
+
+        assert_eq!(side.value, "+0");
+        assert!(side.even, "a dead flat term is not an argument either way");
+        assert!(!side.positive);
+    }
+
+    /// Never sorted by contribution: that is the reason list below it. A table
+    /// whose rows move between heroes is one you re-read every time.
+    #[test]
+    fn the_ledger_reads_in_the_order_the_score_is_summed() {
+        let ds = phrasing_fixture();
+        let view = WhyView::build(&ledger_rec(), 0, 0.15, Rank::All, &ds);
+
+        let labels: Vec<&str> = view.terms.iter().map(|term| term.label).collect();
+        let expected: Vec<&str> = TermKind::ALL.into_iter().map(TermKind::label).collect();
+        assert_eq!(labels, expected);
+    }
+
+    /// The one term that can move a score with no reason line behind it. A mixed
+    /// board is rated and has committed to nothing, so `CountersShape` has no
+    /// archetype to name and the panel is the only place this can be said.
+    #[test]
+    fn a_mixed_enemy_shape_is_named_in_the_panel_even_though_no_reason_line_can_carry_it() {
+        let ds = phrasing_fixture();
+        let mut rec = ledger_rec();
+        rec.breakdown.shape = mixed_shape(&ds);
+
+        let view = WhyView::build(&rec, 0, 0.15, Rank::All, &ds);
+        let shape = view.shape.expect("a mixed board is worth saying");
+        assert!(shape.contains("mixed"), "{shape}");
+        assert!(
+            !view
+                .reasons
+                .iter()
+                .any(|line| line.text.contains("answers their")),
+            "a mixed board has no axis for a reason line to name"
+        );
+    }
+
+    /// The other half. An axis that leads has a reason line that can name it, so
+    /// the panel says nothing and the sentence carries it.
+    #[test]
+    fn an_enemy_shape_that_leads_is_left_to_the_reason_line_that_can_name_it() {
+        let ds = phrasing_fixture();
+        let mut rec = ledger_rec();
+        rec.breakdown.shape = leading_shape(&ds);
+
+        assert!(WhyView::build(&rec, 0, 0.15, Rank::All, &ds)
+            .shape
+            .is_none());
+    }
+
+    /// What dropping `take(MAX_REASONS)` buys, and the answer to "which enemies
+    /// made that -32".
+    #[test]
+    fn the_panel_lists_every_reason_rather_than_the_three_the_row_has_room_for() {
+        let ds = phrasing_fixture();
+        let rec = many_reasons_rec();
+        assert!(rec.reasons.len() > MAX_REASONS, "the fixture tests nothing");
+
+        let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
+        let view = WhyView::build(&rec, 0, 0.15, Rank::All, &ds);
+
+        assert_eq!(row.reasons.len(), MAX_REASONS);
+        assert_eq!(view.reasons.len(), rec.reasons.len());
+    }
+
+    /// One builder, so a sentence cannot read one way on the row and another in
+    /// the panel — and, more sharply, so a quoted sentence cannot lose its
+    /// attribution on the way down the page.
+    #[test]
+    fn a_reason_reads_the_same_in_the_panel_as_it_does_on_the_row() {
+        let ds = phrasing_fixture();
+        let rec = many_reasons_rec();
+
+        let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
+        let view = WhyView::build(&rec, 0, 0.15, Rank::All, &ds);
+
+        assert_eq!(row.reasons, view.reasons[..MAX_REASONS]);
+        assert!(
+            view.reasons.iter().any(|line| line.cited),
+            "the fixture no longer carries a quoted sentence, so this tests nothing"
+        );
+    }
+
+    /// The row goes quiet on a complete read because a fraction on every row is
+    /// noise. Here the question is "how much of this did you know", so silence
+    /// would be the one answer that does not answer it.
+    #[test]
+    fn the_panel_states_its_coverage_even_where_the_row_stays_silent() {
+        let ds = phrasing_fixture();
+        let mut rec = ledger_rec();
+        rec.breakdown.counter = Coverage {
+            rated: 4,
+            entered: 4,
+        };
+
+        assert_eq!(coverage_note(rec.breakdown.counter), None);
+        let view = WhyView::build(&rec, 0, 0.15, Rank::All, &ds);
+        assert_eq!(view.coverage, "read against all 4 of their picks");
+    }
+
+    /// The top hero is inside the band of itself, always, so the flag alone would
+    /// print a tie on every leading row in the app.
+    #[test]
+    fn only_a_real_tie_puts_the_tie_line_in_the_panel() {
+        let ds = phrasing_fixture();
+        let mut rec = ledger_rec();
+        rec.tied_with_top = true;
+
+        assert!(
+            WhyView::build(&rec, 1, 0.15, Rank::All, &ds).tie.is_none(),
+            "one is not a tie"
+        );
+        let tied = WhyView::build(&rec, 3, 0.15, Rank::All, &ds)
+            .tie
+            .expect("three rows the scorer could not separate");
+        assert!(
+            tied.contains("15"),
+            "the band is read off the weight: {tied}"
+        );
+    }
+
+    /// A scored recommendation with a live ledger, for the panel tests. Side is
+    /// left at nothing on purpose — the zero row is half of what is under test.
+    fn ledger_rec() -> Recommendation {
+        let mut rec = scored(REINHARDT, 0.0, Vec::new());
+        let live = [
+            (TermKind::Base, 0.15, 0.20),
+            (TermKind::Counter, 1.0, -0.32),
+            (TermKind::Map, 0.25, 0.60),
+            (TermKind::Personal, 0.60, 0.55),
+        ];
+        for (kind, weight, value) in live {
+            let term = &mut rec.breakdown.terms[kind.index()];
+            term.weight = weight;
+            term.value = value;
+        }
+        rec.breakdown.counter = Coverage {
+            rated: 3,
+            entered: 5,
+        };
+        rec.score = rec.breakdown.total();
+        rec
+    }
+
+    /// Four reasons, one of them a quoted sentence, so the row's cut to three is
+    /// visible against the panel's completeness.
+    fn many_reasons_rec() -> Recommendation {
+        let reason = |kind, contribution, text: &str| Reason {
+            kind,
+            contribution,
+            text: text.to_owned(),
+        };
+        scored(
+            REINHARDT,
+            0.2,
+            vec![
+                reason(
+                    ReasonKind::LosesToEnemy(PHARAH),
+                    -0.4,
+                    "Nothing Reinhardt does reaches the air.",
+                ),
+                reason(ReasonKind::BaseStrength, 0.3, ""),
+                reason(ReasonKind::MapFit(MapId(0)), 0.2, ""),
+                reason(ReasonKind::Comfort(55), 0.1, ""),
+            ],
+        )
+    }
+
+    /// Two dive and two poke, which ties the axes: rated, and committed to
+    /// nothing. `Shape` has no constructor, so it is built the only way it can
+    /// be — out of a board.
+    fn mixed_shape(ds: &Dataset) -> overwatch_core::Shape {
+        overwatch_core::shape_of(ds, &[REINHARDT, REINHARDT, PHARAH, PHARAH])
+    }
+
+    fn leading_shape(ds: &Dataset) -> overwatch_core::Shape {
+        overwatch_core::shape_of(ds, &[REINHARDT, REINHARDT])
     }
 
     /// What a keyboard user is told when they land on the row. Until this slice

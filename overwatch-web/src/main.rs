@@ -326,6 +326,11 @@ fn App() -> Element {
     // Whether the rank sheet is showing. A disclosure, not draft state: it never
     // survives a pick and nothing but a click on the chip opens it.
     let mut rank_open = use_signal(|| false);
+    // Which row's arithmetic is open, if any. The id and not the panel: the panel
+    // is derived from the rows about to be drawn, so this signal is allowed to go
+    // stale and the *view* cannot. A hero leaves the list when you change role
+    // and also when a teammate takes it, and nothing clears the second.
+    let mut why = use_signal(|| None::<HeroId>);
     let mut join_entry = use_signal(String::new);
 
     let sinks = sync::Sinks {
@@ -398,6 +403,11 @@ fn App() -> Element {
     let set_role = {
         let ds = dataset.clone();
         use_callback(move |next: Role| {
+            // The way `set_rank` closes the rank sheet. Not for correctness — the
+            // panel is derived and cannot describe a hero the list has lost — but
+            // so that leaving a role and coming back does not re-open something
+            // you closed by leaving.
+            why.set(None);
             me.write().set_role(&ds, next);
             let mut p = profile.write();
             p.role = next;
@@ -904,6 +914,31 @@ fn App() -> Element {
         .recommendations
         .first()
         .map(|rec| chip_of(rec.hero).name);
+    // Derived, never stored: if the hero the signal names is not among the rows
+    // about to be drawn, there is nothing to open. That covers a role change, an
+    // ally taking the hero, and every other way a row can leave, without a
+    // clearing line at each of them.
+    let why_view = why().and_then(|hero| {
+        rec_rows
+            .iter()
+            .find(|row| row.hero == hero)
+            .and_then(|row| {
+                frame
+                    .recommendations
+                    .iter()
+                    .find(|rec| rec.hero == row.hero)
+            })
+            .map(|rec| {
+                ui::WhyView::build(
+                    rec,
+                    tie_count(&rec_rows, draft.enemies.len()),
+                    profile.read().weights.tie_band,
+                    rank,
+                    &dataset,
+                )
+            })
+    });
+
     let score_note = ui::score_note(
         locked_name.as_deref(),
         top_name.as_deref(),
@@ -1285,9 +1320,16 @@ fn App() -> Element {
                         items: rec_rows.clone(),
                         swap_mode: draft.locked.is_some(),
                         note: score_note,
+                        why: why_view,
                         rank: profile.read().rank,
                         rank_open: rank_open(),
                         on_lock: move |hero: HeroId| lock_hero.call(hero),
+                        // A toggle: pressing `why` on the row already open closes
+                        // it, the way clicking a picked map takes it back.
+                        on_why: move |hero: HeroId| {
+                            let next = (why() != Some(hero)).then_some(hero);
+                            why.set(next);
+                        },
                         on_rank: move |next: Rank| set_rank.call(next),
                         // Picking a rung closes the sheet: it is a one-shot choice,
                         // not something to sit comparing, and leaving it open would

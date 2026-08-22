@@ -1148,11 +1148,13 @@ body {
    what carries it and `{:+}` always emits one; the colour only reinforces,
    exactly as with .reason.good / .reason.bad. A dead-even row takes neither
    class and stays muted, because "+0" is not an argument in either direction. */
-.threat .score.good {
+.threat .score.good,
+.why .score.good {
     color: var(--positive);
 }
 
-.threat .score.bad {
+.threat .score.bad,
+.why .score.bad {
     color: var(--negative);
 }
 
@@ -1219,6 +1221,128 @@ body {
    places it. */
 .rec.after-tie {
     box-shadow: inset 0 1px 0 var(--line-strong);
+}
+
+/* The second control in a row, and the quieter one: it explains rather than
+   picks, so it takes no border and no fill and sits at the far right past the
+   star. Shaped on `.rank-chip`, which is the app's other "quiet chip that opens
+   a thing". */
+.rec-why {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 3px;
+    padding: 0;
+    font: inherit;
+    font-size: var(--fs-micro);
+    letter-spacing: 0.04em;
+    color: var(--text-faint);
+    background: none;
+    border: 0;
+    cursor: pointer;
+}
+
+.rec-why:hover,
+.rec-why.open {
+    color: var(--text);
+}
+
+.rec-why:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* Turned when open, which `.rank-caret` deliberately is not. That sheet opens
+   directly under its own chip, so the sheet is its own indicator; this one opens
+   at the foot of eight rows, where the reader may never see it move. With eight
+   of these on screen, the one that is turned is the only local answer to which
+   row the panel below is about. */
+.rec-why-caret {
+    display: inline-block;
+    font-size: var(--fs-micro);
+}
+
+.rec-why.open .rec-why-caret {
+    transform: rotate(180deg);
+}
+
+/* --- the why panel ---
+   At the foot of the list rather than anchored to a row: a sheet hung under row
+   two covers rows three through eight, which are the rows it was opened to
+   compare against. Down here it opens into normal flow with nothing beneath it,
+   so not one aim target moves.
+
+   `display: none` to `.open { display: block }`, which is `.ranks`' whole toggle.
+   No transition and no height animation — the page grows downward and that is
+   all. */
+.why {
+    display: none;
+    margin-top: var(--sp-4);
+    padding-top: var(--sp-4);
+    border-top: 1px solid var(--line);
+}
+
+.why.open {
+    display: block;
+}
+
+.why-head {
+    margin: 0;
+    font-size: var(--fs-md);
+    font-weight: 600;
+    color: var(--text);
+}
+
+.why-lede {
+    margin: var(--sp-1) 0 var(--sp-3);
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+}
+
+/* One column of nine lines, deliberately, where two columns of four would be
+   denser. The order is `TermKind::ALL` — the order the score is summed — and one
+   column is the only arrangement in which that reads straight down at every
+   width without a flow direction to get wrong. */
+.why-terms {
+    margin-bottom: var(--sp-3);
+}
+
+/* Shaped on `.keys-row`: a label that flexes and a fixed cell beside it. Here
+   the fixed cell is `.score`, which already brings the tabular figures and the
+   right edge every other number on this screen is compared down. */
+.why-term {
+    display: flex;
+    align-items: baseline;
+    gap: var(--sp-3);
+    padding: 2px 0;
+    font-size: var(--fs-sm);
+}
+
+.why-term-label {
+    flex: 1;
+    min-width: 0;
+    color: var(--text-muted);
+}
+
+/* The one line that is not a term. A rule above it rather than a weight step,
+   because the eight above are already the argument and this is only their sum. */
+.why-total {
+    margin-top: var(--sp-1);
+    padding-top: var(--sp-2);
+    border-top: 1px solid var(--line);
+}
+
+.why-total .why-term-label {
+    color: var(--text);
+}
+
+/* The admissions the row has no space for: coverage, the mixed shape, the tie.
+   Same register as `.threat-note` and `.rec-coverage`, because they are the same
+   kind of sentence. */
+.why-note {
+    margin: var(--sp-1) 0 0;
+    max-width: 62ch;
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
 }
 
 /* Wraps, because this row is the narrowest thing in the app that has to hold
