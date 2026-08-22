@@ -2018,10 +2018,15 @@ fn pick_label(row: &RecRow) -> String {
 /// drawn by class and nothing else, so a reader who cannot tell two borders apart
 /// depends entirely on this being right, and logic no test can reach drifts.
 ///
-/// `after-tie` goes on the row *following* the tied ones, so the hairline it draws
-/// along its own top edge falls below the last of them. Derived from the count
-/// rather than carried as a fifth field: the boundary is a property of the set,
-/// and the set is a prefix, so its position is the count itself.
+/// `tie-end` goes on the **last tied row**, and draws along that row's own bottom
+/// edge. It used to go on the row *after* the tied ones and draw along their top
+/// edge — visually the same line, until the `why` panel moved under its row and
+/// could be inserted into exactly that gap, leaving the boundary below the panel
+/// and claiming the panel was one of the tied ones. A boundary belongs to the
+/// last row inside the set, not to the first row outside it.
+///
+/// Derived from the count rather than carried as a fifth field: the boundary is a
+/// property of the set, and the set is a prefix, so its position is the count.
 ///
 /// `> 1` because the top hero is inside the band of itself by definition. A rule
 /// drawn under row one alone would mark a tie that does not exist.
@@ -2031,8 +2036,8 @@ fn rec_class(rec: &RecRow, tied: usize) -> String {
         if rec.is_locked { " locked" } else { "" },
         if rec.worth_swapping { " swap" } else { "" },
         if rec.claimed() { " pooled" } else { "" },
-        if tied > 1 && rec.place == tied {
-            " after-tie"
+        if tied > 1 && rec.place + 1 == tied {
+            " tie-end"
         } else {
             ""
         },
@@ -2405,110 +2410,114 @@ impl RecRow {
     }
 }
 
-/// The whole arithmetic behind one row, at the foot of the list.
+/// The whole arithmetic behind one row, directly under that row.
 ///
-/// One panel, not eight anchored sheets. Per row would mean eight always-mounted
-/// panels for `aria-controls` to resolve against, and a sheet anchored to row two
-/// covers rows three through eight — the rows it was opened to compare with. In
-/// normal flow below the last row it opens without moving a single aim target,
-/// because there is nothing beneath it.
+/// It sat at the foot of the whole list first, on the argument that a sheet
+/// anchored to row two would cover rows three through eight — the rows it was
+/// opened to compare against — while at the foot it opened without moving a
+/// single aim target, because there is nothing beneath it. Used, that reads as
+/// the panel belonging to the *list* rather than to the hero: you press `why` on
+/// the second row and the answer appears past the eighth.
 ///
-/// Rendered whether or not anything is open, which is `RankPicker`'s rule: the id
-/// `aria-controls` names has to resolve to a real element, and the panel is then
-/// a class away from visible rather than a mount away.
+/// So it moved, and the cost is real and paid on purpose: the rows below it move
+/// when it opens. Two things make that cheaper than it was when the foot was
+/// chosen. The panel carries its own Δ column now, so it no longer needs the rows
+/// underneath to be visible; and in normal flow rather than anchored it covers
+/// nothing, which is also what buys back the z-index, the capped height, the
+/// scroll container and the dismiss path an overlay would have needed.
+///
+/// Still one panel, because only one row is open at a time — the state is an
+/// `Option<HeroId>` and not a flag per row.
 ///
 /// This is not the rule about nothing appearing mid-draft. What that forbids is
 /// something a *draft* can reveal or remove; this opens on an explicit click on a
 /// control that is always there, and no pick, role change or rotation can add or
-/// take away either the control or the panel.
+/// take away that control.
 #[component]
-fn WhyPanel(view: Option<WhyView>) -> Element {
+fn WhyPanel(view: WhyView) -> Element {
     rsx! {
         div {
-            id: "why",
-            class: if view.is_some() { "why open" } else { "why" },
+            class: "why",
             role: "group",
-            if let Some(view) = &view {
-                h3 { class: "why-head", "why \u{b7} {view.name}" }
-                p { class: "why-lede", "all eight terms, and they add up to the score" }
-                // A line rather than a column header: a cell wide enough for
-                // "Δ vs Wrecking Ball" costs more width than the ledger has, and
-                // the wording is the one `score_note` already uses for the same
-                // relation one panel up.
-                if let Some(against) = &view.against {
-                    p { class: "why-lede", "the right column is the gain over {against}" }
-                }
-                div { class: "why-terms",
-                    for term in view.terms.iter() {
-                        div { key: "{term.label}", class: "why-term",
-                            span { class: "why-term-label", "{term.label}" }
+            h3 { class: "why-head", "why \u{b7} {view.name}" }
+            p { class: "why-lede", "all eight terms, and they add up to the score" }
+            // A line rather than a column header: a cell wide enough for
+            // "Δ vs Wrecking Ball" costs more width than the ledger has, and
+            // the wording is the one `score_note` already uses for the same
+            // relation one panel up.
+            if let Some(against) = &view.against {
+                p { class: "why-lede", "the right column is the gain over {against}" }
+            }
+            div { class: "why-terms",
+                for term in view.terms.iter() {
+                    div { key: "{term.label}", class: "why-term",
+                        span { class: "why-term-label", "{term.label}" }
+                        span {
+                            // The even case takes neither tint, which is the
+                            // rule the threat column set: "+0" is not an
+                            // argument in either direction. The sign carries
+                            // the direction; the colour only reinforces it.
+                            class: if term.even {
+                                "score"
+                            } else if term.positive {
+                                "score good"
+                            } else {
+                                "score bad"
+                            },
+                            "{term.value}"
+                        }
+                        if let Some(delta) = &term.delta {
                             span {
-                                // The even case takes neither tint, which is the
-                                // rule the threat column set: "+0" is not an
-                                // argument in either direction. The sign carries
-                                // the direction; the colour only reinforces it.
-                                class: if term.even {
-                                    "score"
-                                } else if term.positive {
-                                    "score good"
+                                class: if term.delta_even {
+                                    "why-delta"
+                                } else if term.delta_positive {
+                                    "why-delta good"
                                 } else {
-                                    "score bad"
+                                    "why-delta bad"
                                 },
-                                "{term.value}"
-                            }
-                            if let Some(delta) = &term.delta {
-                                span {
-                                    class: if term.delta_even {
-                                        "why-delta"
-                                    } else if term.delta_positive {
-                                        "why-delta good"
-                                    } else {
-                                        "why-delta bad"
-                                    },
-                                    "{delta}"
-                                }
+                                "{delta}"
                             }
                         }
                     }
-                    div { class: "why-term why-total",
-                        span { class: "why-term-label", "total" }
-                        span { class: "score", "{view.total}" }
-                        if let Some(delta) = &view.delta_total {
-                            span { class: "why-delta", "{delta}" }
-                        }
+                }
+                div { class: "why-term why-total",
+                    span { class: "why-term-label", "total" }
+                    span { class: "score", "{view.total}" }
+                    if let Some(delta) = &view.delta_total {
+                        span { class: "why-delta", "{delta}" }
                     }
                 }
-                p { class: "why-note", "{view.coverage}" }
-                if let Some(allies) = &view.allies {
-                    p { class: "why-note", "{allies}" }
-                }
-                if let Some(shape) = &view.shape {
-                    p { class: "why-note", "{shape}" }
-                }
-                if let Some(tie) = &view.tie {
-                    p { class: "why-note", "{tie}" }
-                }
-                // The same markup the row uses, so the sentences, their signs and
-                // both markers cannot read differently in the two places.
-                ul { class: "reasons",
-                    for (index, line) in view.reasons.iter().enumerate() {
-                        li {
-                            key: "{index}",
-                            class: if line.positive { "reason good" } else { "reason bad" },
-                            "{line.text}"
-                            if line.disputed {
-                                span {
-                                    class: "caveat",
-                                    title: "the two sources disagree about this matchup, so the reading has been pulled toward even",
-                                    "disputed"
-                                }
+            }
+            p { class: "why-note", "{view.coverage}" }
+            if let Some(allies) = &view.allies {
+                p { class: "why-note", "{allies}" }
+            }
+            if let Some(shape) = &view.shape {
+                p { class: "why-note", "{shape}" }
+            }
+            if let Some(tie) = &view.tie {
+                p { class: "why-note", "{tie}" }
+            }
+            // The same markup the row uses, so the sentences, their signs and
+            // both markers cannot read differently in the two places.
+            ul { class: "reasons",
+                for (index, line) in view.reasons.iter().enumerate() {
+                    li {
+                        key: "{index}",
+                        class: if line.positive { "reason good" } else { "reason bad" },
+                        "{line.text}"
+                        if line.disputed {
+                            span {
+                                class: "caveat",
+                                title: "the two sources disagree about this matchup, so the reading has been pulled toward even",
+                                "disputed"
                             }
-                            if line.cited {
-                                span {
-                                    class: "cite",
-                                    title: "quoted from counterpickgg",
-                                    "counterpickgg"
-                                }
+                        }
+                        if line.cited {
+                            span {
+                                class: "cite",
+                                title: "quoted from counterpickgg",
+                                "counterpickgg"
                             }
                         }
                     }
@@ -2656,8 +2665,15 @@ pub fn Recommendations(
                             button {
                                 class: if open_why == Some(rec.hero) { "rec-why open" } else { "rec-why" },
                                 r#type: "button",
+                                // `aria-expanded`, and no `aria-controls`. That
+                                // attribute was bridging the distance to a panel
+                                // eight rows away; the panel is the next element
+                                // after this row now, so adjacency does the same
+                                // work — and there is no id to point at while it
+                                // is closed. It is the optional half of the
+                                // disclosure pattern, with uneven support, where
+                                // `aria-expanded` is neither.
                                 aria_expanded: "{open_why == Some(rec.hero)}",
-                                aria_controls: "why",
                                 onclick: {
                                     let hero = rec.hero;
                                     move |evt: Event<MouseData>| {
@@ -2714,13 +2730,20 @@ pub fn Recommendations(
                         }
                     }
                 }
+                // Under the row it explains rather than after all of them. The
+                // `if` is the whole disclosure: one row is open at a time, so the
+                // panel exists exactly where it is wanted and nowhere else.
+                if open_why == Some(rec.hero) {
+                    if let Some(view) = &why {
+                        WhyPanel { view: view.clone() }
+                    }
+                }
             }
             // Standing, and at the foot. Standing because a legend that appears
             // only once there is something to explain is a legend the reader
             // meets after the thing it explains; at the foot because it is about
             // the lines, which is the mirror of `.rank-note` above sitting with
             // the control it qualifies.
-            WhyPanel { view: why.clone() }
             p { class: "cite-legend",
                 "lines marked counterpickgg are quoted from that site \u{00b7} everything else is this app's own words"
             }
@@ -4700,17 +4723,16 @@ mod tests {
         let rows: Vec<RecRow> = (0..4).map(row_at).collect();
 
         assert!(
-            !rec_class(&rows[1], 2).contains("after-tie"),
-            "the last tied row"
+            rec_class(&rows[1], 2).contains("tie-end"),
+            "the last tied row owns the boundary under it"
         );
         assert!(
-            rec_class(&rows[2], 2).contains("after-tie"),
-            "the first row after it"
+            !rec_class(&rows[2], 2).contains("tie-end"),
+            "and not the first row outside the set \u{2014} the `why` panel opens \
+             into that gap, and the boundary must not end up below it"
         );
-        assert!(
-            !rec_class(&rows[3], 2).contains("after-tie"),
-            "and nowhere else"
-        );
+        assert!(!rec_class(&rows[0], 2).contains("tie-end"));
+        assert!(!rec_class(&rows[3], 2).contains("tie-end"));
     }
 
     /// One is not a tie, so there is no boundary to draw. Without the guard every
@@ -4722,7 +4744,7 @@ mod tests {
         for tied in [0, 1] {
             for row in &rows {
                 assert!(
-                    !rec_class(row, tied).contains("after-tie"),
+                    !rec_class(row, tied).contains("tie-end"),
                     "row {} drew a boundary at a tie of {tied}",
                     row.place
                 );
@@ -4734,13 +4756,14 @@ mod tests {
     /// were already there — a pooled row still owns its left border.
     #[test]
     fn the_boundary_class_joins_the_row_states_rather_than_replacing_them() {
-        let mut row = row_at(2);
+        // The second of two tied rows, which is the one that owns the boundary.
+        let mut row = row_at(1);
         row.is_locked = true;
         row.worth_swapping = true;
         row.comfort = 55;
 
         let class = rec_class(&row, 2);
-        for state in ["rec", "locked", "swap", "pooled", "after-tie"] {
+        for state in ["rec", "locked", "swap", "pooled", "tie-end"] {
             assert!(class.contains(state), "{state} missing from {class:?}");
         }
     }

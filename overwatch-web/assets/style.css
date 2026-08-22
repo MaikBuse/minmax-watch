@@ -1207,8 +1207,14 @@ body {
 }
 
 /* Where the scorer stops being able to tell the rows apart: a hairline along the
-   top of the first row it *can* separate, so it reads as a rule under the tied
-   ones above it.
+   bottom of the last row it cannot separate.
+
+   Under that row and not over the next one, which is where it used to be. The two
+   drew the same line until the `why` panel moved from the foot of the list to
+   under the row it explains — it can now open into exactly that gap, and a
+   boundary owned by the row below would end up beneath the panel, claiming the
+   panel was one of the tied ones. A boundary belongs to the last row inside the
+   set.
 
    A shadow rather than a border because the border on this element is spoken for
    three times over — a transparent 1px track so nothing shifts when a state
@@ -1219,8 +1225,8 @@ body {
 
    No colour meaning: the tie is also said in words above the list, and this only
    places it. */
-.rec.after-tie {
-    box-shadow: inset 0 1px 0 var(--line-strong);
+.rec.tie-end {
+    box-shadow: inset 0 -1px 0 var(--line-strong);
 }
 
 /* The second control in a row, and the quieter one: it explains rather than
@@ -1251,11 +1257,16 @@ body {
     outline-offset: 1px;
 }
 
-/* Turned when open, which `.rank-caret` deliberately is not. That sheet opens
-   directly under its own chip, so the sheet is its own indicator; this one opens
-   at the foot of eight rows, where the reader may never see it move. With eight
-   of these on screen, the one that is turned is the only local answer to which
-   row the panel below is about. */
+/* Turned when open, which `.rank-caret` deliberately is not. That difference used
+   to rest on distance — this panel opened at the foot of eight rows, where the
+   reader might never see it appear — and the panel is adjacent now, so that
+   argument is gone.
+
+   It stays for the reason that survives the move: there are eight of these on
+   screen and the panel is only ever under one of them. Scrolled so the open row
+   is off screen, the turned caret is what says the block you are reading belongs
+   to a row above rather than to the one beside it. The rank chip is a single
+   control and never has that problem. */
 .rec-why-caret {
     display: inline-block;
     font-size: var(--fs-micro);
@@ -1266,23 +1277,30 @@ body {
 }
 
 /* --- the why panel ---
-   At the foot of the list rather than anchored to a row: a sheet hung under row
-   two covers rows three through eight, which are the rows it was opened to
-   compare against. Down here it opens into normal flow with nothing beneath it,
-   so not one aim target moves.
+   Under the row it explains, in normal flow. It sat at the foot of the list
+   first, which read as belonging to the list rather than to the hero: you press
+   `why` on the second row and the answer arrives past the eighth.
 
-   `display: none` to `.open { display: block }`, which is `.ranks`' whole toggle.
-   No transition and no height animation — the page grows downward and that is
-   all. */
+   No `display` toggle any more — presence in the DOM is the state, because only
+   one row is open at a time and the panel is emitted at that row. Nothing here
+   is anchored, so there is no z-index, no capped height and no scroll container
+   to keep.
+
+   A rule down the left rather than across the top. The top rule said "a new
+   section below the list", which was true at the foot and is a lie here; the left
+   one says "this hangs off the row above". Deliberately not indented to line up
+   with `.rec-body`: that offset is `.rec`'s padding plus `.rank`'s width plus
+   `.rec-portrait`'s width plus two gaps, four numbers living in three other
+   rules, and a fifth copy here is how they come apart.
+
+   Symmetric margins, because `.rec` carries `margin-bottom: 5px` and adjacent
+   margins collapse: without a matching bottom the panel would sit 12px below the
+   row it belongs to and 5px above the next one, which reads as belonging to the
+   wrong side. */
 .why {
-    display: none;
-    margin-top: var(--sp-4);
-    padding-top: var(--sp-4);
-    border-top: 1px solid var(--line);
-}
-
-.why.open {
-    display: block;
+    margin: var(--sp-3) 0 var(--sp-4);
+    padding-left: var(--sp-4);
+    border-left: 2px solid var(--line-strong);
 }
 
 .why-head {
