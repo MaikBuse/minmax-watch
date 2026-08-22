@@ -1064,6 +1064,23 @@ body {
     line-height: 1.35;
 }
 
+/* How much of the enemy board one candidate was actually read against. Last in
+   the row and in the same register as `.threat-note` below, because it is the
+   same admission one panel over: the matchups panel says it about the hero you
+   are on, and this says it per candidate.
+
+   No 62ch cap, unlike `.ban-worst` whose slot this takes. That group is for lines
+   that can carry a scraped sentence and run past ninety characters; this is a
+   template with two single-digit numbers in it, forty-two characters at its
+   longest, and a measure on it could only ever break it early. `.threat-note`,
+   which is this line in every respect but its subject, is not in the group
+   either. */
+.rec-coverage {
+    margin: var(--sp-1) 0 0;
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+}
+
 /* How many enemies are entered but unrated. Muted and last, because it is about
    the absence of rows rather than about any of them. */
 .threat-note {

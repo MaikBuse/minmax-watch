@@ -6,8 +6,8 @@
 
 use dioxus::prelude::*;
 use overwatch_core::{
-    ComfortStep, Dataset, Format, HeroId, MapId, Queue, Rank, ReasonKind, Recommendation, Role,
-    Side, TeamSize, Threat,
+    ComfortStep, Coverage, Dataset, Format, HeroId, MapId, Queue, Rank, ReasonKind, Recommendation,
+    Role, Side, TeamSize, Threat,
 };
 
 /// A reset that asks first, for the ones that throw away configuration rather
@@ -1195,6 +1195,44 @@ pub struct BanRow {
     pub prevalence: Option<String>,
 }
 
+/// How much of the enemy board this candidate was actually read against.
+///
+/// The counter mean divides by *every* enemy rather than only the rated ones —
+/// see `score_hero`, which spends a page on why — so thin coverage no longer
+/// reads as conviction in the ranking. What it could not do is say so: two rows
+/// at +41 and +38 look alike whether one was read against five enemies and the
+/// other against one.
+///
+/// Silence means complete. `5 of 5` on every row is a fraction nobody reads
+/// twice, and the rows that say nothing are then the ones with nothing to admit.
+///
+/// The `rated == 0` sentence is the one `main.rs` already gives the empty threat
+/// panel, with `your pick` becoming `it` because the subject here is a candidate
+/// rather than the hero you are on. Two silences about the same absence should
+/// read alike.
+///
+/// **A mirror counts as rated.** `matchup_term` answers `Some(0.0)` when the
+/// candidate is the enemy, so mirroring an entered pick adds to `rated`. That is
+/// the app's position rather than an oversight — a mirror is a rated dead even,
+/// and the threat row beside this one prints `the mirror — even by definition`.
+///
+/// **The fraction can never describe a single pick.** Reaching it needs
+/// `0 < rated < entered`, so `entered` is at least two by construction and
+/// `their {entered} picks` is never singular. That is why this carries none of
+/// the singular/plural split `p.threat-note` needs.
+pub fn coverage_note(counter: Coverage) -> Option<String> {
+    if counter.entered == 0 || counter.rated == counter.entered {
+        return None;
+    }
+    if counter.rated == 0 {
+        return Some("no source has rated it against any of them".to_owned());
+    }
+    Some(format!(
+        "read against {} of their {} picks",
+        counter.rated, counter.entered
+    ))
+}
+
 /// Says out loud that a hero is picked far more or far less often than its role's
 /// share, when it is.
 ///
@@ -1538,6 +1576,10 @@ pub struct RecRow {
     /// function, and the star is what survives when impact-sorting drops the line.
     pub comfort: i8,
     pub reasons: Vec<ReasonLine>,
+    /// How much of the enemy board this row was read against, when that is worth
+    /// saying. `None` on a complete read and on an empty board alike — see
+    /// [`coverage_note`] for why silence is the right shape for both.
+    pub coverage: Option<String>,
 }
 
 /// One line of a row's "why", resolved to the words it will show.
@@ -2048,6 +2090,7 @@ impl RecRow {
             tied_with_top: rec.tied_with_top,
             comfort,
             reasons,
+            coverage: coverage_note(rec.breakdown.counter),
         }
     }
 
@@ -2190,6 +2233,15 @@ pub fn Recommendations(
                                     }
                                 }
                             }
+                        }
+                        // After the reasons, because it is about all of them at
+                        // once: how much of the enemy board the sentences above
+                        // could have been drawn from. The slot `.ban-worst`
+                        // occupies on a ban row, and the register `.threat-note`
+                        // uses, which is the panel already admitting this about
+                        // the hero you are on.
+                        if let Some(coverage) = &rec.coverage {
+                            p { class: "rec-coverage", "{coverage}" }
                         }
                     }
                 }
@@ -3741,7 +3793,101 @@ mod tests {
             tied_with_top: false,
             comfort: 0,
             reasons: Vec::new(),
+            coverage: None,
         }
+    }
+
+    /// The whole point: two rows at nearly the same number, one read against the
+    /// whole enemy board and one against a fifth of it, used to look alike.
+    #[test]
+    fn a_candidate_read_against_two_of_five_enemies_says_so_on_its_row() {
+        let note = coverage_note(Coverage {
+            rated: 2,
+            entered: 5,
+        });
+
+        assert_eq!(note.as_deref(), Some("read against 2 of their 5 picks"));
+    }
+
+    /// Silence is what a complete row looks like. `5 of 5` on every row is a
+    /// fraction nobody reads twice, and the rows that stay quiet are then exactly
+    /// the ones with nothing to admit.
+    #[test]
+    fn a_complete_read_says_nothing_because_silence_is_what_a_full_row_looks_like() {
+        assert_eq!(
+            coverage_note(Coverage {
+                rated: 5,
+                entered: 5
+            }),
+            None
+        );
+    }
+
+    /// A fraction of zero is a worse sentence than the one the app already uses
+    /// for this silence a panel over — and it is the same silence, so it gets the
+    /// same words.
+    #[test]
+    fn a_candidate_no_source_has_rated_says_that_rather_than_printing_a_fraction() {
+        let note = coverage_note(Coverage {
+            rated: 0,
+            entered: 4,
+        })
+        .expect("nothing rated is worth saying");
+
+        assert_eq!(note, "no source has rated it against any of them");
+        assert!(
+            !note.contains("0 of"),
+            "the fraction this arm exists to avoid"
+        );
+    }
+
+    /// Nothing entered is not thin coverage, it is no question yet.
+    #[test]
+    fn an_empty_enemy_board_has_no_coverage_to_report() {
+        assert_eq!(
+            coverage_note(Coverage {
+                rated: 0,
+                entered: 0
+            }),
+            None
+        );
+    }
+
+    /// The claim the doc makes by construction, pinned rather than left as a
+    /// comment: reaching the fraction needs `0 < rated < entered`, so `entered` is
+    /// at least two and the sentence never reads `their 1 picks`. It is why this
+    /// carries none of the singular/plural split `p.threat-note` needs.
+    #[test]
+    fn the_coverage_line_never_describes_a_single_pick() {
+        for entered in 0..=5usize {
+            for rated in 0..=entered {
+                let Some(note) = coverage_note(Coverage { rated, entered }) else {
+                    continue;
+                };
+                assert!(
+                    !note.contains("their 1 picks"),
+                    "{rated} of {entered} produced {note:?}"
+                );
+            }
+        }
+    }
+
+    /// Computable is not the same as wired. This is the only test that fails if
+    /// the builder stops reading the ledger the scorer filled in.
+    #[test]
+    fn the_coverage_line_reaches_the_row_through_the_builder() {
+        let ds = phrasing_fixture();
+        let mut rec = scored(REINHARDT, 0.2, Vec::new());
+        rec.breakdown.counter = Coverage {
+            rated: 1,
+            entered: 3,
+        };
+
+        let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
+        assert_eq!(
+            row.coverage.as_deref(),
+            Some("read against 1 of their 3 picks")
+        );
     }
 
     /// The direct answer to "there are a lot of acceptable answers": when the

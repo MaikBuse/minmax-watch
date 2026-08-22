@@ -1489,6 +1489,7 @@ mod tests {
             tied_with_top: true,
             comfort: 0,
             reasons: Vec::new(),
+            coverage: None,
         }
     }
 
