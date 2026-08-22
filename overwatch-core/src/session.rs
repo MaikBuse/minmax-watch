@@ -207,6 +207,14 @@ pub struct Seat {
     /// `default` because a seat from a client that predates this field must
     /// still load — as an empty pool, which reads correctly as "they have not
     /// said".
+    ///
+    /// **Membership, and never how well they play it.** On the client this is
+    /// derived from a per-hero comfort value, and only the "above zero" part of
+    /// that crosses the wire — there is no comfort field on this struct and there
+    /// should not be. The ban list wants the question a pool answers, "what might
+    /// you end up on", and a magnitude would add nothing to it while making
+    /// everyone's self-assessment everybody's business. Levels stay on the
+    /// machine that set them.
     #[serde(default)]
     pub pool: Vec<HeroId>,
     /// The rung of the ladder they read patch strength on.

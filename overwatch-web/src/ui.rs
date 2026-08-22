@@ -6,8 +6,8 @@
 
 use dioxus::prelude::*;
 use overwatch_core::{
-    Dataset, Format, HeroId, MapId, Queue, Rank, ReasonKind, Recommendation, Role, Side, TeamSize,
-    Threat,
+    ComfortStep, Dataset, Format, HeroId, MapId, Queue, Rank, ReasonKind, Recommendation, Role,
+    Side, TeamSize, Threat,
 };
 
 /// A reset that asks first, for the ones that throw away configuration rather
@@ -92,9 +92,13 @@ pub struct ModeChip {
     pub role: Role,
     /// The spoken word, from [`Role::label`] — "dps", not "damage".
     pub label: String,
-    /// How many heroes of this role you have marked as yours. A zero is honest
-    /// now: the pool highlights rather than restricts, so an empty one costs
-    /// you nothing but the highlight.
+    /// How many heroes of this role you have marked as yours.
+    ///
+    /// A zero is honest: the pool has never restricted what the list shows, so an
+    /// empty one costs you the comfort term on that role and nothing else. What
+    /// it counts changed underneath this without the number moving — it is now
+    /// the heroes with a comfort value above zero, which is the same set the
+    /// board draws and the same set the seat publishes.
     pub pool_size: usize,
     /// How many heroes the role has, so the count has something to be out of.
     pub roster_size: usize,
@@ -486,6 +490,16 @@ pub struct HeroTile {
     /// Whose it is, on a [`TileState::Theirs`] tile. It rides in the hover
     /// label, because "not yours to click" is only half an answer without it.
     pub owner: Option<String>,
+    /// How well you play this hero, on the pool board. `None` everywhere else,
+    /// and `None` on the pool board for a hero you have not claimed.
+    ///
+    /// A field beside [`TileState`] rather than a variant inside it, deliberately.
+    /// That enum is what `board::ally_tile_state` returns, and its five states
+    /// exist so an impossible combination cannot be written down; a `Comfort(u8)`
+    /// arm would put a pool concept into the type the *team* board is checked
+    /// against. So a claimed pool tile stays [`TileState::Free`] and carries its
+    /// level here.
+    pub comfort: Option<ComfortStep>,
 }
 
 /// One role's worth of a roster board.
@@ -700,7 +714,16 @@ pub fn HeroBoard(
                         for tile in row.tiles.iter() {
                             button {
                                 key: "{tile.hero.0}",
-                                class: format!("tile{}", tile.state.class()),
+                                class: format!(
+                                    "tile{}{}",
+                                    tile.state.class(),
+                                    match tile.comfort {
+                                        Some(ComfortStep::Ok) => " c1",
+                                        Some(ComfortStep::Good) => " c2",
+                                        Some(ComfortStep::Main) => " c3",
+                                        None => "",
+                                    },
+                                ),
                                 style: art(&tile.icon),
                                 aria_label: "{tile.name}",
                                 // Whose it is, where that is the reason it
@@ -1420,10 +1443,18 @@ pub struct RecRow {
     pub score: String,
     pub is_locked: bool,
     pub worth_swapping: bool,
-    /// One of yours, from the pool board. A highlight and nothing else — the
-    /// hero is ranked and the score untouched either way, because the comfort
-    /// overrides are already the lever for "I like this hero" and two levers for
-    /// one job would fight.
+    /// One of yours, from the pool board.
+    ///
+    /// **No longer a highlight and nothing else.** It used to say the score was
+    /// untouched either way, because the comfort overrides were the lever for "I
+    /// like this hero" and two levers for one job would fight. They are now the
+    /// same lever: the pool *is* the comfort value, so a starred row is a row
+    /// whose score this marker also moved.
+    ///
+    /// Which means a claimed hero can currently say so twice — a star up here and
+    /// a comfort line in the reasons below. That is a wording problem rather than
+    /// a modelling one, and it belongs to the change that makes the reason line
+    /// name the level.
     pub in_pool: bool,
     pub reasons: Vec<ReasonLine>,
 }

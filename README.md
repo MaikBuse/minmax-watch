@@ -35,7 +35,7 @@ that entry by hand, and they load unclamped.
 | Term | Weight | What it reads |
 | --- | --- | --- |
 | `counter` | 1.00 | matchups against every enemy entered, weighted by role pairing |
-| `personal` | 0.60 | your own comfort — see below, it is currently always zero |
+| `personal` | 0.60 | your own comfort, from the heroes you mark on the pool board |
 | `map` | 0.25 | hero/map affinity |
 | `shape` | 0.25 | dive / poke / brawl against the enemy comp's shape |
 | `side` | 0.20 | the attack/defend lean, on the maps that have sides |
@@ -44,10 +44,10 @@ that entry by hand, and they load unclamped.
 | `rank` | 0.15 | how far that moves at the rung you selected, if you selected one |
 
 Comfort sitting second is deliberate: a hero you play well but is countered
-usually beats the "correct" pick you cannot play. That is the intent rather than
-the behaviour — **nothing in the app writes the term today**, so in the shipped
-build it contributes exactly zero to every score. The interface for setting it is
-the next thing being built.
+usually beats the "correct" pick you cannot play. You set it on the **my pool**
+board — a hero you mark is worth `0.12`, which is deliberately less than the
+`0.15` a swap has to clear, so marking a hero can never on its own tell you to
+abandon a pick that is working.
 
 Four things about the arithmetic worth knowing before you trust a number:
 

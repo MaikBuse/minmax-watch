@@ -773,8 +773,22 @@ body {
 }
 /* The same colour the recommendation list marks your picks with, so the board
    and the list are visibly the same set rather than two things that happen to
-   agree. */
-.board-pool .tile.selected {
+   agree.
+
+   Keyed on the comfort level rather than on `.selected`, because a pool tile is
+   no longer picked-or-not: it carries how well you play the hero. The tile keeps
+   `TileState::Free` and the level rides beside it, so this is the only selector
+   that says a hero is yours.
+
+   All three are the same border today, and only `.c1` is reachable — the ladder's
+   upper rungs are not on the screen yet, so this change is deliberately invisible
+   and the risk in it is entirely in the storage behind it. What distinguishes the
+   levels from each other is coming, and it will not be a third colour: the border
+   already means "mine", and a hue cannot say "how much" without breaking the rule
+   that colour never carries meaning alone. */
+.board-pool .tile.c1,
+.board-pool .tile.c2,
+.board-pool .tile.c3 {
     border-color: var(--warn);
 }
 .board-map .tile.selected {
@@ -1809,9 +1823,12 @@ body {
 }
 
 /* --- my pool ---
-   A marker and nothing else: every hero in the role is ranked either way, so it
-   gets a colour that reads as "mine" rather than as "good". The glyph carries it
-   on its own, so the highlight is not the only cue. */
+   Amber rather than the positive green, and that survives the pool becoming the
+   comfort value: every hero in the role is still ranked either way, so the mark
+   says "mine" rather than "good". What changed is that "mine" now also moves the
+   score, which is an argument for keeping the two hues apart rather than against
+   it — green here would claim the app agrees with you. The glyph carries it on
+   its own, so the colour is not the only cue. */
 
 .star {
     padding: 0 0.25rem;

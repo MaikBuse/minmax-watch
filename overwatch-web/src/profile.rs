@@ -5,7 +5,9 @@
 //! sticky. The map is sticky too, but only within a session — it is cleared
 //! deliberately rather than carried into the next match on a different map.
 
-use overwatch_core::{Dataset, Format, HeroSet, Rank, Role, UserContext, Weights};
+use overwatch_core::{
+    ComfortStep, Dataset, Format, HeroId, HeroSet, Rank, Role, UserContext, Weights,
+};
 use serde::{Deserialize, Serialize};
 
 const STORAGE_KEY: &str = "minmax.profile";
@@ -84,29 +86,27 @@ pub struct Profile {
     /// wins, exactly as the map does — this only ever remembers what *you* last
     /// chose, and an incoming board never writes it.
     pub format: Format,
-    /// The heroes you actually play, one set per role, indexed by
-    /// [`Role::index`]. An array rather than a field each, so adding a fourth
-    /// role could never again leave a `match` with a catch-all arm quietly
-    /// pointing two roles at one pool.
-    ///
-    /// A marker *in the pick list*: it highlights your picks rather than deciding
-    /// what appears there. It used to be a whitelist, and a separate "favourites"
-    /// set did the highlighting — two levers for one idea, and the filtering one
-    /// hid heroes on exactly the draft that called for them.
-    ///
-    /// It is not inert, though, and "purely a marker" — which this said for a
-    /// while — is wrong about where. The pool travels to your seat and reaches the
-    /// ban list as `Knowledge::Pool`, which `ban_recommendations` scores at full
-    /// certainty, so it decides who the team is defended against before anybody
-    /// has picked.
-    ///
-    /// The comfort overrides are the intended lever for "rank this hero higher",
-    /// and **nothing writes them yet** — the term is second-heaviest in the score
-    /// and zero for every user until an interface for it exists.
-    pub pools: [HeroSet; Role::ALL.len()],
     /// Which rung of the ladder to read patch strength on. Sticky like the role
     /// and the format — you play an evening in one bracket.
     pub rank: Rank,
+    /// How well you play each hero, on the canonical -100..=100 scale, indexed by
+    /// hero. **This is also your pool**, and the two are one field on purpose.
+    ///
+    /// [`Profile::pool`] is a view over it: a hero is yours exactly when its
+    /// value is above zero. There used to be a `pools: [HeroSet; 3]` beside this,
+    /// and two representations of one fact is the bug class this file exists to
+    /// prevent — the same failure the pool itself was collapsed out of, when it
+    /// was a whitelist with a separate "favourites" set doing the highlighting.
+    /// The comfort overrides were already described as "the lever for rank this
+    /// hero higher"; the bug was that the surviving lever had no handle, and a
+    /// second comfort surface beside the pool board would have rebuilt exactly
+    /// the thing that was removed.
+    ///
+    /// It reaches two places. It is the [`Weights::personal`] term in the score,
+    /// second-heaviest of the eight; and its *membership* — never its magnitude —
+    /// travels to your seat and reaches the ban list as `Knowledge::Pool`, which
+    /// `ban_recommendations` scores at full certainty, so it decides who the team
+    /// is defended against before anybody has picked.
     pub overrides: Vec<i8>,
     pub weights: Weights,
     /// What the roster calls you. Empty until you say otherwise, at which point
@@ -122,7 +122,6 @@ impl Profile {
         Self {
             role: Role::Tank,
             format: Format::default(),
-            pools: [HeroSet::empty(); Role::ALL.len()],
             rank: Rank::All,
             overrides: vec![0; hero_count],
             weights: Weights::default(),
@@ -149,12 +148,61 @@ impl Profile {
         ctx
     }
 
-    pub fn pool(&self, role: Role) -> HeroSet {
-        self.pools[role.index()]
+    /// The heroes of one role you have said are yours.
+    ///
+    /// Derived rather than stored: exactly the heroes of `role` whose comfort is
+    /// above zero. `> 0` and not `!= 0` — a negative is a hand-edited profile
+    /// saying "rank this down", which is the opposite of claiming the hero, and
+    /// there is no negative rung on the ladder for it to have come from.
+    ///
+    /// Recomputed on every call, over one `i8` per hero. That is the trade this
+    /// crate makes everywhere: nothing is memoised, because scoring itself is a
+    /// few thousand `i8` lookups.
+    pub fn pool(&self, dataset: &Dataset, role: Role) -> HeroSet {
+        let mut set = HeroSet::empty();
+        for hero in dataset.heroes_in_role(role) {
+            if self.comfort(hero) > 0 {
+                let _ = set.insert(hero);
+            }
+        }
+        set
     }
 
-    pub fn pool_mut(&mut self, role: Role) -> &mut HeroSet {
-        &mut self.pools[role.index()]
+    /// How well you have said you play one hero. Zero for a hero you have not.
+    pub fn comfort(&self, hero: HeroId) -> i8 {
+        self.overrides.get(hero.index()).copied().unwrap_or(0)
+    }
+
+    /// One click on a pool tile.
+    ///
+    /// **A toggle, not [`ComfortStep::cycle`], and that is this release only.**
+    /// The ladder has three rungs; only the lowest is reachable from the screen
+    /// so far, so the risky half — collapsing the pool onto the comfort value and
+    /// migrating every stored profile onto it — lands on its own. Opening the
+    /// other two rungs is a change to this body and to nothing that calls it.
+    pub fn cycle_comfort(&mut self, hero: HeroId) {
+        let next = if self.comfort(hero) > 0 {
+            0
+        } else {
+            ComfortStep::Ok.value()
+        };
+        if let Some(slot) = self.overrides.get_mut(hero.index()) {
+            *slot = next;
+        }
+    }
+
+    /// Clears one role's pool and leaves the other two alone.
+    ///
+    /// Role-scoped rather than a blanket `overrides.fill(0)`: the board that
+    /// offers this shows one role at a time, and a reset that silently emptied
+    /// the two you were not looking at is the failure this file's own doc calls
+    /// cardinal.
+    pub fn clear_pool(&mut self, dataset: &Dataset, role: Role) {
+        for hero in dataset.heroes_in_role(role) {
+            if let Some(slot) = self.overrides.get_mut(hero.index()) {
+                *slot = 0;
+            }
+        }
     }
 
     fn from_stored(stored: StoredProfile, dataset: &Dataset) -> Self {
@@ -176,20 +224,52 @@ impl Profile {
         if let Some(rank) = stored.rank.as_deref().and_then(|r| Rank::parse(r).ok()) {
             profile.rank = rank;
         }
-        // Unknown keys are dropped rather than treated as an error: a hero
-        // removed from the roster should cost you that entry, not your profile.
-        *profile.pool_mut(Role::Tank) = to_set(&stored.tank_pool, dataset);
-        *profile.pool_mut(Role::Damage) = to_set(&stored.damage_pool, dataset);
-        *profile.pool_mut(Role::Support) = to_set(&stored.support_pool, dataset);
-        // A profile written before the pool absorbed the favourites still
-        // carries a `favorites` key. Unknown fields are ignored rather than
-        // rejected, so it loads with its pools intact and the stale key goes
-        // away on the next save.
-
+        // Comfort first, then the legacy pools promoted into whatever it left
+        // at zero. The order is the whole migration: a value somebody set wins
+        // over a bare membership key naming the same hero, so a hand-edited 55
+        // survives the upgrade instead of being flattened back to 20.
+        //
+        // Unknown keys are dropped rather than treated as an error, in both
+        // passes: a hero removed from the roster should cost you that entry, not
+        // your profile.
         for (key, value) in &stored.overrides {
             if let Ok(hero) = dataset.hero_by_key(key) {
                 if let Some(slot) = profile.overrides.get_mut(hero.index()) {
                     *slot = *value;
+                }
+            }
+        }
+
+        // Every hero in a legacy pool arrives at the lowest rung of the ladder.
+        //
+        // Emptying the pool instead is off the table — this module's own opening
+        // calls that "exactly the setup time the profile exists to save" — so the
+        // only question was which rung, and 20 is the one that cannot do harm:
+        // it is worth 0.12 against a swap threshold of 0.15, so marking a hero
+        // can never *on its own* tell somebody to abandon a pick that is working.
+        // See `ComfortStep::value` for the full argument.
+        //
+        // Idempotent by construction rather than by a flag: `to_stored` filters
+        // zeros out and writes the promoted value back as an override, so the
+        // next load finds it already set and this pass has nothing to do.
+        //
+        // A profile written before the pool absorbed the favourites still carries
+        // a `favorites` key. Unknown fields are ignored rather than rejected, so
+        // it loads intact and the stale key goes away on the next save.
+        let legacy = [
+            (Role::Tank, &stored.tank_pool),
+            (Role::Damage, &stored.damage_pool),
+            (Role::Support, &stored.support_pool),
+        ];
+        for (_, keys) in legacy {
+            for key in keys {
+                let Ok(hero) = dataset.hero_by_key(key) else {
+                    continue;
+                };
+                if let Some(slot) = profile.overrides.get_mut(hero.index()) {
+                    if *slot == 0 {
+                        *slot = ComfortStep::Ok.value();
+                    }
                 }
             }
         }
@@ -225,9 +305,26 @@ impl Profile {
             role: Some(self.role.as_str().to_owned()),
             format: Some(self.format),
             rank: Some(self.rank.as_str().to_owned()),
-            tank_pool: keys(&self.pool(Role::Tank)),
-            damage_pool: keys(&self.pool(Role::Damage)),
-            support_pool: keys(&self.pool(Role::Support)),
+            // Still written, one release after the pool became the comfort
+            // value, and read back as the fallback above.
+            //
+            // This departs from the `room` precedent below on purpose. A stale
+            // service worker or a second machine on an older build reads only
+            // these keys, and would otherwise open on an empty pool — which is
+            // this module's cardinal sin. Deleting the write is a separate later
+            // change of three lines.
+            //
+            // The cost of keeping it, stated so nobody has to rediscover it:
+            // during the overlap an *old* build can drop a hero from `tank_pool`
+            // while `overrides` still names it, because that build has no way to
+            // clear a comfort value. This one reads the override, which wins, so
+            // a pool removal made on an old build does not stick. The
+            // alternative — treating absence from these keys as a removal —
+            // would zero a hand-edited override on the very first load, which is
+            // worse.
+            tank_pool: keys(&self.pool(dataset, Role::Tank)),
+            damage_pool: keys(&self.pool(dataset, Role::Damage)),
+            support_pool: keys(&self.pool(dataset, Role::Support)),
             overrides: self
                 .overrides
                 .iter()
@@ -269,16 +366,6 @@ impl Profile {
             let _ = storage.set_item(STORAGE_KEY, &raw);
         }
     }
-}
-
-fn to_set(keys: &[String], dataset: &Dataset) -> HeroSet {
-    let mut set = HeroSet::empty();
-    for key in keys {
-        if let Ok(hero) = dataset.hero_by_key(key) {
-            let _ = set.insert(hero);
-        }
-    }
-    set
 }
 
 fn storage() -> Option<web_sys::Storage> {
@@ -361,8 +448,228 @@ mod tests {
         // ignoring pick rate entirely. See `default_prevalence` in core.
         assert_eq!(weights.prevalence, Weights::default().prevalence);
         assert!(weights.prevalence > 0.0);
+
+        // This blob is also the whole migration in one fixture: it carries the
+        // legacy pool keys *and* an `overrides` entry, which is exactly the
+        // collision the two passes exist to resolve.
+        let ds = fixture();
+        let profile = Profile::from_stored(stored, &ds);
+        for key in ["reinhardt", "winston", "ana"] {
+            let hero = ds.hero_by_key(key).expect("in the fixture");
+            assert_eq!(
+                profile.comfort(hero),
+                ComfortStep::Ok.value(),
+                "{key} was in a pool and had no value of its own"
+            );
+        }
+        let dva = ds.hero_by_key("dva").expect("in the fixture");
+        assert_eq!(
+            profile.comfort(dva),
+            20,
+            "dva had a stored value and is in no pool, so nothing touches it"
+        );
+        assert_eq!(profile.pool(&ds, Role::Tank).len(), 3, "dva joins the pool");
+        assert!(profile.pool(&ds, Role::Damage).is_empty());
     }
 
+    /// The migration itself. Every hero somebody had marked arrives at the
+    /// bottom rung of the ladder, which is the only rung that cannot do harm:
+    /// 20 is worth 0.12 against a swap threshold of 0.15.
+    ///
+    /// Emptying the pool instead was never an option — this module opens by
+    /// calling that "exactly the setup time the profile exists to save".
+    #[test]
+    fn a_profile_written_when_the_pool_was_only_a_highlight_arrives_at_the_lowest_comfort_step() {
+        let ds = fixture();
+        let stored = StoredProfile {
+            tank_pool: vec!["reinhardt".to_owned(), "winston".to_owned()],
+            support_pool: vec!["ana".to_owned()],
+            ..StoredProfile::default()
+        };
+
+        let profile = Profile::from_stored(stored, &ds);
+
+        for key in ["reinhardt", "winston", "ana"] {
+            let hero = ds.hero_by_key(key).expect("in the fixture");
+            assert_eq!(
+                profile.comfort(hero),
+                ComfortStep::Ok.value(),
+                "{key} was marked, so it arrives at the lowest step"
+            );
+        }
+        let unmarked = ds.hero_by_key("dva").expect("in the fixture");
+        assert_eq!(profile.comfort(unmarked), 0, "and nobody else moves");
+    }
+
+    /// Idempotent by construction rather than by a flag: `to_stored` writes the
+    /// promoted value back as an override and filters zeros out, so the next
+    /// load finds it already set. Without this a pooled hero would climb a rung
+    /// on every visit.
+    #[test]
+    fn an_upgraded_pool_entry_is_not_promoted_a_second_time_on_the_next_load() {
+        let ds = fixture();
+        let stored = StoredProfile {
+            tank_pool: vec!["reinhardt".to_owned()],
+            ..StoredProfile::default()
+        };
+
+        let once = Profile::from_stored(stored, &ds);
+        let twice = Profile::from_stored(once.to_stored(&ds), &ds);
+        let thrice = Profile::from_stored(twice.to_stored(&ds), &ds);
+
+        let hero = ds.hero_by_key("reinhardt").expect("in the fixture");
+        assert_eq!(twice.comfort(hero), ComfortStep::Ok.value());
+        assert_eq!(thrice.comfort(hero), ComfortStep::Ok.value());
+    }
+
+    /// The order of the two passes, which is the whole migration. A value
+    /// somebody set has to beat a bare membership key naming the same hero, or
+    /// the upgrade flattens every hand-edited level back to the bottom rung.
+    #[test]
+    fn a_stored_comfort_value_wins_over_a_legacy_pool_key_naming_the_same_hero() {
+        let ds = fixture();
+        let stored = StoredProfile {
+            tank_pool: vec!["reinhardt".to_owned(), "winston".to_owned()],
+            overrides: vec![("reinhardt".to_owned(), ComfortStep::Main.value())],
+            ..StoredProfile::default()
+        };
+
+        let profile = Profile::from_stored(stored, &ds);
+
+        let rein = ds.hero_by_key("reinhardt").expect("in the fixture");
+        let winston = ds.hero_by_key("winston").expect("in the fixture");
+        assert_eq!(profile.comfort(rein), ComfortStep::Main.value());
+        assert_eq!(profile.comfort(winston), ComfortStep::Ok.value());
+    }
+
+    /// The invariant the whole slice rests on, including the edge that `> 0` and
+    /// `!= 0` disagree about: a negative is a hand-edited "rank this down", which
+    /// is the opposite of claiming the hero.
+    #[test]
+    fn the_pool_is_exactly_the_heroes_with_a_comfort_value_above_zero() {
+        let ds = fixture();
+        let mut profile = Profile::empty(ds.hero_count());
+
+        let rein = ds.hero_by_key("reinhardt").expect("in the fixture");
+        let winston = ds.hero_by_key("winston").expect("in the fixture");
+        let dva = ds.hero_by_key("dva").expect("in the fixture");
+        profile.overrides[rein.index()] = ComfortStep::Ok.value();
+        profile.overrides[winston.index()] = ComfortStep::Main.value();
+        profile.overrides[dva.index()] = -40;
+
+        let pool = profile.pool(&ds, Role::Tank);
+        assert!(pool.contains(rein));
+        assert!(pool.contains(winston));
+        assert!(!pool.contains(dva), "a negative is not a claim on the hero");
+        assert_eq!(pool.len(), 2);
+
+        // And the pool only ever holds its own role.
+        assert!(profile.pool(&ds, Role::Support).is_empty());
+    }
+
+    /// The board that offers the reset shows one role at a time, so a reset that
+    /// reached the other two would silently empty pools nobody was looking at.
+    #[test]
+    fn resetting_one_roles_pool_leaves_the_other_two_alone() {
+        let ds = fixture();
+        let mut profile = Profile::from_stored(
+            StoredProfile {
+                tank_pool: vec!["reinhardt".to_owned()],
+                damage_pool: vec!["ashe".to_owned()],
+                support_pool: vec!["ana".to_owned()],
+                ..StoredProfile::default()
+            },
+            &ds,
+        );
+
+        profile.clear_pool(&ds, Role::Tank);
+
+        assert!(profile.pool(&ds, Role::Tank).is_empty());
+        assert_eq!(profile.pool(&ds, Role::Damage).len(), 1);
+        assert_eq!(profile.pool(&ds, Role::Support).len(), 1);
+    }
+
+    /// Still written one release on, and read back as the fallback. A stale
+    /// service worker or a second machine on an older build reads only these
+    /// keys, and would otherwise open on an empty pool.
+    #[test]
+    fn saving_still_writes_the_pool_keys_an_older_build_reads() {
+        let ds = fixture();
+        let mut profile = Profile::empty(ds.hero_count());
+        profile.cycle_comfort(ds.hero_by_key("reinhardt").expect("in the fixture"));
+        profile.cycle_comfort(ds.hero_by_key("ana").expect("in the fixture"));
+
+        let stored = profile.to_stored(&ds);
+
+        assert_eq!(stored.tank_pool, vec!["reinhardt".to_owned()]);
+        assert_eq!(stored.support_pool, vec!["ana".to_owned()]);
+        assert!(stored.damage_pool.is_empty());
+        // And the same fact in its new home, so the two cannot disagree.
+        assert!(stored
+            .overrides
+            .contains(&("reinhardt".to_owned(), ComfortStep::Ok.value())));
+    }
+
+    /// A roster update drops heroes. Losing the entry is the price; losing the
+    /// profile is not, and the two passes have to agree about that.
+    #[test]
+    fn a_hero_the_roster_no_longer_names_costs_its_comfort_value_and_nothing_else() {
+        let ds = fixture();
+        let stored = StoredProfile {
+            role: Some("support".to_owned()),
+            tank_pool: vec!["reinhardt".to_owned(), "hero-that-retired".to_owned()],
+            overrides: vec![("also-gone".to_owned(), 55)],
+            ..StoredProfile::default()
+        };
+
+        let profile = Profile::from_stored(stored, &ds);
+
+        assert_eq!(profile.role, Role::Support, "the rest of it survives");
+        assert_eq!(profile.pool(&ds, Role::Tank).len(), 1);
+        let rein = ds.hero_by_key("reinhardt").expect("in the fixture");
+        assert_eq!(profile.comfort(rein), ComfortStep::Ok.value());
+    }
+
+    /// Comfort is not a thing you tell the room. `Seat` is the entire per-person
+    /// wire shape, and the ban list wants the question a pool answers — "what
+    /// might you end up on" — which a magnitude adds nothing to.
+    ///
+    /// Asserted over the constructed value rather than by reading the type, so a
+    /// future field called `comfort` fails here before it reaches a socket.
+    #[test]
+    fn a_seat_carries_which_heroes_are_yours_and_never_how_good_you_are_at_them() {
+        let ds = fixture();
+        let mut profile = Profile::empty(ds.hero_count());
+        let rein = ds.hero_by_key("reinhardt").expect("in the fixture");
+        let winston = ds.hero_by_key("winston").expect("in the fixture");
+        profile.overrides[rein.index()] = ComfortStep::Main.value();
+        profile.overrides[winston.index()] = ComfortStep::Ok.value();
+
+        // Exactly what `main.rs` publishes into the seat.
+        let published: Vec<overwatch_core::HeroId> = profile.pool(&ds, Role::Tank).iter().collect();
+
+        assert_eq!(
+            published,
+            vec![rein, winston],
+            "membership, in roster order"
+        );
+        let wire = serde_json::to_string(&overwatch_core::Seat {
+            id: "me".to_owned(),
+            name: String::new(),
+            role: Role::Tank,
+            locked: None,
+            pool: published,
+            rank: Rank::All,
+            connected: true,
+        })
+        .expect("a seat serialises");
+        assert!(
+            !wire.contains("comfort") && !wire.contains("100"),
+            "the level must not reach the wire: {wire}"
+        );
+    }
+
+    /// The two-person build called this field `room` and defaulted it to "us",
     /// The two-person build called this field `room` and defaulted it to "us",
     /// so essentially every pre-session profile carries one. A room was created
     /// by whoever joined it first; a session has to be minted. Carrying the name
@@ -431,7 +738,7 @@ mod tests {
         assert_eq!(profile.format, Format::default());
         assert_eq!(profile.format.team_size(), 5);
         assert_eq!(
-            profile.pool(Role::Support).len(),
+            profile.pool(&fixture(), Role::Support).len(),
             1,
             "and the rest of it is untouched"
         );
@@ -450,7 +757,7 @@ mod tests {
         let profile = Profile::from_stored(stored, &fixture());
         assert_eq!(profile.rank, Rank::All);
         assert_eq!(
-            profile.pool(Role::Support).len(),
+            profile.pool(&fixture(), Role::Support).len(),
             1,
             "and the rest of it is untouched"
         );
@@ -487,7 +794,7 @@ mod tests {
 
         assert_eq!(profile.rank, Rank::All, "the setting falls back");
         assert_eq!(profile.role, Role::Support, "and nothing else is lost");
-        assert_eq!(profile.pool(Role::Support).len(), 1);
+        assert_eq!(profile.pool(&fixture(), Role::Support).len(), 1);
     }
 
     /// The guard against the pick column and the lock-top shortcut drifting
@@ -550,13 +857,26 @@ mod tests {
     fn fixture() -> Dataset {
         use overwatch_core::{DatasetParts, Hero, Matrix};
 
-        let heroes = vec![Hero {
-            key: "ana".to_owned(),
-            name: "Ana".to_owned(),
-            role: Role::Support,
+        // Several per role, because every migration test below needs to tell
+        // one role's pool from another's and a one-hero roster cannot.
+        let heroes: Vec<Hero> = [
+            ("reinhardt", "Reinhardt", Role::Tank),
+            ("winston", "Winston", Role::Tank),
+            ("dva", "D.Va", Role::Tank),
+            ("ashe", "Ashe", Role::Damage),
+            ("cassidy", "Cassidy", Role::Damage),
+            ("ana", "Ana", Role::Support),
+            ("kiriko", "Kiriko", Role::Support),
+        ]
+        .into_iter()
+        .map(|(key, name, role)| Hero {
+            key: key.to_owned(),
+            name: name.to_owned(),
+            role,
             subrole: None,
-            aliases: vec!["ana".to_owned()],
-        }];
+            aliases: vec![key.to_owned()],
+        })
+        .collect();
         let n = heroes.len();
 
         Dataset::new(DatasetParts {

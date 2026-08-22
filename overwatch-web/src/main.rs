@@ -34,8 +34,8 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use overwatch_core::{
     ban_recommendations, recommend, search_maps, shape_of, threats, Archetype, BanBoard,
-    BanSubject, Board, Capacity, Dataset, Draft, Format, HeroId, MapId, Rank, Recommendation, Role,
-    Seat, SessionState, Side, Threat,
+    BanSubject, Board, Capacity, ComfortStep, Dataset, Draft, Format, HeroId, MapId, Rank,
+    Recommendation, Role, Seat, SessionState, Side, Threat,
 };
 
 use crate::profile::Profile;
@@ -263,7 +263,7 @@ fn App() -> Element {
             name: profile.name.clone(),
             role: profile.role,
             locked: None,
-            pool: profile.pool(profile.role).iter().collect(),
+            pool: profile.pool(&dataset, profile.role).iter().collect(),
             rank: profile.rank,
             connected: true,
         }
@@ -496,10 +496,11 @@ fn App() -> Element {
     // writer. This runs whenever the pool or the role changes — the pool that
     // matters is the one for the role you are actually queued as — and the seat
     // effect below does the sending.
+    let ds_pool = dataset.clone();
     use_effect(move || {
         let mine: Vec<HeroId> = {
             let profile = profile.read();
-            profile.pool(profile.role).iter().collect()
+            profile.pool(&ds_pool, profile.role).iter().collect()
         };
         // Peeked, so this effect does not subscribe to the signal it writes.
         if me.peek().pool != mine {
@@ -653,7 +654,7 @@ fn App() -> Element {
     let chip_of = move |hero: HeroId| hero_chip(&ds_view, hero);
 
     let role = profile.read().role;
-    let pool = profile.read().pool(role);
+    let pool = profile.read().pool(&dataset, role);
     let map = draft.map.and_then(|m| map_chip(&dataset, m));
 
     // Every mode carries its own pool count, so how much of a role you have
@@ -663,7 +664,7 @@ fn App() -> Element {
         .map(|mode| ModeChip {
             role: mode,
             label: mode.label().to_owned(),
-            pool_size: profile.read().pool(mode).len(),
+            pool_size: profile.read().pool(&dataset, mode).len(),
             roster_size: dataset.heroes_in_role(mode).count(),
         })
         .collect();
@@ -791,10 +792,7 @@ fn App() -> Element {
         mine: false,
         tiles: dataset
             .heroes_in_role(role)
-            .map(|hero| {
-                let (state, owner) = plain_tile(pool.contains(hero), false);
-                tile_of(&dataset, hero, state, owner)
-            })
+            .map(|hero| pool_tile(&dataset, hero, profile.read().comfort(hero)))
             .collect(),
     }];
 
@@ -995,7 +993,7 @@ fn App() -> Element {
                         let ds = dataset.clone();
                         move |hero: HeroId| {
                             let mut p = profile.write();
-                            let _ = p.pool_mut(role).toggle(hero);
+                            p.cycle_comfort(hero);
                             p.save(&ds);
                         }
                     },
@@ -1003,7 +1001,7 @@ fn App() -> Element {
                         let ds = dataset.clone();
                         move |_| {
                             let mut p = profile.write();
-                            *p.pool_mut(role) = overwatch_core::HeroSet::empty();
+                            p.clear_pool(&ds, role);
                             p.save(&ds);
                         }
                     },
@@ -1308,6 +1306,22 @@ fn tile_of(dataset: &Dataset, hero: HeroId, state: TileState, owner: Option<Stri
         icon: chip.icon,
         state,
         owner,
+        comfort: None,
+    }
+}
+
+/// A tile on the pool board, which is the one board that is not about a team.
+///
+/// Its own constructor rather than a third case inside [`plain_tile`], because
+/// that one is shared with the enemy roster and the pool has nothing in common
+/// with it: no seats, no capacity, and a level rather than a picked/not-picked
+/// bit. The state stays [`TileState::Free`] on every tile, claimed or not —
+/// the level is what says so, and it rides beside the state rather than inside
+/// it. See `HeroTile::comfort`.
+fn pool_tile(dataset: &Dataset, hero: HeroId, comfort: i8) -> HeroTile {
+    HeroTile {
+        comfort: ComfortStep::of(comfort),
+        ..tile_of(dataset, hero, TileState::Free, None)
     }
 }
 
