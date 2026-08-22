@@ -332,6 +332,7 @@ mod tests {
             prevalence: vec![[0; Rank::CHOICES.len()]; n],
             win_rate: vec![None; n],
             side_lean: vec![0; n],
+            side_note: vec![String::new(); n],
             // One pure hero per axis, at equal strength, so a team of all three
             // is an exact three-way tie and `mixed` is not resting on the
             // margin happening to swallow a lopsided fixture.
@@ -346,6 +347,7 @@ mod tests {
                 [50, 45, 0], // narrow
                 [50, 40, 0], // clear
             ],
+            shape_note: vec![String::new(); n],
             reasons: vec![String::new(); n * n],
             disputed: vec![false; n * n],
             generated: "test".to_owned(),

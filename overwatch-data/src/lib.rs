@@ -96,6 +96,41 @@ pub struct Sources<'a> {
     pub archetype: &'a str,
 }
 
+/// The part of a curated note that is about the game.
+///
+/// `side.toml` and `archetype.toml` are written for the next person to edit
+/// them, and a few notes close on an aside to that reader — Jetpack Cat's
+/// archetype note ends *"the least settled entry in this file"*, which is true
+/// and is not for a player. Keeping the first sentence is what makes a note safe
+/// to render without asking every future author to write two audiences into one
+/// string, and it is also what keeps the rendered line near the length of the
+/// scraped sentences it sits beside: 27 of the 53 archetype notes run to more
+/// than one sentence.
+///
+/// The cut is at the first `". "` **followed by an uppercase letter**, and that
+/// qualifier is load-bearing rather than defensive. Ashe's side note reads
+/// *"...and B.O.B. arrives as an entry. Both sides, so neither."* — the
+/// initialism's own full stop is followed by a space, so the rule without it
+/// renders the fragment *"...and B.O.B."* Checked against all 106 committed
+/// notes: it differs from the naive rule on that one row and nowhere else, and
+/// every sentence it returns ends in a full stop. Ashe leans neither way today,
+/// so nothing on screen would have shown the fragment — which is why
+/// `a_hero_ability_written_as_initials_does_not_cut_a_note_short` exists rather
+/// than a bug report later.
+///
+/// Cut here rather than in core so the aside never crosses into the dataset at
+/// all, and only the ~5 KB that can be shown is retained.
+fn first_sentence(note: &str) -> String {
+    for (at, _) in note.match_indices(". ") {
+        // `at + 2` and `at + 1` are both char boundaries: the pattern is two
+        // ASCII bytes, whatever the note has around it.
+        if note[at + 2..].starts_with(char::is_uppercase) {
+            return note[..=at].to_owned();
+        }
+    }
+    note.to_owned()
+}
+
 pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     let heroes_file: HeroesFile = parse("heroes.toml", sources.heroes)?;
     let maps_file: MapsFile = parse("maps.toml", sources.maps)?;
@@ -274,11 +309,18 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     // read from one somebody read and found neutral, so the note beside the
     // zero is the only thing that can. Guarded by
     // `every_hero_has_a_side_lean_written_down_even_when_it_is_zero`.
+    //
+    // The note comes with it, cut to its first sentence, because it is the only
+    // evidence behind a hand-curated number and the app now shows it.
     let mut side_lean = vec![0i8; n];
+    let mut side_note = vec![String::new(); n];
     for entry in &side_file.entries {
         let hero = hero_id("side.toml", &entry.hero)?;
         if let Some(slot) = side_lean.get_mut(hero.index()) {
             *slot = entry.value;
+        }
+        if let Some(slot) = side_note.get_mut(hero.index()) {
+            *slot = first_sentence(&entry.note);
         }
     }
 
@@ -287,10 +329,14 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
     // "nobody has curated this kit" rather than as a hero that wants none of
     // the three fights — see `overwatch_core::archetype::shape_of`.
     let mut shape = vec![[0i8; 3]; n];
+    let mut shape_note = vec![String::new(); n];
     for entry in &archetype_file.entries {
         let hero = hero_id("archetype.toml", &entry.hero)?;
         if let Some(slot) = shape.get_mut(hero.index()) {
             *slot = [entry.dive, entry.poke, entry.brawl];
+        }
+        if let Some(slot) = shape_note.get_mut(hero.index()) {
+            *slot = first_sentence(&entry.note);
         }
     }
 
@@ -305,7 +351,9 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
         prevalence,
         win_rate,
         side_lean,
+        side_note,
         shape,
+        shape_note,
         reasons,
         disputed,
         generated: matchups_file.generated.clone(),
@@ -317,6 +365,58 @@ pub fn load_from(sources: Sources<'_>) -> Result<Dataset, DataError> {
 mod tests {
     use super::*;
 
+    /// A note is written for whoever edits the file next, and a few of them close
+    /// on a line addressed to that reader. Only the first sentence crosses into
+    /// the dataset, so the rest can never reach a player.
+    #[test]
+    fn only_the_first_sentence_of_a_note_reaches_the_dataset() {
+        assert_eq!(
+            first_sentence(
+                "Boosters are the engage and the exit. Matrix is why she can stand in a brawl."
+            ),
+            "Boosters are the engage and the exit."
+        );
+        // The Jetpack Cat shape: the aside is the tail of the last sentence
+        // rather than a sentence of its own, so the cut has to happen at the
+        // boundary before it.
+        assert_eq!(
+            first_sentence(
+                "Permanent flight as a passive. Purr rewards grouping \u{2014} the least settled entry in this file."
+            ),
+            "Permanent flight as a passive."
+        );
+        // A single-sentence note is returned whole, with its full stop.
+        assert_eq!(
+            first_sentence("A held long sightline is defence's to keep."),
+            "A held long sightline is defence's to keep."
+        );
+        assert_eq!(first_sentence(""), "");
+    }
+
+    /// The one case a naive split gets wrong, and it is latent rather than live:
+    /// Ashe's side note carries `B.O.B.` and Ashe leans neither way, so nothing on
+    /// screen would show the fragment until the day that value moves.
+    #[test]
+    fn a_hero_ability_written_as_initials_does_not_cut_a_note_short() {
+        let note = "Coach Gun boosts her onto an angle, and B.O.B. arrives as an entry. \
+                    Both sides, so neither.";
+        assert_eq!(
+            first_sentence(note),
+            "Coach Gun boosts her onto an angle, and B.O.B. arrives as an entry.",
+            "the full stop inside an initialism is not a sentence boundary"
+        );
+
+        // The rule the qualifier rests on: a real boundary is followed by a
+        // capital, and the letter after `B.O.B.` is not.
+        assert_eq!(
+            first_sentence("Nano Boost lands on D.Va. She dives on it."),
+            "Nano Boost lands on D.Va.",
+            "a boundary that is followed by a capital is still a boundary"
+        );
+    }
+
+    /// The committed dataset must always load. This is the guard against a bad
+    /// ingest landing in the repo.
     /// The committed dataset must always load. This is the guard against a bad
     /// ingest landing in the repo.
     #[test]

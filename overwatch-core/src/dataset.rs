@@ -56,6 +56,12 @@ pub struct Dataset {
     /// Positive leans attack, negative leans defend. Only consulted on the modes
     /// that have sides at all.
     side_lean: Vec<i8>,
+    /// Why each hero leans the way it does, one first sentence per hero.
+    ///
+    /// Hand-written in `side.toml`, which has no source behind it — so unlike
+    /// every other column here, the sentence is the only evidence there is. Empty
+    /// string means "nothing written", read through [`Self::side_note`].
+    side_note: Vec<String>,
     /// Dive, poke and brawl per hero, in [`crate::archetype::Archetype::ALL`]
     /// order.
     ///
@@ -64,6 +70,9 @@ pub struct Dataset {
     /// [`crate::archetype::shape_of`] for why that silence is left out of a
     /// team's mean rather than counted as a shape of its own.
     shape: Vec<[i8; 3]>,
+    /// Why each hero reads the way it does on those axes, one first sentence per
+    /// hero. The [`Self::side_note`] argument, for `archetype.toml`.
+    shape_note: Vec<String>,
     /// Row-major `n x n`, parallel to `matchups`. Empty string means "no text".
     reasons: Vec<String>,
     /// Row-major `n x n`, parallel to `matchups`: the sources that rated this
@@ -111,7 +120,12 @@ pub struct DatasetParts {
     pub prevalence: Vec<[i8; Rank::CHOICES.len()]>,
     pub win_rate: Vec<Option<f32>>,
     pub side_lean: Vec<i8>,
+    /// One per hero, parallel to `side_lean`. Already cut to its first sentence
+    /// by the loader — see the fields of the same name on [`Dataset`].
+    pub side_note: Vec<String>,
     pub shape: Vec<[i8; 3]>,
+    /// One per hero, parallel to `shape`.
+    pub shape_note: Vec<String>,
     pub reasons: Vec<String>,
     /// Row-major `n x n`, parallel to `matchups`: the sources that rated this
     /// direction contradicted each other by more than the blend threshold.
@@ -175,11 +189,25 @@ impl Dataset {
                 actual: parts.side_lean.len(),
             });
         }
+        if parts.side_note.len() != n {
+            return Err(CoreError::RosterLengthMismatch {
+                what: "side_note",
+                expected: n,
+                actual: parts.side_note.len(),
+            });
+        }
         if parts.shape.len() != n {
             return Err(CoreError::RosterLengthMismatch {
                 what: "shape",
                 expected: n,
                 actual: parts.shape.len(),
+            });
+        }
+        if parts.shape_note.len() != n {
+            return Err(CoreError::RosterLengthMismatch {
+                what: "shape_note",
+                expected: n,
+                actual: parts.shape_note.len(),
             });
         }
         if parts.reasons.len() != n * n {
@@ -241,7 +269,9 @@ impl Dataset {
             prevalence: parts.prevalence,
             win_rate: parts.win_rate,
             side_lean: parts.side_lean,
+            side_note: parts.side_note,
             shape: parts.shape,
+            shape_note: parts.shape_note,
             reasons: parts.reasons,
             disputed: parts.disputed,
             pairs_rated,
@@ -390,6 +420,33 @@ impl Dataset {
         self.shape.get(hero.index()).copied().unwrap_or([0; 3])
     }
 
+    /// The hand-written sentence behind this hero's attack/defend lean, if there
+    /// is one.
+    ///
+    /// Filtered on the empty string exactly as [`Self::reason`] is, so a hero the
+    /// file does not mention and a hero written down with nothing to say are the
+    /// same silence — and the caller can compose without checking, because a
+    /// `Some("")` would render a head with a dangling dash after it.
+    ///
+    /// The one difference from `reason` worth knowing: this file has no source
+    /// behind it, so the sentence is not a second opinion on a number, it is the
+    /// whole argument for the number.
+    pub fn side_note(&self, hero: HeroId) -> Option<&str> {
+        self.side_note
+            .get(hero.index())
+            .map(String::as_str)
+            .filter(|s| !s.is_empty())
+    }
+
+    /// The hand-written sentence behind this hero's dive/poke/brawl reading, if
+    /// there is one. See [`Self::side_note`].
+    pub fn shape_note(&self, hero: HeroId) -> Option<&str> {
+        self.shape_note
+            .get(hero.index())
+            .map(String::as_str)
+            .filter(|s| !s.is_empty())
+    }
+
     /// Neutral (0) when the map is unknown or affinity data is missing, so a
     /// partially-populated dataset still scores rather than failing.
     pub fn map_affinity(&self, map: MapId, hero: HeroId) -> i8 {
@@ -520,7 +577,9 @@ mod tests {
             prevalence: vec![[0; Rank::CHOICES.len()]; n],
             win_rate: vec![None; n],
             side_lean: vec![0; n],
+            side_note: vec![String::new(); n],
             shape: vec![[0; 3]; n],
+            shape_note: vec![String::new(); n],
             reasons,
             disputed,
             generated: "test".to_owned(),

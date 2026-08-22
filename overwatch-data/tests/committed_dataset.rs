@@ -756,6 +756,141 @@ fn every_hero_has_a_side_lean_written_down_even_when_it_is_zero() {
     );
 }
 
+/// The note has to survive the loader, not merely exist in the file.
+///
+/// `every_hero_has_a_side_lean_written_down_even_when_it_is_zero` above reads
+/// `SIDE_TOML` and checks the file; this reads the `Dataset` and checks what
+/// actually reaches a screen. They are one edit apart from disagreeing: the
+/// loader cuts each note to its first sentence, and a note that is one word and a
+/// full stop would pass the file check and arrive as a line that says nothing.
+///
+/// Only the heroes that can produce a line are required to have one. `SideFit`
+/// fires only on a non-zero lean, so the 26 written zeroes are unreachable from
+/// the pick list by construction and requiring prose of them would be requiring
+/// prose nobody can read.
+#[test]
+fn every_hero_with_a_side_lean_has_a_note_to_show_for_it() {
+    let ds = load().expect("committed data must load");
+
+    let leaning: Vec<HeroId> = (0..ds.hero_count())
+        .map(|i| HeroId(i as u16))
+        .filter(|hero| ds.side_lean(*hero) != 0)
+        .collect();
+
+    let silent: Vec<&str> = leaning
+        .iter()
+        .filter(|hero| ds.side_note(**hero).is_none())
+        .filter_map(|hero| ds.hero(*hero).ok())
+        .map(|hero| hero.key.as_str())
+        .collect();
+
+    assert!(
+        silent.is_empty(),
+        "{} of {} leaning heroes reach the screen with no reason behind the lean: {}",
+        silent.len(),
+        leaning.len(),
+        silent.join(" ")
+    );
+    // A band rather than a floor: a loader that stopped writing notes and one
+    // that wrote every hero's would both pass an `is_empty` on the silent list.
+    assert!(
+        leaning.len() >= 20,
+        "only {} heroes lean at all - has side.toml emptied?",
+        leaning.len()
+    );
+}
+
+/// The same, for the axes. Coverage here is total rather than partial: every
+/// hero with any non-zero axis can produce a shape line, and all 53 do.
+#[test]
+fn every_hero_on_the_playstyle_axes_has_a_note_to_show_for_it() {
+    let ds = load().expect("committed data must load");
+
+    let read: Vec<HeroId> = (0..ds.hero_count())
+        .map(|i| HeroId(i as u16))
+        .filter(|hero| ds.shape(*hero).iter().any(|axis| *axis != 0))
+        .collect();
+
+    let silent: Vec<&str> = read
+        .iter()
+        .filter(|hero| ds.shape_note(**hero).is_none())
+        .filter_map(|hero| ds.hero(*hero).ok())
+        .map(|hero| hero.key.as_str())
+        .collect();
+
+    assert!(
+        silent.is_empty(),
+        "{} of {} curated kits reach the screen with no reason behind the reading: {}",
+        silent.len(),
+        read.len(),
+        silent.join(" ")
+    );
+    assert_eq!(
+        read.len(),
+        ds.hero_count(),
+        "archetype.toml no longer covers the whole roster"
+    );
+}
+
+/// The notes are written for whoever edits the file next, and a few of them close
+/// on a line addressed to that reader rather than to a player. The loader keeps
+/// only the first sentence; this is the guard that the rule still catches them.
+///
+/// Two assertions, and the second is the one that makes this a guard rather than
+/// a formality: it checks the raw files **do** contain the register being scanned
+/// for. A scanner whose phrases have drifted out of use passes the first
+/// assertion on an empty search and reports nothing, which is indistinguishable
+/// from working. Same argument `report_key_drift` makes in the ingest.
+#[test]
+fn no_notes_first_sentence_leaks_a_maintainers_aside_to_the_screen() {
+    let ds = load().expect("committed data must load");
+
+    // The register of a note about the *file* rather than about the game.
+    const ASIDES: [&str; 6] = [
+        "this file",
+        "the entry above",
+        "the pair above",
+        "unreachable from the source",
+        "see the",
+        "TODO",
+    ];
+    let leaks = |text: &str| {
+        let lower = text.to_lowercase();
+        ASIDES
+            .iter()
+            .find(|phrase| lower.contains(&phrase.to_lowercase()))
+            .copied()
+    };
+
+    let mut offenders: Vec<String> = Vec::new();
+    for i in 0..ds.hero_count() {
+        let hero = HeroId(i as u16);
+        let key = ds.hero(hero).map(|h| h.key.clone()).unwrap_or_default();
+        for (what, note) in [("side", ds.side_note(hero)), ("shape", ds.shape_note(hero))] {
+            if let Some(phrase) = note.and_then(leaks) {
+                offenders.push(format!("{key} {what}: {phrase:?} in {note:?}"));
+            }
+        }
+    }
+    assert!(
+        offenders.is_empty(),
+        "{} note(s) reach the screen talking about the repository: {offenders:#?}",
+        offenders.len()
+    );
+
+    let raw = format!(
+        "{}{}",
+        overwatch_data::SIDE_TOML,
+        overwatch_data::ARCHETYPE_TOML
+    );
+    assert!(
+        leaks(&raw).is_some(),
+        "the scanner matches nothing in either file, so the assertion above proved nothing - \
+         either an author has stopped writing asides, or these phrases have gone stale"
+    );
+}
+
+/// Same guard for `archetype.toml`, which the ingest also never writes.
 /// Same guard for `archetype.toml`, which the ingest also never writes.
 ///
 /// Coverage matters more here than for the side leans: an unrated hero is left

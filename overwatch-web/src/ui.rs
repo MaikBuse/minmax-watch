@@ -259,9 +259,10 @@ pub fn HowItWorks(generated: String, with_note: usize, rated: usize) -> Element 
                 p {
                     "The matchup sentences are counterpickgg's, quoted exactly \u{2014} {with_note} of the \
                      {rated} rated pairs have one. The dive/poke/brawl readings and the attack/defend \
-                     leans are written by hand in this repository, because no site publishes either. \
-                     Every other line under a pick is this app's own wording over its own \
-                     arithmetic, set in lowercase so the two are told apart."
+                     leans are written by hand in this repository, because no site publishes either, \
+                     and the sentence beside each one is shown on the row it argues for. Every other \
+                     line under a pick is this app's own wording over its own arithmetic, set in \
+                     lowercase so the two are told apart."
                 }
                 h3 { "the sources" }
                 ul { class: "how-sources",
@@ -1652,6 +1653,29 @@ fn phrasing(kind: ReasonKind, hero: HeroId, rank: Rank, ds: &Dataset) -> Phrasin
     }
 }
 
+/// The curated sentence behind a term the app scored off a hand-written file, if
+/// there is one.
+///
+/// `None` for every other kind, and that is the whole rule rather than a default:
+/// the rest read scraped tables, and a table has no sentence to give. The two
+/// files this does reach — `side.toml` and `archetype.toml` — have no source
+/// behind them at all, so the sentence is not a second opinion on the number, it
+/// is the only argument for it. Coverage is total by construction: `SideFit`
+/// fires only on a non-zero lean and the shape kinds only on a curated kit, and
+/// every entry that can produce a line carries a note (27 of 27, 53 of 53).
+///
+/// Read here rather than carried on `Reason.text`, which stays exactly one thing:
+/// a sentence a *source* published. That is what keeps [`ReasonLine::cited`]
+/// honest and what leaves [`phrasing`] returning this app's own voice, lowercase
+/// and unpunctuated, for the test that holds the register apart.
+fn hand_written_note(kind: ReasonKind, hero: HeroId, ds: &Dataset) -> Option<&str> {
+    match kind {
+        ReasonKind::SideFit(_) => ds.side_note(hero),
+        ReasonKind::CountersShape(_) | ReasonKind::LosesToShape(_) => ds.shape_note(hero),
+        _ => None,
+    }
+}
+
 impl RecRow {
     /// Resolves one scored recommendation into display form.
     pub fn build(
@@ -1684,7 +1708,16 @@ impl RecRow {
                     // Only ~40% of matchups carry a scraped sentence; the rest
                     // get phrasing generated from the reason kind, because a
                     // bare number explains nothing.
-                    phrasing(reason.kind, rec.hero, rank, dataset).under(positive)
+                    let head = phrasing(reason.kind, rec.hero, rank, dataset).under(positive);
+                    match hand_written_note(reason.kind, rec.hero, dataset) {
+                        // The head has to survive rather than be replaced, and
+                        // the shape kinds are why: the head names *their* leading
+                        // axis while the note is about *this* kit. "answers their
+                        // dive" alone says what the portrait already said, and
+                        // the note alone answers a question nobody asked.
+                        Some(note) => format!("{head} \u{2014} {note}"),
+                        None => head,
+                    }
                 } else {
                     reason.text.clone()
                 };
@@ -2220,7 +2253,9 @@ mod tests {
             prevalence: vec![[0; Rank::CHOICES.len()]; n],
             win_rate: vec![None; n],
             side_lean: vec![0; n],
+            side_note: vec![String::new(); n],
             shape: vec![[0; 3]; n],
+            shape_note: vec![String::new(); n],
             reasons: vec![String::new(); n * n],
             disputed,
             generated: String::new(),
@@ -2243,6 +2278,19 @@ mod tests {
         // wording is chosen under is passed in, not read back out of the data.
         parts.map_affinity = vec![0; parts.maps.len() * parts.heroes.len()];
         parts.win_rate = vec![Some(50.7), Some(45.6)];
+        // Reinhardt is curated and Pharah is not, so one dataset covers both the
+        // composed line and the head standing alone. `SideFit` is the arm that
+        // needs it most: it is the only `Signed` kind that gains a note, and a
+        // sentence that reads correctly after "suits attack" and wrongly after
+        // "leans defend" is exactly what that variant exists to catch.
+        parts.side_note = vec![
+            "Wall denies a choke the attackers must clear.".to_owned(),
+            String::new(),
+        ];
+        parts.shape_note = vec![
+            "A held barrier is what a dive has to go through or around.".to_owned(),
+            String::new(),
+        ];
         Dataset::new(parts).expect("a two-hero dataset with a map is valid")
     }
 
@@ -2540,6 +2588,85 @@ mod tests {
         );
     }
 
+    /// One reason on one row, resolved. Three tests below differ only in the kind
+    /// and the sign, and spelling `Recommendation` out three times would bury
+    /// that.
+    fn one_reason(hero: HeroId, kind: ReasonKind, contribution: f32, ds: &Dataset) -> String {
+        let rec = Recommendation {
+            hero,
+            score: contribution,
+            delta_vs_locked: None,
+            worth_swapping: false,
+            is_locked: false,
+            reasons: vec![Reason {
+                kind,
+                contribution,
+                text: String::new(),
+            }],
+        };
+        RecRow::build(&rec, ds, false, false, Rank::All)
+            .reasons
+            .remove(0)
+            .text
+    }
+
+    /// The head names *their* leading axis and the note is about *this* kit, so
+    /// replacing one with the other loses half the sentence either way. Both
+    /// survive, in that order.
+    #[test]
+    fn a_shape_reason_names_their_shape_before_saying_why_this_kit_answers_it() {
+        let ds = phrasing_fixture();
+
+        let line = one_reason(
+            REINHARDT,
+            ReasonKind::CountersShape(Archetype::Dive),
+            0.2,
+            &ds,
+        );
+        assert_eq!(
+            line,
+            "answers their dive \u{2014} A held barrier is what a dive has to go through or around."
+        );
+        assert!(
+            line.starts_with("answers their dive"),
+            "the head has to come first: it is what the number is about"
+        );
+    }
+
+    /// A hero nobody has written a note for reads exactly as it did before this
+    /// existed. The dataset says nothing and the row says the head, rather than
+    /// the head plus a dangling dash.
+    #[test]
+    fn a_shape_line_keeps_its_head_when_there_is_no_note_behind_it() {
+        let ds = phrasing_fixture();
+
+        let line = one_reason(PHARAH, ReasonKind::LosesToShape(Archetype::Dive), -0.2, &ds);
+        assert_eq!(line, "walks into their dive");
+        assert!(
+            !line.contains('\u{2014}'),
+            "an empty note must not leave its separator behind"
+        );
+    }
+
+    /// `SideFit` is the only `Signed` kind that gains prose, so it is the only one
+    /// where the note has to read correctly after two different heads. A sentence
+    /// that argues for attacking, printed after "leans defend", would be the row
+    /// contradicting itself in the middle.
+    #[test]
+    fn a_side_note_reads_the_same_under_both_wordings_of_its_sign() {
+        let ds = phrasing_fixture();
+        const NOTE: &str = "Wall denies a choke the attackers must clear.";
+
+        let up = one_reason(REINHARDT, ReasonKind::SideFit(Side::Attack), 0.2, &ds);
+        let down = one_reason(REINHARDT, ReasonKind::SideFit(Side::Attack), -0.2, &ds);
+
+        assert_eq!(up, format!("suits attack \u{2014} {NOTE}"));
+        assert_eq!(down, format!("leans defend \u{2014} {NOTE}"));
+        assert_ne!(up, down, "the head still turns with the sign");
+    }
+
+    /// The mirror line is the app's own, and it is the reason this panel is
+    /// marked per row rather than carrying one note over the column.
     /// The mirror line is the app's own, and it is the reason this panel is
     /// marked per row rather than carrying one note over the column.
     #[test]
