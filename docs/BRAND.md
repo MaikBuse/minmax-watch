@@ -146,6 +146,18 @@ State what is true, including when it is nothing. "solo" and "offline" are
 information, not errors — scoring is local either way — and they are styled
 muted rather than alarming.
 
+**The lowercase is load-bearing, not a mannerism.** It is the register that tells
+the app's own words apart from everybody else's. Every wording the scorer
+generates is lowercase-initial with no terminal full stop; every one of the 1,066
+matchup sentences quoted from counterpickgg opens on a capital and closes on a
+stop, as do the hand-written notes in `side.toml` and `archetype.toml`. So
+capitalised, punctuated prose on a row is *prose somebody wrote* — and because
+that covers both a source's sentence and one of ours, a line carrying a source's
+words also names the source, in a `.cite` marker after the sentence. Both halves
+are tested (`no_generated_line_is_capitalised_or_ends_in_a_full_stop`,
+`every_scraped_sentence_is_capitalised_so_the_two_registers_stay_apart`). Write a
+new reason wording in this app's voice or you break an attribution, not a style.
+
 ## Space and shape
 
     --sp-1: 2px   --sp-2: 4px   --sp-3: 8px

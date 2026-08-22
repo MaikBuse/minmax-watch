@@ -204,6 +204,49 @@ fn no_committed_reason_carries_a_site_artefact() {
     );
 }
 
+/// The other half of the register the app attributes with.
+///
+/// Every sentence in this file is counterpickgg's, quoted exactly, and every one
+/// of them opens on a capital and closes on a full stop — 1,066 of 1,066. The
+/// app's own wordings are lowercase-initial with no terminal period, which
+/// `overwatch-web`'s `no_generated_line_is_capitalised_or_ends_in_a_full_stop`
+/// holds up from the other side. Together they are what lets a reader who has met
+/// the `counterpickgg` marker once tell the two apart on a line where the marker
+/// has wrapped out of view.
+///
+/// A scrape that started returning fragments, or a cleaner that ate a terminal
+/// stop, would leave the two registers overlapping and nothing else would notice.
+#[test]
+fn every_scraped_sentence_is_capitalised_so_the_two_registers_stay_apart() {
+    let matchups: MatchupsFile =
+        toml::from_str(overwatch_data::MATCHUPS_TOML).expect("committed matchups must parse");
+
+    let mut offenders: Vec<String> = Vec::new();
+    let mut counted = 0usize;
+    for entry in &matchups.matchups {
+        let reason = &entry.reason;
+        if reason.is_empty() {
+            continue;
+        }
+        counted += 1;
+        let row = format!("{} vs {}", entry.hero, entry.vs);
+        if !reason.starts_with(char::is_uppercase) {
+            offenders.push(format!(
+                "{row}: opens lowercase, like one of ours: {reason:?}"
+            ));
+        }
+        if !reason.ends_with('.') {
+            offenders.push(format!("{row}: no terminal full stop: {reason:?}"));
+        }
+    }
+
+    assert!(
+        offenders.is_empty(),
+        "{} of {counted} quoted sentences have left the register the app cites them by: {offenders:#?}",
+        offenders.len()
+    );
+}
+
 /// Accents stripped, case and punctuation kept, so `Lúcio` becomes exactly the
 /// `Lucio` the site writes rather than a lowercased comparison key.
 fn deaccent(text: &str) -> String {

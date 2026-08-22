@@ -1108,6 +1108,10 @@ pub struct BanRow {
     pub worst_owner: Option<String>,
     /// The scraped sentence for that pair, or the win rate on the patch rung.
     pub text: String,
+    /// True when `text` is a source's sentence rather than a figure this app
+    /// formatted. Resolved with `text` in [`ban_text`], so the line and the claim
+    /// about who wrote it cannot be decided in two places and disagree.
+    pub cited: bool,
     /// Why this row sits higher or lower than its matchup alone would put it, when
     /// prevalence moved it far enough to be worth saying. `None` for the ordinary
     /// middle of the roster, which is most of it.
@@ -1189,7 +1193,19 @@ pub fn BanPanel(subject: String, items: Vec<BanRow>) -> Element {
                             }
                         }
                         if !ban.text.is_empty() {
-                            p { class: "ban-text", "{ban.text}" }
+                            p { class: "ban-text",
+                                "{ban.text}"
+                                // Never on the patch rung, where the line is a
+                                // win rate this app formatted rather than
+                                // anything a site said about a pair.
+                                if ban.cited {
+                                    span {
+                                        class: "cite",
+                                        title: "quoted from counterpickgg",
+                                        "counterpickgg"
+                                    }
+                                }
+                            }
                         }
                         // A third claim, so a third line: how often this hero
                         // turns up at all, which is what moved the row relative
@@ -1226,6 +1242,12 @@ pub struct ThreatRow {
     /// Not the roster's `contested`, which is two teammates on one hero. This is
     /// about the number, not about the seat.
     pub disputed: bool,
+    /// The words on this row are counterpickgg's, quoted exactly.
+    ///
+    /// This panel is *not* uniform, which is why the marker is per row here as
+    /// well: the mirror gets a line this app wrote, and a panel-level "quoted
+    /// from counterpickgg" would credit the site with it.
+    pub cited: bool,
 }
 
 impl ThreatRow {
@@ -1239,6 +1261,11 @@ impl ThreatRow {
         // to an integer *before* the sign is read: `format!("{:+.0}", -0.004)`
         // prints "-0", and a red minus-zero is a claim the data does not make.
         let points = (threat.severity * -100.0).round() as i32;
+
+        // Read before the mirror substitution below, because that line is ours.
+        // `threats()` fills this field from `ds.reason` and from nowhere else, so
+        // the raw field is the whole question.
+        let cited = !threat.text.is_empty();
 
         let text = if !threat.text.is_empty() {
             threat.text.clone()
@@ -1267,6 +1294,7 @@ impl ThreatRow {
             even: points == 0,
             text,
             disputed: threat.disputed,
+            cited,
         }
     }
 }
@@ -1349,7 +1377,20 @@ pub fn ThreatPanel(
                             }
                         }
                         if !threat.text.is_empty() {
-                            p { class: "threat-text", "{threat.text}" }
+                            p { class: "threat-text",
+                                "{threat.text}"
+                                // Per row rather than per panel, because this
+                                // panel is not uniform: the mirror carries a line
+                                // this app wrote, and one standing note over the
+                                // column would credit counterpickgg with it.
+                                if threat.cited {
+                                    span {
+                                        class: "cite",
+                                        title: "quoted from counterpickgg",
+                                        "counterpickgg"
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1402,6 +1443,15 @@ pub struct ReasonLine {
     /// read the matchup matrix, so they are the only ones with two sources that
     /// could have disagreed.
     pub disputed: bool,
+    /// The words on this line are counterpickgg's, quoted exactly.
+    ///
+    /// Not a synonym for "the text came from the dataset". The typographic
+    /// register separates *prose* from *templates*, and the hand-written notes in
+    /// `side.toml` and `archetype.toml` are prose too — so the moment those reach
+    /// `Reason.text`, a line carrying a sentence is no longer necessarily carrying
+    /// a site's sentence. Only the kind can answer that, which is why [`RecRow`]
+    /// resolves this the way it resolves `disputed`.
+    pub cited: bool,
 }
 
 /// A hero's display name, or `?` for an id the roster cannot resolve.
@@ -1439,6 +1489,31 @@ pub fn win_rate_text(rate: f32, rank: Rank) -> String {
         format!("{rate:.1}% win rate")
     } else {
         format!("{rate:.1}% win rate across the ladder")
+    }
+}
+
+/// The ban row's sentence, and whether those words are a source's.
+///
+/// Two returns rather than two functions, and rather than the `match` this grew
+/// out of at the call site: the patch rung shows a figure instead of a rationale
+/// there is none of, and the figure is ours. Deciding the line in one place and
+/// the attribution in another is how the two end up disagreeing about a row.
+///
+/// A free function in this module for the reason [`win_rate_text`] and
+/// [`prevalence_note`] are: `main.rs` builds [`BanRow`] inline, and logic that
+/// only exists inside that component is logic no test can reach.
+pub fn ban_text(
+    win_rate: Option<f32>,
+    patch_subject: bool,
+    scraped: &str,
+    rank: Rank,
+) -> (String, bool) {
+    match win_rate {
+        // The wording, and the reason it is qualified once a rank is chosen, live
+        // in `win_rate_text` — the pick list's patch-strength line prints the same
+        // figure and the two must not drift.
+        Some(rate) if patch_subject => (win_rate_text(rate, rank), false),
+        _ => (scraped.to_owned(), !scraped.is_empty()),
     }
 }
 
@@ -1623,10 +1698,21 @@ impl RecRow {
                     }
                     _ => false,
                 };
+                // Gated on the *kind* and not merely on the text being there.
+                // `!text.is_empty()` alone answers correctly today and becomes a
+                // false attribution the moment a term other than the counter
+                // ones carries prose: the notes in `side.toml` and
+                // `archetype.toml` are this repository's own words, and marking
+                // them `counterpickgg` would credit a site that never saw them.
+                let cited = matches!(
+                    reason.kind,
+                    ReasonKind::BeatsEnemy(_) | ReasonKind::LosesToEnemy(_)
+                ) && !reason.text.is_empty();
                 ReasonLine {
                     positive,
                     text,
                     disputed,
+                    cited,
                 }
             })
             .collect();
@@ -1731,11 +1817,33 @@ pub fn Recommendations(
                                             "disputed"
                                         }
                                     }
+                                    // Last, and dot-separated: attribution closes
+                                    // a quote. 244 of the 254 disputed rows also
+                                    // carry a sentence, so this pair of markers
+                                    // is the common case rather than the edge,
+                                    // and the caveat has to sit tight to the
+                                    // claim it qualifies rather than to the name
+                                    // of whoever wrote it.
+                                    if line.cited {
+                                        span {
+                                            class: "cite",
+                                            title: "quoted from counterpickgg",
+                                            "counterpickgg"
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            }
+            // Standing, and at the foot. Standing because a legend that appears
+            // only once there is something to explain is a legend the reader
+            // meets after the thing it explains; at the foot because it is about
+            // the lines, which is the mirror of `.rank-note` above sitting with
+            // the control it qualifies.
+            p { class: "cite-legend",
+                "lines marked counterpickgg are quoted from that site \u{00b7} everything else is this app's own words"
             }
         }
     }
@@ -2355,6 +2463,166 @@ mod tests {
             !row.reasons[1].disputed,
             "patch strength has one source and nothing to disagree with"
         );
+    }
+
+    /// The whole point of the slice: a line carrying somebody else's sentence
+    /// says so, and a line the app wrote about its own arithmetic does not.
+    #[test]
+    fn a_scraped_sentence_is_marked_as_quoted_and_a_generated_line_is_not() {
+        let ds = phrasing_fixture();
+
+        let rec = Recommendation {
+            hero: REINHARDT,
+            score: 0.2,
+            delta_vs_locked: None,
+            worth_swapping: false,
+            is_locked: false,
+            reasons: vec![
+                Reason {
+                    kind: ReasonKind::LosesToEnemy(PHARAH),
+                    contribution: -0.3,
+                    text: "Nothing Reinhardt does reaches the air.".to_owned(),
+                },
+                Reason {
+                    kind: ReasonKind::BaseStrength,
+                    contribution: 0.1,
+                    text: String::new(),
+                },
+            ],
+        };
+
+        let row = RecRow::build(&rec, &ds, false, false, Rank::All);
+        assert!(row.reasons[0].cited, "the site wrote that sentence");
+        assert_eq!(
+            row.reasons[0].text,
+            "Nothing Reinhardt does reaches the air."
+        );
+        assert!(
+            !row.reasons[1].cited,
+            "a win rate this app formatted is nobody's quotation"
+        );
+    }
+
+    /// The forward guard, and the only test that fails if the kind gate in
+    /// [`RecRow::build`] is "simplified" into a bare `!text.is_empty()`.
+    ///
+    /// `side.toml` and `archetype.toml` are hand-written in this repository and
+    /// their notes are capitalised prose exactly like the site's sentences, so the
+    /// typographic register cannot tell the two apart and the moment those notes
+    /// reach `Reason.text` the only thing standing between them and a false
+    /// attribution is the kind.
+    #[test]
+    fn a_hand_written_note_is_not_attributed_to_the_site_that_did_not_write_it() {
+        let ds = phrasing_fixture();
+
+        let rec = Recommendation {
+            hero: REINHARDT,
+            score: 0.2,
+            delta_vs_locked: None,
+            worth_swapping: false,
+            is_locked: false,
+            reasons: vec![Reason {
+                kind: ReasonKind::SideFit(Side::Attack),
+                contribution: 0.1,
+                text: "Wall denies a choke the attackers must clear.".to_owned(),
+            }],
+        };
+
+        let row = RecRow::build(&rec, &ds, false, false, Rank::All);
+        assert_eq!(
+            row.reasons[0].text,
+            "Wall denies a choke the attackers must clear."
+        );
+        assert!(
+            !row.reasons[0].cited,
+            "this repository wrote that note, and crediting counterpickgg with it \
+             is the failure the kind gate exists to prevent"
+        );
+    }
+
+    /// The mirror line is the app's own, and it is the reason this panel is
+    /// marked per row rather than carrying one note over the column.
+    #[test]
+    fn the_mirror_line_is_the_apps_own_and_is_never_attributed() {
+        let ds = fixture();
+
+        let row = ThreatRow::build(&threat(REINHARDT, 0.0, ""), REINHARDT, &ds);
+        assert_eq!(row.text, "the mirror \u{2014} even by definition");
+        assert!(!row.cited, "no site wrote that line");
+
+        let quoted = ThreatRow::build(&threat(PHARAH, 0.5, "Pharah flies."), REINHARDT, &ds);
+        assert!(quoted.cited, "that sentence came out of the matrix");
+    }
+
+    /// The patch rung shows a win rate this app formatted, not a claim about a
+    /// pair, so the marker must not follow it. The bug it forecloses is one
+    /// `match` growing a second reader that decides the attribution separately
+    /// from the line.
+    #[test]
+    fn the_ban_panels_win_rate_figure_is_never_attributed_to_counterpickgg() {
+        let (text, cited) = ban_text(Some(52.4), true, "Something the site said.", Rank::All);
+        assert_eq!(text, "52.4% win rate");
+        assert!(!cited, "the figure is ours and the wording is ours");
+
+        let (text, cited) = ban_text(Some(52.4), false, "Something the site said.", Rank::All);
+        assert_eq!(text, "Something the site said.");
+        assert!(cited);
+
+        // No pair rated, no figure to fall back to: a bare row, and an empty
+        // string is not a quotation of anything.
+        let (text, cited) = ban_text(None, true, "", Rank::Master);
+        assert!(text.is_empty());
+        assert!(!cited);
+    }
+
+    /// Locks the typographic channel the attribution rests on. Every wording this
+    /// app generates is lowercase-initial with no terminal full stop, and every
+    /// one of the 1,066 committed sentences is the opposite — so a reader who has
+    /// met the legend once can tell the registers apart even where a marker has
+    /// scrolled out of view.
+    ///
+    /// Iterates the same table [`every_reason_kind_renders_a_line_under_both_signs`]
+    /// does, which is what makes the compiler's exhaustive `match` carry this test
+    /// too: a new [`ReasonKind`] cannot skip the arm, and the arm cannot skip
+    /// this.
+    #[test]
+    fn no_generated_line_is_capitalised_or_ends_in_a_full_stop() {
+        let ds = phrasing_fixture();
+        let map = MapId(0);
+
+        let kinds = [
+            ReasonKind::BeatsEnemy(PHARAH),
+            ReasonKind::LosesToEnemy(PHARAH),
+            ReasonKind::CountersShape(Archetype::Dive),
+            ReasonKind::LosesToShape(Archetype::Dive),
+            ReasonKind::BaseStrength,
+            ReasonKind::RankFit(Rank::Master),
+            ReasonKind::SideFit(Side::Attack),
+            ReasonKind::MapFit(map),
+            ReasonKind::PairsWithAlly(PHARAH),
+            ReasonKind::Comfort,
+        ];
+
+        let mut lines: Vec<String> = Vec::new();
+        for kind in kinds {
+            lines.push(phrasing(kind, REINHARDT, Rank::All, &ds).under(true));
+            lines.push(phrasing(kind, REINHARDT, Rank::All, &ds).under(false));
+        }
+        // The two the table above cannot reach: the arm taken when a hero has no
+        // published win rate, and the line the matchups panel writes for a mirror.
+        lines.push(phrasing(ReasonKind::BaseStrength, HeroId(99), Rank::All, &ds).under(true));
+        lines.push(ThreatRow::build(&threat(REINHARDT, 0.0, ""), REINHARDT, &ds).text);
+
+        for line in &lines {
+            assert!(
+                !line.starts_with(char::is_uppercase),
+                "{line:?} opens like a quotation, and this app writes in lowercase"
+            );
+            assert!(
+                !line.ends_with('.'),
+                "{line:?} closes like a quotation, and this app does not punctuate its own labels"
+            );
+        }
     }
 
     /// Every kind, both signs. The compiler is the real guard — a kind added to

@@ -1030,6 +1030,32 @@ body {
     white-space: nowrap;
 }
 
+/* Whose words the sentence in front of it is. A label and not a tint: the
+   leading sign already spends the only two colours a reason line has
+   (.reason.good::before / .reason.bad::before below), and a citation that exists
+   only as a colour cites nobody — which is BRAND rule 1 arriving at the one place
+   it is least negotiable.
+
+   Last on the line and separated by a dot, where `.caveat` above sits tight to
+   the sentence with no separator. 244 of the 254 disputed rows also carry a
+   quoted sentence, so the two markers together are the common case: the caveat
+   has to read as an aside on the claim, and the attribution has to close the
+   line the way a quote's attribution does. */
+.cite {
+    margin-left: 0.35em;
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+    white-space: nowrap;
+}
+
+/* The separator lives inside the nowrap so the dot can never be orphaned onto a
+   line without the name it introduces. Written as the character rather than an
+   escape, which is what `.reason.bad::before` below already does with its
+   minus. */
+.cite::before {
+    content: "· ";
+}
+
 /* Unlike the ban list, this one is not homogeneous — an enemy you beat appears
    here too — so the tint is per row rather than per column. The leading sign is
    what carries it and `{:+}` always emits one; the colour only reinforces,
@@ -1180,7 +1206,8 @@ body {
    it said. */
 .reason,
 .ban-text,
-.ban-worst {
+.ban-worst,
+.threat-text {
     max-width: 62ch;
 }
 
@@ -1653,6 +1680,20 @@ body {
    are one block, and the first row should not look like it belongs to them. */
 .rank-note {
     margin: -0.15rem 0 0.6rem;
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+}
+
+/* What a `counterpickgg` marker on a reason line means, taught once at the foot
+   of the list the markers are in.
+
+   The exact inverse of `.rank-note` directly above, and for the same reason that
+   rule gives: that one qualifies the *control* and so sits with it, above the
+   rows; this one qualifies the *lines* and so sits after them. Standing rather
+   than conditional on a marked line being on screen — a legend that arrives only
+   once there is something to explain is a legend the reader meets second. */
+.cite-legend {
+    margin: var(--sp-3) 0 0;
     font-size: var(--fs-micro);
     color: var(--text-faint);
 }

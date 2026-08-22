@@ -1153,6 +1153,19 @@ fn App() -> Element {
                             .take(8)
                             .map(|ban| {
                                 let chip = chip_of(ban.hero);
+                                // The patch rung ranks on strength rather than on
+                                // any pair, so it shows a figure instead of a
+                                // rationale there is none of. Resolved with the
+                                // claim about whose words those are, in
+                                // `ui::ban_text`, so a row can never print a site's
+                                // sentence unattributed or our own figure credited
+                                // to them.
+                                let (text, cited) = ui::ban_text(
+                                    dataset.win_rate(ban.hero),
+                                    patch_subject,
+                                    &ban.text,
+                                    profile.read().rank,
+                                );
                                 BanRow {
                                     hero: ban.hero,
                                     name: chip.name,
@@ -1170,19 +1183,8 @@ fn App() -> Element {
                                         .then(|| ban.worst.map(|hero| chip_of(hero).name))
                                         .flatten(),
                                     worst_owner: ban.worst_owner.clone(),
-                                    // The patch rung ranks on strength rather than
-                                    // on any pair, so it shows a figure instead of
-                                    // a rationale there is none of. The wording,
-                                    // and the reason it is qualified once a rank is
-                                    // chosen, live in `ui::win_rate_text` — the
-                                    // pick list's patch-strength line prints the
-                                    // same figure and the two must not drift.
-                                    text: match dataset.win_rate(ban.hero) {
-                                        Some(rate) if patch_subject => {
-                                            ui::win_rate_text(rate, profile.read().rank)
-                                        }
-                                        _ => ban.text.clone(),
-                                    },
+                                    text,
+                                    cited,
                                     prevalence: ui::prevalence_note(
                                         ban.prevalence,
                                         profile.read().rank,

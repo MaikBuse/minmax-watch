@@ -160,6 +160,13 @@ before the swings were read it was 265. Where the two trusted sources disagree s
 matchup carries a `disputed` tag on the matchups panel and a marker on the reason
 line that argues from it.
 
+The written rationale on a row is quoted from counterpickgg verbatim, and the row
+says so: a quoted line closes with a `counterpickgg` marker, and everything else
+on screen is the app's own wording over its own arithmetic. The two are also told
+apart typographically — the app writes in lowercase with no terminal full stop and
+the quotations are punctuated sentences — which is what carries the distinction on
+a line whose marker has wrapped out of view.
+
 Coverage is uneven and the app says so out loud rather than in this file: **533 of
 the 1,330 rated pairs carry a published sentence**, and the "where these numbers
 come from" panel at the foot of the app counts both figures off the matrix in the
