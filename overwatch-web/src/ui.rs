@@ -1514,6 +1514,12 @@ pub struct RecRow {
     /// in your own copy is only right for as long as the two copies agree, and
     /// nothing said they did.
     pub place: usize,
+    /// Whether the scorer could separate this hero from the best one.
+    ///
+    /// The set is a prefix of the list, which is what lets the panel draw it as a
+    /// boundary between two rows rather than as a mark on each of them — see
+    /// `Recommendation::tied_with_top`.
+    pub tied_with_top: bool,
     /// How well you have said you play this hero, on the canonical -100..=100
     /// scale. Zero for a hero you have said nothing about.
     ///
@@ -1624,6 +1630,33 @@ pub fn ban_text(
     }
 }
 
+/// The class list for one row of the pick list.
+///
+/// Out of `rsx!` for the reason [`tile_class`] is: three of the four states are
+/// drawn by class and nothing else, so a reader who cannot tell two borders apart
+/// depends entirely on this being right, and logic no test can reach drifts.
+///
+/// `after-tie` goes on the row *following* the tied ones, so the hairline it draws
+/// along its own top edge falls below the last of them. Derived from the count
+/// rather than carried as a fifth field: the boundary is a property of the set,
+/// and the set is a prefix, so its position is the count itself.
+///
+/// `> 1` because the top hero is inside the band of itself by definition. A rule
+/// drawn under row one alone would mark a tie that does not exist.
+fn rec_class(rec: &RecRow, tied: usize) -> String {
+    format!(
+        "rec{}{}{}{}",
+        if rec.is_locked { " locked" } else { "" },
+        if rec.worth_swapping { " swap" } else { "" },
+        if rec.claimed() { " pooled" } else { "" },
+        if tied > 1 && rec.place == tied {
+            " after-tie"
+        } else {
+            ""
+        },
+    )
+}
+
 /// What the score column means, in one line under the list.
 ///
 /// The number has always been a weighted sum on a scale of this app's own
@@ -1636,6 +1669,10 @@ pub fn ban_text(
 /// `main.rs` assembles the props inline, and logic that exists only inside a
 /// component is logic no test can reach.
 ///
+/// `tied` is how many of the shown rows the scorer could not separate, and it
+/// takes the line over when there are two or more — see [`crate::tie_count`] for
+/// why the caller sometimes reports none even though the scorer found some.
+///
 /// `lead` is in **displayed** points and the caller owes it that: the note sits
 /// directly above the two figures it subtracts, so it has to be their difference
 /// rather than the rounding of their difference. That makes a lead of zero
@@ -1645,6 +1682,8 @@ pub fn score_note(
     locked: Option<&str>,
     top: Option<&str>,
     lead: Option<i32>,
+    tied: usize,
+    shown: usize,
     any_swap: bool,
     swap_threshold: f32,
 ) -> String {
@@ -1668,6 +1707,25 @@ pub fn score_note(
         return format!("the column is the gain over {locked} \u{2014} {clause}");
     }
 
+    // The tie **replaces** the scale rather than joining it. When the answer is
+    // "any of these three", what the number is measured in is the less useful of
+    // the two sentences, and there is one line.
+    //
+    // `>= 2` and not `>= 1`: the top hero is inside the band of itself, always, so
+    // a count of one is no tie at all. `shown` separates the two wordings and is
+    // the only reason it is a parameter — "all 8 here" and "top 8" are different
+    // claims, and the second one implies a ninth row nobody can see. The caller
+    // counts over the rows it is about to draw, so this can never name more heroes
+    // than are on screen.
+    if tied >= 2 {
+        let clause = "take the one you are comfortable on";
+        return if tied >= shown {
+            format!("all {tied} here are too close to call \u{2014} {clause}")
+        } else {
+            format!("top {tied} too close to call \u{2014} {clause}")
+        };
+    }
+
     // Said first and every time, because it is the half a newcomer needs and the
     // half that is true whatever the draft is doing.
     let scale = "weighted sum, not a percentage";
@@ -1677,6 +1735,12 @@ pub fn score_note(
         }
         // Not "leads by 0". The figures are equal as printed and saying so is the
         // honest reading of a column the eye has already compared.
+        //
+        // Unreachable at any sensible band, and kept anyway: two rows printing the
+        // same figure are inside 0.005 of each other and therefore inside a band
+        // of 0.15, so the tie clause above answers first. What reaches this is a
+        // hand-edited `tie_band` near zero — where it is exactly the right
+        // sentence, and where the alternative is a lead of nothing.
         (Some(_), Some(_)) => format!("{scale} \u{2014} the top two are level"),
         (Some(_), None) => format!("{scale} \u{2014} the only hero left in this role"),
         // Nothing to compare. The scale is still worth stating: the panel below
@@ -1981,6 +2045,7 @@ impl RecRow {
             is_locked: rec.is_locked,
             worth_swapping: rec.worth_swapping,
             place: rec.place,
+            tied_with_top: rec.tied_with_top,
             comfort,
             reasons,
         }
@@ -2019,6 +2084,13 @@ pub fn Recommendations(
     on_rank: EventHandler<Rank>,
     on_rank_open: EventHandler<()>,
 ) -> Element {
+    // Counted once for the whole list rather than per row. Kept even in swap
+    // mode, unlike the note: the column there is the score minus a constant, so
+    // `best - score` is unchanged by it and a tie means exactly what it means
+    // anywhere else. Two candidates that both clear the bar and cannot be told
+    // apart is the moment this is most worth drawing.
+    let tied = items.iter().filter(|row| row.tied_with_top).count();
+
     rsx! {
         section { class: "panel recommendations",
             div { class: "panel-head",
@@ -2046,12 +2118,7 @@ pub fn Recommendations(
             for rec in items.iter() {
                 div {
                     key: "{rec.hero.0}",
-                    class: format!(
-                        "rec{}{}{}",
-                        if rec.is_locked { " locked" } else { "" },
-                        if rec.worth_swapping { " swap" } else { "" },
-                        if rec.claimed() { " pooled" } else { "" },
-                    ),
+                    class: rec_class(rec, tied),
                     onclick: {
                         let hero = rec.hero;
                         move |_| on_lock.call(hero)
@@ -3475,7 +3542,7 @@ mod tests {
     /// and nothing else on the screen corrects that.
     #[test]
     fn the_note_states_the_scale_when_nothing_is_locked() {
-        let note = score_note(None, Some("Winston"), Some(6), false, 0.15);
+        let note = score_note(None, Some("Winston"), Some(6), 0, 8, false, 0.15);
 
         assert_eq!(
             note,
@@ -3488,7 +3555,15 @@ mod tests {
     /// the whole point: "the gain" over an unnamed something is not a scale.
     #[test]
     fn the_note_names_the_hero_the_column_is_measured_against() {
-        let note = score_note(Some("Reinhardt"), Some("Winston"), Some(6), true, 0.15);
+        let note = score_note(
+            Some("Reinhardt"),
+            Some("Winston"),
+            Some(6),
+            0,
+            8,
+            true,
+            0.15,
+        );
 
         assert!(
             note.starts_with("the column is the gain over Reinhardt"),
@@ -3510,8 +3585,24 @@ mod tests {
     /// threshold by hand.
     #[test]
     fn the_note_says_when_nothing_clears_the_swap_bar() {
-        let nothing = score_note(Some("Reinhardt"), Some("Winston"), Some(6), false, 0.15);
-        let something = score_note(Some("Reinhardt"), Some("Winston"), Some(6), true, 0.15);
+        let nothing = score_note(
+            Some("Reinhardt"),
+            Some("Winston"),
+            Some(6),
+            0,
+            8,
+            false,
+            0.15,
+        );
+        let something = score_note(
+            Some("Reinhardt"),
+            Some("Winston"),
+            Some(6),
+            0,
+            8,
+            true,
+            0.15,
+        );
 
         assert!(nothing.contains("nothing here clears +15"), "{nothing}");
         assert_ne!(nothing, something);
@@ -3522,7 +3613,7 @@ mod tests {
     /// moved the weight `worth_swapping` is actually measured against.
     #[test]
     fn the_swap_bar_on_the_note_is_read_off_the_stored_weight() {
-        let moved = score_note(Some("Reinhardt"), None, None, true, 0.25);
+        let moved = score_note(Some("Reinhardt"), None, None, 0, 8, true, 0.25);
 
         assert!(moved.contains("+25"), "{moved}");
         assert!(
@@ -3536,7 +3627,7 @@ mod tests {
     /// the next by 0" is a sentence that reads as a bug.
     #[test]
     fn the_top_two_reading_the_same_is_said_rather_than_printed_as_a_lead_of_zero() {
-        let note = score_note(None, Some("Winston"), Some(0), false, 0.15);
+        let note = score_note(None, Some("Winston"), Some(0), 0, 8, false, 0.15);
 
         assert!(note.ends_with("the top two are level"), "{note}");
         assert!(
@@ -3549,7 +3640,7 @@ mod tests {
     /// as a margin against a hero that is not on the list.
     #[test]
     fn a_role_with_one_candidate_left_says_so_rather_than_naming_a_margin() {
-        let alone = score_note(None, Some("Winston"), None, false, 0.15);
+        let alone = score_note(None, Some("Winston"), None, 0, 1, false, 0.15);
         assert!(
             alone.ends_with("the only hero left in this role"),
             "{alone}"
@@ -3558,7 +3649,7 @@ mod tests {
         // And with nothing at all, the scale still stands on its own — the panel
         // below says why the list is empty; this says what its numbers meant.
         assert_eq!(
-            score_note(None, None, None, false, 0.15),
+            score_note(None, None, None, 0, 0, false, 0.15),
             "weighted sum, not a percentage"
         );
     }
@@ -3569,18 +3660,166 @@ mod tests {
     #[test]
     fn the_score_note_is_written_in_this_apps_own_voice_under_every_state() {
         let states = [
-            score_note(None, Some("Winston"), Some(6), false, 0.15),
-            score_note(None, Some("Winston"), Some(0), false, 0.15),
-            score_note(None, Some("Winston"), None, false, 0.15),
-            score_note(None, None, None, false, 0.15),
-            score_note(Some("Reinhardt"), None, None, true, 0.15),
-            score_note(Some("Reinhardt"), None, None, false, 0.15),
+            score_note(None, Some("Winston"), Some(6), 0, 8, false, 0.15),
+            score_note(None, Some("Winston"), Some(0), 0, 8, false, 0.15),
+            score_note(None, Some("Winston"), None, 0, 1, false, 0.15),
+            score_note(None, None, None, 0, 0, false, 0.15),
+            score_note(Some("Reinhardt"), None, None, 0, 8, true, 0.15),
+            score_note(Some("Reinhardt"), None, None, 0, 8, false, 0.15),
+            score_note(None, Some("Winston"), Some(0), 3, 8, false, 0.15),
+            score_note(None, Some("Winston"), Some(0), 8, 8, false, 0.15),
         ];
         for note in states {
             assert!(!note.starts_with(char::is_uppercase), "{note}");
             assert!(!note.ends_with('.'), "{note}");
             assert!(!note.contains("  "), "double space in {note:?}");
         }
+    }
+
+    /// The hairline marks the boundary, so it belongs on the first row the scorer
+    /// *could* separate — one place further down than the eye expects, because an
+    /// inset top shadow draws along that row's own top edge.
+    #[test]
+    fn the_hairline_falls_below_the_last_tied_row_rather_than_on_it() {
+        let rows: Vec<RecRow> = (0..4).map(row_at).collect();
+
+        assert!(
+            !rec_class(&rows[1], 2).contains("after-tie"),
+            "the last tied row"
+        );
+        assert!(
+            rec_class(&rows[2], 2).contains("after-tie"),
+            "the first row after it"
+        );
+        assert!(
+            !rec_class(&rows[3], 2).contains("after-tie"),
+            "and nowhere else"
+        );
+    }
+
+    /// One is not a tie, so there is no boundary to draw. Without the guard every
+    /// list with a clear leader would get a rule under its top row.
+    #[test]
+    fn a_list_with_no_tie_draws_no_boundary_anywhere() {
+        let rows: Vec<RecRow> = (0..4).map(row_at).collect();
+
+        for tied in [0, 1] {
+            for row in &rows {
+                assert!(
+                    !rec_class(row, tied).contains("after-tie"),
+                    "row {} drew a boundary at a tie of {tied}",
+                    row.place
+                );
+            }
+        }
+    }
+
+    /// The boundary is one class among four and must not disturb the three that
+    /// were already there — a pooled row still owns its left border.
+    #[test]
+    fn the_boundary_class_joins_the_row_states_rather_than_replacing_them() {
+        let mut row = row_at(2);
+        row.is_locked = true;
+        row.worth_swapping = true;
+        row.comfort = 55;
+
+        let class = rec_class(&row, 2);
+        for state in ["rec", "locked", "swap", "pooled", "after-tie"] {
+            assert!(class.contains(state), "{state} missing from {class:?}");
+        }
+    }
+
+    fn row_at(place: usize) -> RecRow {
+        RecRow {
+            hero: HeroId(place as u16),
+            name: String::new(),
+            icon: String::new(),
+            score: String::new(),
+            is_locked: false,
+            worth_swapping: false,
+            place,
+            tied_with_top: false,
+            comfort: 0,
+            reasons: Vec::new(),
+        }
+    }
+
+    /// The direct answer to "there are a lot of acceptable answers": when the
+    /// scorer cannot separate the top rows, the panel stops explaining a scale and
+    /// starts saying which rows it cannot tell apart.
+    #[test]
+    fn a_tied_top_replaces_the_scale_clause_rather_than_appending_to_it() {
+        let note = score_note(None, Some("Winston"), Some(6), 3, 8, false, 0.15);
+
+        assert_eq!(
+            note,
+            "top 3 too close to call \u{2014} take the one you are comfortable on"
+        );
+        assert!(
+            !note.contains("weighted sum"),
+            "there is one line, and what the number is measured in is the less \
+             useful half of it once the answer is any of these three: {note}"
+        );
+        assert!(!note.contains("leads the next"), "{note}");
+    }
+
+    /// "top 8" implies a ninth row the reader cannot see. When the tie is the
+    /// whole visible list, the sentence has to say so instead.
+    #[test]
+    fn the_whole_visible_list_being_tied_says_so_rather_than_naming_a_top_n() {
+        let all = score_note(None, Some("Winston"), Some(0), 8, 8, false, 0.15);
+
+        assert!(all.starts_with("all 8 here are too close to call"), "{all}");
+        assert!(
+            !all.contains("top 8"),
+            "there is no ninth row for a top eight to be the top of: {all}"
+        );
+    }
+
+    /// The count comes from the rows the caller is about to draw, so the note can
+    /// never name a hero that is not on screen — but the arm still has to exist,
+    /// because the two wordings turn on exactly that comparison.
+    #[test]
+    fn the_tie_note_never_claims_more_heroes_than_the_list_shows() {
+        let three_of_three = score_note(None, Some("Winston"), Some(0), 3, 3, false, 0.15);
+        assert!(three_of_three.starts_with("all 3 here"), "{three_of_three}");
+
+        let three_of_eight = score_note(None, Some("Winston"), Some(0), 3, 8, false, 0.15);
+        assert!(three_of_eight.starts_with("top 3"), "{three_of_eight}");
+    }
+
+    /// One is not a tie. The top hero is inside the band of itself by definition,
+    /// so a count of one has to read as the clear leader it is.
+    #[test]
+    fn a_top_that_is_tied_with_nothing_still_reports_its_margin() {
+        let note = score_note(None, Some("Winston"), Some(6), 1, 8, false, 0.15);
+
+        assert_eq!(
+            note,
+            "weighted sum, not a percentage \u{2014} Winston leads the next by 6"
+        );
+    }
+
+    /// Swap mode has one line and the threshold statement is what it is for. The
+    /// hairline still draws — that is placement rather than a claim — but the
+    /// sentence stays the one about whether anything is worth the swap.
+    #[test]
+    fn swap_mode_keeps_the_threshold_statement_when_the_top_is_tied() {
+        let note = score_note(
+            Some("Reinhardt"),
+            Some("Winston"),
+            Some(0),
+            4,
+            8,
+            true,
+            0.15,
+        );
+
+        assert!(
+            note.starts_with("the column is the gain over Reinhardt"),
+            "{note}"
+        );
+        assert!(!note.contains("too close to call"), "{note}");
     }
 
     /// The row you are on used to be the one exception in the column: a delta
@@ -3609,6 +3848,7 @@ mod tests {
             is_locked: false,
             breakdown: Breakdown::default(),
             place: 0,
+            tied_with_top: false,
             reasons,
         }
     }

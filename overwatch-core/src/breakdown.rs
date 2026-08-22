@@ -23,7 +23,9 @@ use crate::archetype::Shape;
 ///
 /// The eight variants are every term in the sum and nothing else.
 /// `Weights::prevalence` is not here because it reaches only the ban list, and
-/// `Weights::swap_threshold` is not a term at all.
+/// `Weights::swap_threshold` and `Weights::tie_band` are not terms at all — one
+/// prices abandoning a pick and the other is the resolution the list is ordered
+/// at. Neither is added to a score, so neither has a row here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TermKind {
     /// All-ranks patch strength.

@@ -446,6 +446,13 @@ mod tests {
         // ignoring pick rate entirely. See `default_prevalence` in core.
         assert_eq!(weights.prevalence, Weights::default().prevalence);
         assert!(weights.prevalence > 0.0);
+        // And once more for the tie band, where serde's 0.0 is not a term
+        // switched off but a whole feature: at zero no two heroes are ever within
+        // it unless their scores are bit-identical, so the list goes back to
+        // claiming an order it cannot defend and nothing on screen says a word
+        // about it. See `default_tie_band` in core.
+        assert_eq!(weights.tie_band, Weights::default().tie_band);
+        assert!(weights.tie_band > 0.0);
 
         // This blob is also the whole migration in one fixture: it carries the
         // legacy pool keys *and* an `overrides` entry, which is exactly the

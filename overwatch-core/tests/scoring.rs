@@ -12,7 +12,7 @@ use overwatch_core::{
     ban_recommendations, difficulty_to_value, recommend, threats, Archetype, BanBoard, BanSubject,
     ComfortStep, Dataset, DatasetParts, Defended, DefendedTeam, Draft, EnemyRoleWeights, GameMap,
     GameMode, Hero, HeroId, Knowledge, MapId, Matrix, Rank, ReasonKind, Role, Side, TermKind,
-    UserContext,
+    UserContext, Weights,
 };
 
 const REINHARDT: HeroId = HeroId(0);
@@ -2750,4 +2750,137 @@ fn the_place_on_each_recommendation_is_the_position_the_list_sorted_it_into() {
     for pair in recs.windows(2) {
         assert!(pair[0].score >= pair[1].score, "the list is not sorted");
     }
+}
+
+// ---------------------------------------------------------------------------
+// Ties: when the list stops claiming an order it cannot defend.
+// ---------------------------------------------------------------------------
+
+/// Three tanks whose scores differ, but by less than one term's range.
+///
+/// `fixture()` leaves every base strength at zero, so on an empty board comfort
+/// is the only live term and the gaps are exactly what this sets: D.Va 0.06,
+/// Sigma 0.03, Reinhardt 0.00, against a band of 0.15. Deliberately *not* an
+/// exactly flat field — scores that are bit-identical are tied at any band at
+/// all, including zero, so a test built on one cannot tell a band from a bug.
+fn near_flat(ds: &Dataset) -> UserContext {
+    let mut ctx = tank_context(ds);
+    ctx.overrides[DVA.index()] = 10;
+    ctx.overrides[SIGMA.index()] = 5;
+    ctx
+}
+
+/// A field with nothing much between its top rows says so, rather than
+/// presenting an order the numbers do not support.
+#[test]
+fn a_flat_field_reports_its_top_as_a_tie_rather_than_an_order() {
+    let ds = fixture();
+    let ctx = near_flat(&ds);
+    let recs = recommend(&ds, &Draft::new(), &ctx).expect("scoring succeeds");
+
+    // The premise: these are three different numbers. The claim is not that they
+    // are equal, it is that the differences are too small to rank on.
+    assert!(
+        recs[0].score > recs[1].score && recs[1].score > recs[2].score,
+        "the fixture went flat, so this no longer tests a band"
+    );
+    assert!(
+        recs.iter().take(3).all(|rec| rec.tied_with_top),
+        "0.06 is less than half of what the rank term alone can move a score"
+    );
+}
+
+/// The property the whole rendering rests on. The set is drawn as a boundary
+/// between two rows rather than as a mark on each, and a boundary is only
+/// meaningful if the set is a prefix — which it is, because the list is sorted
+/// and `best - score` only grows down it.
+#[test]
+fn the_tied_set_is_always_a_prefix_of_the_list() {
+    let ds = fixture();
+    let ctx = tank_context(&ds);
+    let mut draft = Draft::new();
+    draft.add_enemy(PHARAH);
+    draft.add_enemy(WIDOWMAKER);
+
+    let recs = recommend(&ds, &draft, &ctx).expect("scoring succeeds");
+
+    let mut ended = false;
+    for rec in &recs {
+        if !rec.tied_with_top {
+            ended = true;
+        } else {
+            assert!(
+                !ended,
+                "{:?} is tied with the top after the tie already ended",
+                rec.hero
+            );
+        }
+    }
+}
+
+/// The other half: a real gap is still a real gap, and the top hero is tied with
+/// nothing but itself. Counting these has to treat one as no tie at all.
+#[test]
+fn a_clear_best_pick_is_tied_with_nothing_but_itself() {
+    let ds = fixture();
+    let mut ctx = tank_context(&ds);
+    // Comfort at the top rung is 0.60, four times the band, so this is a gap
+    // nothing about the measurement's resolution can explain away.
+    ctx.overrides[DVA.index()] = ComfortStep::Main.value();
+
+    let recs = recommend(&ds, &Draft::new(), &ctx).expect("scoring succeeds");
+
+    assert_eq!(recs[0].hero, DVA);
+    assert!(recs[0].tied_with_top, "the top is always tied with itself");
+    assert_eq!(
+        recs.iter().filter(|rec| rec.tied_with_top).count(),
+        1,
+        "a 0.60 lead is not a tie at a 0.15 band"
+    );
+}
+
+/// The design decision, pinned. These are different quantities — one prices the
+/// cost of abandoning a hero you are playing, the other is the resolution the
+/// measurement is read at — and sharing a field would mean anybody who raised the
+/// swap bar because they hate switching also collapsed their top six into "too
+/// close to call".
+///
+/// Both directions, and both against a field whose gaps sit *between* the two
+/// values being set, because that is the only arrangement in which an alias shows
+/// up at all: with both at their defaults the two are indistinguishable by
+/// construction.
+#[test]
+fn the_tie_band_and_the_swap_threshold_move_independently() {
+    let ds = fixture();
+    let tied = |ctx: &UserContext| {
+        recommend(&ds, &Draft::new(), ctx)
+            .expect("scoring succeeds")
+            .iter()
+            .filter(|rec| rec.tied_with_top)
+            .count()
+    };
+
+    let base = near_flat(&ds);
+    assert_eq!(tied(&base), 3, "0.06 and 0.03 are both inside the band");
+
+    // Move the swap bar under every gap on the board. If the flag read it, the
+    // tie would collapse to the top hero alone.
+    let mut swap_moved = near_flat(&ds);
+    swap_moved.weights.swap_threshold = 0.01;
+    assert_eq!(
+        tied(&swap_moved),
+        3,
+        "the swap bar reached the tie band, which is the coupling this forbids"
+    );
+
+    // And the other way: move the band alone and the tie does collapse, while the
+    // swap bar goes on pricing what it always priced.
+    let mut band_moved = near_flat(&ds);
+    band_moved.weights.tie_band = 0.01;
+    assert_eq!(tied(&band_moved), 1, "a band under every gap ties nothing");
+    assert_eq!(
+        band_moved.weights.swap_threshold,
+        Weights::default().swap_threshold,
+        "and moving the band did not move the bar"
+    );
 }

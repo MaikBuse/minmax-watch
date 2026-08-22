@@ -169,9 +169,12 @@ impl Default for EnemyRoleWeights {
 /// when it explains how a minus can reach a reason line whose direction is fixed
 /// by its kind.
 ///
-/// Eight of the eleven fields are terms in the pick score. [`Self::prevalence`] is
+/// Eight of the twelve fields are terms in the pick score. [`Self::prevalence`] is
 /// a multiplier on the ban list and reaches nothing else, [`Self::swap_threshold`]
-/// is a threshold rather than a weight, and [`EnemyRoleWeights`] is a table.
+/// and [`Self::tie_band`] are thresholds rather than weights, and
+/// [`EnemyRoleWeights`] is a table. Worth keeping accurate: it is what stops the
+/// next reader giving one of the four a [`crate::TermKind`] and a row in a ledger
+/// that would then no longer add up.
 ///
 /// [`Self::personal`] is the one meant to be the user's own, and it is the one
 /// that has never been reachable: nothing writes [`UserContext::overrides`], so
@@ -271,6 +274,19 @@ pub struct Weights {
     /// Minimum advantage before swap mode suggests leaving a working hero.
     /// Without this the list churns every time the enemy team twitches.
     pub swap_threshold: f32,
+    /// How close two scores have to be before the list stops claiming an order
+    /// between them.
+    ///
+    /// **Deliberately not [`Self::swap_threshold`]**, which is the nearest number
+    /// and the wrong one. That prices the *cost* of abandoning a hero you are
+    /// already playing — tempo, muscle memory, the fight you are in the middle of
+    /// — while this is the *resolution of the measurement*. Sharing one field
+    /// would mean somebody who raises the swap bar because they hate switching
+    /// also collapses their top six into "too close to call", which is a coupling
+    /// with no argument behind it.
+    /// `the_tie_band_and_the_swap_threshold_move_independently` pins that.
+    #[serde(default = "default_tie_band")]
+    pub tie_band: f32,
     /// Defaulted rather than required, so a profile stored before this field
     /// existed still loads with its pool and weights intact.
     #[serde(default)]
@@ -313,6 +329,43 @@ fn default_rank() -> f32 {
 /// through a factor of one instead of a term of zero.
 fn default_prevalence() -> f32 {
     0.40
+}
+
+/// The same trap a fifth time, and here it switches a whole feature off rather
+/// than a term: at 0.0 no hero is ever tied with another except on an exactly
+/// equal `f32`, so the note never fires and the hairline never draws for anybody
+/// with a stored profile — which is everybody who has used the app.
+///
+/// 0.15 is a term's range, and that is the argument: `rank` moves any score by up
+/// to 0.13, `map` caps at 0.15, `shape` at 0.18, `synergy` at 0.20, and a typical
+/// counter contribution is around 0.25. **A gap one term could have created or
+/// erased on its own is not a gap the list can defend**, so the band is the size
+/// of the smallest of them rather than a number chosen for how often it fires.
+///
+/// How often it does fire, measured over 2,997 drafts per enemy count — every
+/// role, rung, map and side, on the committed data:
+///
+/// | enemies entered | 1 | 2 | 3 | 4 | 5 |
+/// | --- | --- | --- | --- | --- | --- |
+/// | any tie at all | 67% | 73% | 75% | 83% | 87% |
+/// | median tied | 2 | 2 | 2 | 3 | 3 |
+/// | the whole visible list | 0% | 1% | 1% | 1% | 7% |
+///
+/// It fires often because the top two usually *are* within one term of each
+/// other — median `best - second` runs 0.093 at one enemy down to 0.062 at five,
+/// against a band of 0.15. Saying so on three drafts in four is the honest
+/// reading, and it is the whole point: the list was claiming an order it could
+/// not defend.
+///
+/// **The empty board is the one case this number cannot fix**, and it is handled
+/// in the view instead. With nothing entered only patch strength, rank and
+/// comfort are live, the top eight are flat by construction — median
+/// `best - eighth` is 0.114 — and the note would claim all eight on 74% of
+/// opening screens. That is a fact about the dataset rather than about anybody's
+/// draft, so `main.rs::tie_count` declines to report it. Lowering the band does
+/// not help: even at 0.05 the empty board ties something 76% of the time.
+fn default_tie_band() -> f32 {
+    0.15
 }
 
 impl Default for Weights {
@@ -361,6 +414,7 @@ impl Default for Weights {
             side: default_side(),
             shape: default_shape(),
             swap_threshold: 0.15,
+            tie_band: default_tie_band(),
             enemy_roles: EnemyRoleWeights::default(),
         }
     }
@@ -490,6 +544,16 @@ pub struct Recommendation {
     /// `place` rather than `rank`, because [`Rank`] is the rung of the ladder and
     /// this screen shows both at once.
     pub place: usize,
+    /// Whether this hero's score is within [`Weights::tie_band`] of the best one.
+    ///
+    /// True for the top hero itself, which is tied with nothing but itself — so a
+    /// reader counting these has to treat one as no tie at all.
+    ///
+    /// Because the list is sorted descending, `best - score` only ever grows down
+    /// it, which makes the tied set a **prefix**. That is not a curiosity: it is
+    /// the only reason the set can be drawn as a boundary between two rows rather
+    /// than as a mark on each of them.
+    pub tied_with_top: bool,
     pub reasons: Vec<Reason>,
 }
 
@@ -1092,8 +1156,9 @@ pub fn recommend(
                     && delta.is_some_and(|d| d > ctx.weights.swap_threshold),
                 is_locked: draft.locked == Some(hero),
                 breakdown,
-                // Filled in below, once there is an order to be in.
+                // Both filled in below, once there is an order to be in.
                 place: 0,
+                tied_with_top: false,
                 reasons,
             }
         })
@@ -1109,8 +1174,18 @@ pub fn recommend(
     // to number it by their own position in their own copy, so nothing said they
     // agreed; now the number is a property of the answer rather than of the
     // rendering of it.
+    //
+    // The tie flag rides the same pass because it is the same kind of fact — a
+    // property of the sorted order and of nothing about the hero.
+    //
+    // Absolute and not relative, because the terms are: a 0.15 gap means the same
+    // thing at the top of the list as anywhere else in it. NaN falls out as
+    // `false` on both sides of the comparison, which is the safe answer — an
+    // unorderable score is not evidence that two heroes are alike.
+    let best = out.first().map(|rec| rec.score);
     for (place, rec) in out.iter_mut().enumerate() {
         rec.place = place;
+        rec.tied_with_top = best.is_some_and(|best| best - rec.score <= ctx.weights.tie_band);
     }
 
     Ok(out)

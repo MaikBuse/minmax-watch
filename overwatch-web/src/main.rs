@@ -194,6 +194,28 @@ fn printed_lead(recs: &[Recommendation]) -> Option<i32> {
     }
 }
 
+/// How many of the shown rows the scorer could not separate — and none at all
+/// while the enemy board is empty.
+///
+/// **That second half is the whole reason this is a function.** With nothing
+/// entered, only patch strength, the rung and your own comfort are live, so the
+/// top eight are flat by construction: median `best - eighth` is 0.114 against a
+/// band of 0.15, and the note would read "all 8 here are too close to call" on
+/// **74% of opening screens**. That is a true sentence about the dataset and a
+/// useless one about your draft, offered before you have told the app anything —
+/// and it is not a number problem, because even a band of 0.05 ties something on
+/// the empty board 76% of the time.
+///
+/// So the tie is reported once there is a draft for it to be about. The rows keep
+/// their `tied_with_top` either way: the hairline is a placement rather than a
+/// claim, and `ui::score_note` reads a count of zero as no tie.
+fn tie_count(rows: &[ui::RecRow], enemies: usize) -> usize {
+    if enemies == 0 {
+        return 0;
+    }
+    rows.iter().filter(|row| row.tied_with_top).count()
+}
+
 /// What the ban list is defending, named rather than left to be inferred: the
 /// number on every row means a different thing in each case, and on the patch
 /// rung it is not about this team at all.
@@ -886,6 +908,10 @@ fn App() -> Element {
         locked_name.as_deref(),
         top_name.as_deref(),
         printed_lead(&frame.recommendations),
+        // Both counted over the rows about to be drawn rather than over the whole
+        // role, so neither sentence can name a hero that is not on screen.
+        tie_count(&rec_rows, draft.enemies.len()),
+        rec_rows.len(),
         // The eight rows on screen, not the whole role: the line says "nothing
         // *here* clears +15", and here is what you can see.
         rec_rows.iter().any(|row| row.worth_swapping),
@@ -1425,6 +1451,47 @@ mod tests {
         assert_eq!(printed_lead(&recs), Some(6));
     }
 
+    /// The half of the tie rule that is not a number, and the one the measurement
+    /// forced: on an empty enemy board the top eight are flat by construction, so
+    /// the note would decline to call the draft on 74% of opening screens — before
+    /// the reader has told the app anything at all.
+    #[test]
+    fn nothing_is_called_a_tie_until_the_draft_says_something() {
+        let rows = vec![tied_row(0), tied_row(1), tied_row(2)];
+
+        assert_eq!(
+            tie_count(&rows, 0),
+            0,
+            "an empty enemy board reports no tie"
+        );
+        assert_eq!(tie_count(&rows, 1), 3, "one enemy is a draft to be about");
+    }
+
+    /// And the count itself is the rows that carry the flag, not the rows there
+    /// are — the scorer decides who is tied, this only decides whether to say so.
+    #[test]
+    fn the_tie_count_is_the_rows_the_scorer_could_not_separate() {
+        let mut rows = vec![tied_row(0), tied_row(1), tied_row(2)];
+        rows[2].tied_with_top = false;
+
+        assert_eq!(tie_count(&rows, 5), 2);
+    }
+
+    fn tied_row(place: usize) -> ui::RecRow {
+        ui::RecRow {
+            hero: HeroId(place as u16),
+            name: String::new(),
+            icon: String::new(),
+            score: String::new(),
+            is_locked: false,
+            worth_swapping: false,
+            place,
+            tied_with_top: true,
+            comfort: 0,
+            reasons: Vec::new(),
+        }
+    }
+
     /// Nothing to lead. Worded by `score_note` rather than printed as a margin.
     #[test]
     fn one_candidate_or_none_has_no_margin_to_report() {
@@ -1441,6 +1508,7 @@ mod tests {
             is_locked: false,
             breakdown: Default::default(),
             place: 0,
+            tied_with_top: false,
             reasons: Vec::new(),
         }
     }

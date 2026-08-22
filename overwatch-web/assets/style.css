@@ -1192,6 +1192,23 @@ body {
     border-color: var(--positive);
 }
 
+/* Where the scorer stops being able to tell the rows apart: a hairline along the
+   top of the first row it *can* separate, so it reads as a rule under the tied
+   ones above it.
+
+   A shadow rather than a border because the border on this element is spoken for
+   three times over — a transparent 1px track so nothing shifts when a state
+   lands, amber for `.locked`, green for `.swap`, and a 3px amber left edge for
+   `.pooled`. `box-shadow` is the one channel `.rec` has never used, and an inset
+   one shifts no layout at all. `.mode.active` is the precedent: a directional bar
+   drawn as an inset shadow to mark a state.
+
+   No colour meaning: the tie is also said in words above the list, and this only
+   places it. */
+.rec.after-tie {
+    box-shadow: inset 0 1px 0 var(--line-strong);
+}
+
 /* Wraps, because this row is the narrowest thing in the app that has to hold
    four items at once — a name, up to two tags and the score — and the panel it
    sits in is half of a two-column grid that now survives down to 700px. Without
