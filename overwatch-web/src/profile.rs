@@ -173,19 +173,17 @@ impl Profile {
         self.overrides.get(hero.index()).copied().unwrap_or(0)
     }
 
-    /// One click on a pool tile.
+    /// One click on a pool tile: up a rung, and off the top back to nothing.
     ///
-    /// **A toggle, not [`ComfortStep::cycle`], and that is this release only.**
-    /// The ladder has three rungs; only the lowest is reachable from the screen
-    /// so far, so the risky half — collapsing the pool onto the comfort value and
-    /// migrating every stored profile onto it — lands on its own. Opening the
-    /// other two rungs is a change to this body and to nothing that calls it.
+    /// It was a toggle for exactly one release, while the risky half — collapsing
+    /// the pool onto the comfort value and migrating every stored profile onto it
+    /// — landed on its own. Opening the other two rungs was a change to this body
+    /// and to nothing that calls it, which is why it has always had this name.
+    ///
+    /// [`ComfortStep::cycle`] rather than a match, so a value the ladder does not
+    /// name still climbs to the rung above it rather than sticking.
     pub fn cycle_comfort(&mut self, hero: HeroId) {
-        let next = if self.comfort(hero) > 0 {
-            0
-        } else {
-            ComfortStep::Ok.value()
-        };
+        let next = ComfortStep::cycle(self.comfort(hero));
         if let Some(slot) = self.overrides.get_mut(hero.index()) {
             *slot = next;
         }
@@ -630,7 +628,59 @@ mod tests {
         assert_eq!(profile.comfort(rein), ComfortStep::Ok.value());
     }
 
-    /// Comfort is not a thing you tell the room. `Seat` is the entire per-person
+    /// The ladder, through the interaction rather than through `ComfortStep`.
+    /// A second click used to clear a hero; now it promotes.
+    ///
+    /// Round-tripped at every rung, because the legacy pool keys are derived
+    /// from "comfort above zero" and a rung that stopped writing them would
+    /// empty an older build's pool without emptying this one's.
+    #[test]
+    fn a_second_click_on_a_claimed_hero_climbs_the_ladder_rather_than_clearing_it() {
+        let ds = fixture();
+        let mut profile = Profile::empty(ds.hero_count());
+        let hero = ds.hero_by_key("reinhardt").expect("in the fixture");
+
+        for expected in [ComfortStep::Ok, ComfortStep::Good, ComfortStep::Main] {
+            profile.cycle_comfort(hero);
+            assert_eq!(profile.comfort(hero), expected.value(), "{expected:?}");
+            assert!(
+                profile.pool(&ds, Role::Tank).contains(hero),
+                "{expected:?} is still a claim on the hero"
+            );
+            assert_eq!(
+                profile.to_stored(&ds).tank_pool,
+                vec!["reinhardt".to_owned()],
+                "and an older build still reads it at {expected:?}"
+            );
+        }
+    }
+
+    /// Off the top and back to nothing, which is the only way to clear a hero
+    /// from the board. Three clicks from `main`, which is the known cost.
+    #[test]
+    fn the_top_of_the_ladder_clears_on_the_next_click() {
+        let ds = fixture();
+        let mut profile = Profile::empty(ds.hero_count());
+        let hero = ds.hero_by_key("reinhardt").expect("in the fixture");
+
+        for _ in 0..3 {
+            profile.cycle_comfort(hero);
+        }
+        assert_eq!(profile.comfort(hero), ComfortStep::Main.value());
+
+        profile.cycle_comfort(hero);
+        assert_eq!(profile.comfort(hero), 0);
+        assert!(profile.pool(&ds, Role::Tank).is_empty());
+        assert!(
+            profile.to_stored(&ds).tank_pool.is_empty(),
+            "and it leaves the key an older build reads"
+        );
+        // A fourth click starts again rather than sticking at zero.
+        profile.cycle_comfort(hero);
+        assert_eq!(profile.comfort(hero), ComfortStep::Ok.value());
+    }
+
+    /// Comfort is not a thing you tell the room.    /// Comfort is not a thing you tell the room. `Seat` is the entire per-person
     /// wire shape, and the ban list wants the question a pool answers — "what
     /// might you end up on" — which a magnitude adds nothing to.
     ///

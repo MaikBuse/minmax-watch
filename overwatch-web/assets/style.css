@@ -799,6 +799,54 @@ body {
     filter: none;
     border-color: var(--warn);
 }
+
+/* How well you play it: one, two or three pips at the corner.
+   `.board-ally .tile.mine::before` below is the idiom, and its comment is the
+   argument — the corner dot carries it too, so the tile is not distinguished by
+   colour alone. Here that matters more, because there are three states to tell
+   apart and only one amber to tell them with.
+
+   One element with `box-shadow` copies rather than three elements, because a
+   tile has exactly two pseudo-elements and `::after` is spent on the hold label.
+
+   **The list paints front to back, so a ring goes *after* the dot it surrounds.**
+   The element's own dot is drawn by `background`, and every entry here is behind
+   it: each offset copy needs its own `var(--bg)` ring immediately after it, or
+   the next dot's ring paints over the previous dot. Getting that order wrong
+   looks like a rendering bug rather than a CSS one.
+
+   5px on a 7px pitch, so three pips span 19px of a 36px tile and clear the
+   border radius. Growing leftward, because the corner is the anchor and the
+   count should read from the same edge every time. */
+.board-pool .tile.c1::before,
+.board-pool .tile.c2::before,
+.board-pool .tile.c3::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--warn);
+    box-shadow: 0 0 0 1px var(--bg);
+}
+
+.board-pool .tile.c2::before {
+    box-shadow:
+        0 0 0 1px var(--bg),
+        -7px 0 0 0 var(--warn),
+        -7px 0 0 1px var(--bg);
+}
+
+.board-pool .tile.c3::before {
+    box-shadow:
+        0 0 0 1px var(--bg),
+        -7px 0 0 0 var(--warn),
+        -7px 0 0 1px var(--bg),
+        -14px 0 0 0 var(--warn),
+        -14px 0 0 1px var(--bg);
+}
 .board-map .tile.selected {
     border-color: var(--accent);
 }
@@ -1702,6 +1750,18 @@ body {
    are one block, and the first row should not look like it belongs to them. */
 .rank-note {
     margin: -0.15rem 0 0.6rem;
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+}
+
+/* What a click on a board does, where that is not the toggle every other board
+   answers with. Only the pool board has one.
+
+   Shaped on `.rank-note` above rather than on `.threat-note`: it qualifies the
+   control rather than counting anything on it, so it sits with the heading and
+   is drawn whether or not there is a single claimed tile under it. */
+.board-note {
+    margin: -0.15rem 0 0.5rem;
     font-size: var(--fs-micro);
     color: var(--text-faint);
 }

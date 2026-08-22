@@ -989,6 +989,10 @@ fn App() -> Element {
                     // Your pool is weeks of accumulated configuration, not draft
                     // state, so this one asks before it throws it away.
                     reset_confirm: true,
+                    // The only board whose click is not a toggle, and the only
+                    // one that moves a scoring term. Both worth saying once,
+                    // where the clicking happens.
+                    note: ui::POOL_NOTE.to_owned(),
                     on_toggle: {
                         let ds = dataset.clone();
                         move |hero: HeroId| {

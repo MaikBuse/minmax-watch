@@ -502,6 +502,49 @@ pub struct HeroTile {
     pub comfort: Option<ComfortStep>,
 }
 
+/// What the pool board says a click does.
+///
+/// A `const` rather than a literal at the call site so a test can read the same
+/// string the screen does — and because a line continuation inside `rsx!` is one
+/// `just fmt` away from baking its own indentation into the copy, which is
+/// exactly what happened to the first version of this.
+pub const POOL_NOTE: &str =
+    "click to cycle \u{2014} ok \u{b7} good \u{b7} main. comfort is the second-heaviest term in the score.";
+
+/// The class list for one tile.
+/// The class list for one tile.
+///
+/// A free function rather than a `format!` inside the markup, for the reason
+/// `ban_text` is one: the comfort level is drawn by class and nothing else, so
+/// a reader who cannot tell two ambers apart depends entirely on this being
+/// right, and logic no test can reach is logic that drifts.
+fn tile_class(tile: &HeroTile) -> String {
+    format!(
+        "tile{}{}",
+        tile.state.class(),
+        match tile.comfort {
+            Some(ComfortStep::Ok) => " c1",
+            Some(ComfortStep::Good) => " c2",
+            Some(ComfortStep::Main) => " c3",
+            None => "",
+        },
+    )
+}
+
+/// What the hold label says: the hero, and whichever of the two things about it
+/// is worth a second word.
+///
+/// The two arms never collide. `owner` belongs to [`TileState::Theirs`], which
+/// the pool board cannot produce, and `comfort` is set on the pool board alone.
+fn tile_label(tile: &HeroTile) -> String {
+    match (&tile.owner, tile.comfort) {
+        (Some(owner), _) => format!("{} \u{b7} {}", tile.name, owner),
+        (None, Some(step)) => format!("{} \u{b7} {}", tile.name, step.label()),
+        (None, None) => tile.name.clone(),
+    }
+}
+
+/// One role's worth of a roster board.
 /// One role's worth of a roster board.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoardRow {
@@ -664,6 +707,14 @@ pub fn HeroBoard(
     /// comp, and it has no shape to state.
     #[props(default)]
     shape: Option<ShapeChip>,
+    /// What a click on this board does, where that is not obvious from the
+    /// board. `None` on the ally, enemy and map boards, where a click picks and
+    /// a second click takes it back — which is the whole of it.
+    ///
+    /// The pool board is the exception and the reason this exists: a click there
+    /// cycles rather than toggles, and nothing on screen said so.
+    #[props(default)]
+    note: Option<String>,
     on_toggle: EventHandler<HeroId>,
     on_reset: EventHandler<()>,
 ) -> Element {
@@ -690,6 +741,12 @@ pub fn HeroBoard(
                 }
                 ResetButton { confirm: reset_confirm, on_reset }
             }
+            // Standing rather than conditional, for `.rank-note`'s reason: a
+            // caveat you have to discover is not a caveat. It sits under the head
+            // and above the rows because it is about what the rows do.
+            if let Some(note) = &note {
+                p { class: "board-note", "{note}" }
+            }
             for row in rows.iter() {
                 // `mine` is exactly "the row your next click claims", so the
                 // amber claiming hover can be scoped to it rather than painted
@@ -714,24 +771,20 @@ pub fn HeroBoard(
                         for tile in row.tiles.iter() {
                             button {
                                 key: "{tile.hero.0}",
-                                class: format!(
-                                    "tile{}{}",
-                                    tile.state.class(),
-                                    match tile.comfort {
-                                        Some(ComfortStep::Ok) => " c1",
-                                        Some(ComfortStep::Good) => " c2",
-                                        Some(ComfortStep::Main) => " c3",
-                                        None => "",
-                                    },
-                                ),
+                                class: tile_class(tile),
                                 style: art(&tile.icon),
                                 aria_label: "{tile.name}",
                                 // Whose it is, where that is the reason it
-                                // cannot be clicked.
-                                "data-name": match &tile.owner {
-                                    Some(owner) => format!("{} · {}", tile.name, owner),
-                                    None => tile.name.clone(),
-                                },
+                                // cannot be clicked — or how well you play it,
+                                // on the one board where that is the question.
+                                //
+                                // Free, and worth having for that alone: this
+                                // label already fires on hover, focus-visible
+                                // *and* `:active`, so the level is readable in
+                                // words on all three pointer kinds through a
+                                // gesture people already use to read a portrait.
+                                // The pips say how many; this says which.
+                                "data-name": tile_label(tile),
                                 // Only a genuinely full row gets the attribute.
                                 // A teammate's pick is inert but stays focusable
                                 // and hoverable, or a keyboard user could never
@@ -2565,6 +2618,98 @@ mod tests {
         );
     }
 
+    fn tile(name: &str, state: TileState, comfort: Option<ComfortStep>) -> HeroTile {
+        HeroTile {
+            hero: REINHARDT,
+            name: name.to_owned(),
+            icon: String::new(),
+            state,
+            owner: None,
+            comfort,
+        }
+    }
+
+    /// The one line telling anyone that this board cycles rather than toggles.
+    /// It is also the only place the ladder's three words appear together, so a
+    /// rung renamed in core has to be renamed here too.
+    #[test]
+    fn the_pool_note_names_every_rung_of_the_ladder_and_says_a_click_cycles() {
+        for step in ComfortStep::LADDER {
+            assert!(
+                POOL_NOTE.contains(step.label()),
+                "the note does not name {:?}: {POOL_NOTE:?}",
+                step
+            );
+        }
+        assert!(POOL_NOTE.contains("cycle"));
+        // Written in this app's voice, like every other line it wrote itself.
+        assert!(!POOL_NOTE.starts_with(char::is_uppercase));
+        // And no line continuation baked its own indentation into the copy,
+        // which is how the first version of this shipped to the screen.
+        assert!(!POOL_NOTE.contains("  "), "double space in {POOL_NOTE:?}");
+    }
+
+    /// The level is drawn by class and by nothing else,    /// The level is drawn by class and by nothing else, so this is what a reader
+    /// who cannot tell two ambers apart is actually depending on. One pip per
+    /// rung, and every rung distinct.
+    #[test]
+    fn every_comfort_step_draws_a_different_number_of_pips() {
+        let classes: Vec<String> = ComfortStep::LADDER
+            .iter()
+            .map(|step| tile_class(&tile("Reinhardt", TileState::Free, Some(*step))))
+            .collect();
+
+        assert_eq!(classes, vec!["tile c1", "tile c2", "tile c3"]);
+        assert_eq!(
+            classes
+                .iter()
+                .collect::<std::collections::HashSet<_>>()
+                .len(),
+            3,
+            "two rungs drawing the same class is two rungs nobody can tell apart"
+        );
+        assert_eq!(
+            tile_class(&tile("Reinhardt", TileState::Free, None)),
+            "tile",
+            "and an unclaimed tile is bare"
+        );
+        // The comfort class rides *beside* the state's rather than replacing it,
+        // so a board that has both keeps both.
+        assert_eq!(
+            tile_class(&tile("Reinhardt", TileState::Picked, Some(ComfortStep::Ok))),
+            "tile selected c1"
+        );
+    }
+
+    /// The level in words, through the label the board already had. It fires on
+    /// hover, focus-visible and `:active`, so this is the only cue that reaches
+    /// every pointer kind — the pips are the count, this is the name.
+    #[test]
+    fn a_pool_tile_names_its_comfort_level_in_the_label_it_already_had() {
+        assert_eq!(
+            tile_label(&tile("Reinhardt", TileState::Free, Some(ComfortStep::Main))),
+            "Reinhardt \u{b7} main"
+        );
+        assert_eq!(
+            tile_label(&tile("Reinhardt", TileState::Free, Some(ComfortStep::Ok))),
+            "Reinhardt \u{b7} ok"
+        );
+        assert_eq!(
+            tile_label(&tile("Reinhardt", TileState::Free, None)),
+            "Reinhardt",
+            "an unclaimed tile is still just the hero"
+        );
+
+        // The other arm, unchanged: a teammate's pick names them instead. The
+        // two cannot collide, because the pool board never produces `Theirs`.
+        let theirs = HeroTile {
+            owner: Some("mika".to_owned()),
+            ..tile("Ana", TileState::Theirs, None)
+        };
+        assert_eq!(tile_label(&theirs), "Ana \u{b7} mika");
+    }
+
+    /// The whole point of the slice: a line carrying somebody else's sentence
     /// The whole point of the slice: a line carrying somebody else's sentence
     /// says so, and a line the app wrote about its own arithmetic does not.
     #[test]
