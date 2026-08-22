@@ -781,14 +781,22 @@ body {
    that says a hero is yours.
 
    All three are the same border today, and only `.c1` is reachable — the ladder's
-   upper rungs are not on the screen yet, so this change is deliberately invisible
-   and the risk in it is entirely in the storage behind it. What distinguishes the
-   levels from each other is coming, and it will not be a third colour: the border
-   already means "mine", and a hue cannot say "how much" without breaking the rule
-   that colour never carries meaning alone. */
+   upper rungs are not on the screen yet. What distinguishes the levels from each
+   other is coming, and it will not be a third colour: the border already means
+   "mine", and a hue cannot say "how much" without breaking the rule that colour
+   never carries meaning alone.
+
+   **The opacity and the filter are not decoration.** They came free while a
+   claimed tile was `TileState::Picked` and picked up `.tile.selected`, which is
+   where they live; the move to `.c1` dropped them, and the board went out with
+   every tile equally dim and a 2px amber border carrying "mine" entirely on its
+   own. That is the one thing this stylesheet is not allowed to do. Restored here,
+   explicitly, because this selector no longer inherits them from anywhere. */
 .board-pool .tile.c1,
 .board-pool .tile.c2,
 .board-pool .tile.c3 {
+    opacity: 1;
+    filter: none;
     border-color: var(--warn);
 }
 .board-map .tile.selected {
