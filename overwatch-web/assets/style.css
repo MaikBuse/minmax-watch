@@ -1196,11 +1196,6 @@ body {
     background: var(--surface-raised);
 }
 
-.rec:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
-}
-
 .rec.locked {
     border-color: var(--warn);
 }
@@ -1250,7 +1245,12 @@ body {
     padding-top: 5px;
 }
 
-.rec-name {
+/* Grouped rather than copied. `.rec-name` is still a span in the ban and threat
+   panels, which share this row's geometry; `.rec-pick` is the pick column's
+   button. The two must stay the same size and the same flex item, and a second
+   copy of these four lines is how they would stop being. */
+.rec-name,
+.rec-pick {
     font-size: var(--fs-lg);
     font-weight: 600;
     /* `min-width: 0` is the half that does the work — `flex: 1` alone still
@@ -1259,6 +1259,43 @@ body {
        cannot fit, so the common case is still one row. */
     flex: 1 1 6rem;
     min-width: 0;
+}
+
+/* The pick list's row is the app's primary action and was the one interactive
+   surface that was not a button. Now it is one, and this takes the chrome back
+   off — the row's hover fill is the affordance, the way it is for `.rank-row`.
+
+   Properties one at a time rather than `font: inherit`, which would reset the
+   size and weight the rule above just set unless the two land in exactly the
+   right order. Nothing here should depend on source order. */
+.rec-pick {
+    font-family: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    text-align: left;
+    cursor: pointer;
+}
+
+/* Shaped on `.strip-pick`, which is the same control one panel down: a real
+   button that picks a hero, ringed outset because it is a small box with room
+   around it rather than a full-width row inside a menu.
+
+   The ring is on the button and not on `.rec:has(:focus-visible)`, deliberately.
+   `:has()` earns its keep below carrying the row tint, where losing it costs a
+   background; carrying the only focus indicator on it would mean no indicator at
+   all wherever it is unsupported, which is a different kind of failure. Every
+   other `:has()` in this file is an enhancement over something already visible. */
+.rec-pick:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+
+/* Which row the ring belongs to, in the fill the pointer already uses for the
+   same question. Degrades to nothing worse than a missing tint. */
+.rec:has(:focus-visible) {
+    background: var(--surface-raised);
 }
 
 .tag {

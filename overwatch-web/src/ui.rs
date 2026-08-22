@@ -1672,6 +1672,64 @@ pub fn ban_text(
     }
 }
 
+/// A place in the list, as English reads it.
+///
+/// The list is cut to eight, so nothing past `8th` can reach a screen today. The
+/// eleventh-to-thirteenth rule is written anyway, because the cap is a `take(8)`
+/// in `main.rs` and this should not be the thing that breaks when it moves.
+fn ordinal(place: usize) -> String {
+    let n = place + 1;
+    let suffix = match (n % 10, n % 100) {
+        (_, 11..=13) => "th",
+        (1, _) => "st",
+        (2, _) => "nd",
+        (3, _) => "rd",
+        _ => "th",
+    };
+    format!("{n}{suffix}")
+}
+
+/// What a screen reader is told about one row when it lands on the button.
+///
+/// Everything else in the row — the reasons, the coverage line, the tags — is
+/// text outside the button and is read in browse mode. This is the name of the
+/// *control*, which is a shorter question: which hero, how good, where in the
+/// list, and whichever of the three marks beside it are lit.
+///
+/// A free function for the reason `tile_class` gives in place: the row's state
+/// is drawn by class and read out by this, and logic no test can reach drifts.
+///
+/// **`worth swapping` is here although the row's own tag is the only other place
+/// it appears.** Every clause below answers to something visible; dropping one
+/// would hand a screen-reader user strictly less than the person beside them.
+///
+/// The locked row is named as a state rather than as an action, because pressing
+/// it is not one: `Seat::lock` assigns rather than toggles, so the current row
+/// re-locks the hero it already holds and nothing moves. The control stays all
+/// the same — a button that came and went would reorder the tab stops mid-draft,
+/// which is worse than one that is idempotent.
+fn pick_label(row: &RecRow) -> String {
+    let mut label = if row.is_locked {
+        format!("{}, the hero you are on", row.name)
+    } else {
+        format!("pick {}", row.name)
+    };
+    label.push_str(&format!(", {}, {}", row.score, ordinal(row.place)));
+
+    // In the order the eye meets them along the row: the swap tag, then the tie
+    // boundary under it, then the star at the far right.
+    if row.worth_swapping {
+        label.push_str(", worth swapping");
+    }
+    if row.tied_with_top {
+        label.push_str(", too close to call");
+    }
+    if row.claimed() {
+        label.push_str(", one of yours");
+    }
+    label
+}
+
 /// The class list for one row of the pick list.
 ///
 /// Out of `rsx!` for the reason [`tile_class`] is: three of the four states are
@@ -2172,7 +2230,35 @@ pub fn Recommendations(
                     span { class: "rec-portrait", style: art(&rec.icon) }
                     div { class: "rec-body",
                         div { class: "rec-head",
-                            span { class: "rec-name", "{rec.name}" }
+                            // The one control the app exists to offer, and until
+                            // now the one surface that was not a button: every
+                            // board tile, the mode switch, the rank picker and
+                            // the answer strip already are. A keyboard could
+                            // reach the strip's top three and nothing else.
+                            //
+                            // The name and not the row, and the row is not given
+                            // `role="button"` either: it holds the reasons, the
+                            // coverage line and the tags, and a button role makes
+                            // its descendants presentational in most assistive
+                            // tech — hiding the app's shows-its-work from exactly
+                            // the readers who need it spoken. Siblings rather
+                            // than nesting, which is `MapBoard`'s rule.
+                            button {
+                                class: "rec-pick",
+                                aria_label: "{pick_label(rec)}",
+                                onclick: {
+                                    let hero = rec.hero;
+                                    move |evt: Event<MouseData>| {
+                                        // The row's own click still locks for the
+                                        // pointer, and the root takes focus back
+                                        // on every click. Same guard the strip,
+                                        // the reset and the key sheet all need.
+                                        evt.stop_propagation();
+                                        on_lock.call(hero);
+                                    }
+                                },
+                                "{rec.name}"
+                            }
                             if rec.is_locked {
                                 span { class: "tag", "current" }
                             }
@@ -3726,6 +3812,102 @@ mod tests {
             assert!(!note.ends_with('.'), "{note}");
             assert!(!note.contains("  "), "double space in {note:?}");
         }
+    }
+
+    /// What a keyboard user is told when they land on the row. Until this slice
+    /// they could not land on it: the strip's top three were the only heroes on
+    /// the screen a tab could reach.
+    #[test]
+    fn the_pick_label_names_the_hero_the_number_and_the_place() {
+        let mut row = row_at(0);
+        row.name = "Winston".to_owned();
+        row.score = "+34".to_owned();
+
+        assert_eq!(pick_label(&row), "pick Winston, +34, 1st");
+    }
+
+    /// The tie is drawn as a hairline and said in a sentence above the list.
+    /// Neither reaches somebody who is hearing one row at a time.
+    #[test]
+    fn a_tied_row_says_so_in_its_accessible_name() {
+        let mut row = row_at(1);
+        row.name = "Sigma".to_owned();
+        row.score = "+33".to_owned();
+        row.tied_with_top = true;
+
+        assert!(pick_label(&row).ends_with(", too close to call"));
+    }
+
+    /// Pressing the current row re-locks the hero it already holds — `Seat::lock`
+    /// assigns rather than toggles — so naming it as an action would promise
+    /// something that does not happen.
+    #[test]
+    fn the_row_you_are_on_is_named_as_current_rather_than_as_a_pick() {
+        let mut row = row_at(0);
+        row.name = "Reinhardt".to_owned();
+        row.score = "+0".to_owned();
+        row.is_locked = true;
+
+        let label = pick_label(&row);
+        assert_eq!(label, "Reinhardt, the hero you are on, +0, 1st");
+        assert!(!label.starts_with("pick"), "{label}");
+    }
+
+    /// The `swap` tag has no other carrier. Leaving it out would hand a
+    /// screen-reader user strictly less than the person beside them.
+    #[test]
+    fn a_swap_candidate_says_so_in_its_name_because_the_tag_beside_it_does() {
+        let mut row = row_at(2);
+        row.name = "D.Va".to_owned();
+        row.score = "+19".to_owned();
+        row.worth_swapping = true;
+
+        assert!(pick_label(&row).contains(", worth swapping"), "{row:?}");
+    }
+
+    /// Same for the star, which is a glyph and a `title` — and a `title` is not
+    /// read at all by most of the software this is for.
+    #[test]
+    fn a_claimed_row_names_the_pool_in_its_accessible_name() {
+        let mut row = row_at(3);
+        row.name = "Ana".to_owned();
+        row.score = "+12".to_owned();
+        row.comfort = 55;
+
+        assert!(pick_label(&row).ends_with(", one of yours"));
+    }
+
+    /// Every mark the row can carry, at once and in the order the eye meets them
+    /// along it. The guard against a fifth state being added to the row and drawn
+    /// without ever being spoken.
+    #[test]
+    fn every_clause_the_row_carries_reaches_its_name() {
+        let mut row = row_at(4);
+        row.name = "Orisa".to_owned();
+        row.score = "+22".to_owned();
+        row.worth_swapping = true;
+        row.tied_with_top = true;
+        row.comfort = 100;
+
+        assert_eq!(
+            pick_label(&row),
+            "pick Orisa, +22, 5th, worth swapping, too close to call, one of yours"
+        );
+    }
+
+    /// The list is cut to eight, so nothing here can reach a screen today. The
+    /// rule is written because the cap is a `take(8)` somewhere else entirely.
+    #[test]
+    fn the_ordinal_reads_as_english_past_the_tenth_row() {
+        let got: Vec<String> = (0..14).map(ordinal).collect();
+
+        assert_eq!(
+            got,
+            [
+                "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th",
+                "12th", "13th", "14th"
+            ]
+        );
     }
 
     /// The hairline marks the boundary, so it belongs on the first row the scorer
