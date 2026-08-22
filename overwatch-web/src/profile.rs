@@ -89,11 +89,20 @@ pub struct Profile {
     /// role could never again leave a `match` with a catch-all arm quietly
     /// pointing two roles at one pool.
     ///
-    /// Purely a marker: it highlights your picks in the list rather than
-    /// deciding what appears there. It used to be a whitelist, and a separate
-    /// "favourites" set did the highlighting — two levers for one idea, and the
-    /// filtering one hid heroes on exactly the draft that called for them. The
-    /// comfort overrides remain the lever for "rank this hero higher".
+    /// A marker *in the pick list*: it highlights your picks rather than deciding
+    /// what appears there. It used to be a whitelist, and a separate "favourites"
+    /// set did the highlighting — two levers for one idea, and the filtering one
+    /// hid heroes on exactly the draft that called for them.
+    ///
+    /// It is not inert, though, and "purely a marker" — which this said for a
+    /// while — is wrong about where. The pool travels to your seat and reaches the
+    /// ban list as `Knowledge::Pool`, which `ban_recommendations` scores at full
+    /// certainty, so it decides who the team is defended against before anybody
+    /// has picked.
+    ///
+    /// The comfort overrides are the intended lever for "rank this hero higher",
+    /// and **nothing writes them yet** — the term is second-heaviest in the score
+    /// and zero for every user until an interface for it exists.
     pub pools: [HeroSet; Role::ALL.len()],
     /// Which rung of the ladder to read patch strength on. Sticky like the role
     /// and the format — you play an evening in one bracket.

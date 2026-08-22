@@ -155,9 +155,28 @@ impl Default for EnemyRoleWeights {
     }
 }
 
-/// Relative importance of each scoring term. Exposed as sliders in the UI and
-/// persisted per user, because "how much do I care about counters vs. comfort"
-/// is a genuine preference rather than something to hard-code.
+/// Relative importance of each scoring term.
+///
+/// **There are no sliders.** This doc claimed there were, for as long as the
+/// struct has existed, and there has never been a control for any of these. The
+/// defaults are the shipped answer, and the measurement behind each one is in the
+/// doc comment on the field.
+///
+/// Persisted per user is true, and is the whole of what "per user" means here:
+/// the struct round-trips through the stored profile, so a hand-edited entry does
+/// change the scoring — **unclamped**, which is the fact the wording code leans on
+/// when it explains how a minus can reach a reason line whose direction is fixed
+/// by its kind.
+///
+/// Eight of the eleven fields are terms in the pick score. [`Self::prevalence`] is
+/// a multiplier on the ban list and reaches nothing else, [`Self::swap_threshold`]
+/// is a threshold rather than a weight, and [`EnemyRoleWeights`] is a table.
+///
+/// [`Self::personal`] is the one meant to be the user's own, and it is the one
+/// that has never been reachable: nothing writes [`UserContext::overrides`], so
+/// the second-heaviest term in the sum contributes exactly zero for everybody. A
+/// declared comfort level is what closes that, and it is declared rather than
+/// inferred from results for the reasons the two `matchlog` module docs give.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 pub struct Weights {
     pub base: f32,

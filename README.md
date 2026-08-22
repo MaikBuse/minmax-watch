@@ -26,13 +26,16 @@ the people drafting; it is never in the path between a keystroke and an answer.
 
 ## How a pick is scored
 
-Every hero in the role you are picking gets a weighted sum of seven terms. The
-shipped weights, all of them adjustable per user:
+Every hero in the role you are picking gets a weighted sum of eight terms. These
+are shipped constants, and the measurement behind each one is in the doc comment
+beside it in [`score.rs`](overwatch-core/src/score.rs). There is no settings
+screen: they round-trip through the stored profile, so changing one means editing
+that entry by hand, and they load unclamped.
 
 | Term | Weight | What it reads |
 | --- | --- | --- |
 | `counter` | 1.00 | matchups against every enemy entered, weighted by role pairing |
-| `personal` | 0.60 | your own comfort |
+| `personal` | 0.60 | your own comfort — see below, it is currently always zero |
 | `map` | 0.25 | hero/map affinity |
 | `shape` | 0.25 | dive / poke / brawl against the enemy comp's shape |
 | `side` | 0.20 | the attack/defend lean, on the maps that have sides |
@@ -41,7 +44,10 @@ shipped weights, all of them adjustable per user:
 | `rank` | 0.15 | how far that moves at the rung you selected, if you selected one |
 
 Comfort sitting second is deliberate: a hero you play well but is countered
-usually beats the "correct" pick you cannot play.
+usually beats the "correct" pick you cannot play. That is the intent rather than
+the behaviour — **nothing in the app writes the term today**, so in the shipped
+build it contributes exactly zero to every score. The interface for setting it is
+the next thing being built.
 
 Four things about the arithmetic worth knowing before you trust a number:
 

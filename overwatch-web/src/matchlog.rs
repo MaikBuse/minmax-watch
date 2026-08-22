@@ -1,9 +1,35 @@
 //! Recording how a match actually went.
 //!
-//! The counter matrix says what *should* work. Only your own results say what
-//! works for you, and the gap between the two is exactly what the personal
-//! overrides exist to close. One keystroke per match is the most that will
-//! realistically get done, so that is the whole interface.
+//! **This does not feed the scorer, and the decision not to is deliberate.** This
+//! doc used to say the gap between the matrix and your own results was "exactly
+//! what the personal overrides exist to close", which reads as a plan to infer
+//! comfort from wins and losses. Comfort is *declared* instead — you say which
+//! heroes you can play — and the four reasons are worth having in front of
+//! whoever next reaches for this data:
+//!
+//! 1. **A result is the team's, not the hero's.** A `MatchRecord` holds one hero,
+//!    one bit, and the ten-hero draft around it. Attributing the loss to your own
+//!    pick is the selection problem the ingest corrects for in `stats.rs` — and
+//!    that has tens of thousands of games per hero and still shrinks hard toward
+//!    the role mean.
+//! 2. **The sample is orders of magnitude too small.** One keystroke per match is
+//!    the most that will realistically get done, which is single digits *per hero*
+//!    for months, against a base rate near 50%. There is nothing to shrink toward
+//!    except the prior.
+//! 3. **It is a closed loop with nothing outside it.** The app recommends a hero,
+//!    you play it, you win, and the app grows more confident in its own advice.
+//!    Every other number in this repo is checked against something external — a
+//!    scrape, a published win rate, `data/ban_rate.toml` as a yardstick. An
+//!    inferred comfort term would be checked against the app.
+//! 4. **You already know.** Saying so costs one click and is exact; inferring it
+//!    costs a season and is approximate.
+//!
+//! What the log is for is the other question: an offline record of what was
+//! drafted and how it went, greppable as JSON Lines, for judging *the app* by hand
+//! — did the top pick win more? That is the one this file can actually answer.
+//!
+//! That budget of one keystroke is also the whole interface, which is what the
+//! rest of this module is.
 //!
 //! Bound to Alt+W and Alt+L rather than bare W/L: recording a result also
 //! clears the draft, so the modifier is a guard against a stray keypress

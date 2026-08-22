@@ -1,9 +1,18 @@
 //! Append-only log of match results.
 //!
-//! The point of recording outcomes is to eventually tune the personal
-//! overrides: after enough games it becomes visible which "correct" picks you
-//! actually lose on. That needs one append per match and a full read when
-//! analysing — no queries, no indexes, no schema migrations.
+//! **Nothing reads this back into the scoring, and that is a decision rather than
+//! an omission.** This doc used to say the point was "to eventually tune the
+//! personal overrides: after enough games it becomes visible which 'correct' picks
+//! you actually lose on". It is not, and the client-side `matchlog` module carries
+//! the four reasons in full — a result belongs to the team rather than to your
+//! hero, the per-hero sample is single digits for months, inferring comfort from
+//! drafts the app itself steered is a closed loop with no external check, and the
+//! player already knows which heroes they can play. Comfort is declared instead.
+//!
+//! What it is for: an offline record of what was drafted and how it went, read by
+//! hand to judge *the app* — did the top pick win more often than the rest? That
+//! needs one append per match and a full read when analysing, and no queries, no
+//! indexes and no schema migrations.
 //!
 //! So this is JSON Lines rather than the SQLite the plan called for. Two people
 //! logging a handful of matches a night will not outgrow it this decade, and it
