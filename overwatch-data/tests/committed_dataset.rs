@@ -317,6 +317,77 @@ fn the_disagreement_flags_reach_the_dataset() {
     );
 }
 
+/// The coverage sentence the "where these numbers come from" panel prints is a
+/// measurement, not copy: `Dataset::new` counts it off the same matrix the scorer
+/// reads, so it cannot survive an ingest that changes it.
+///
+/// Checked against an independent walk of the committed TOML, which also pins the
+/// loader between the two — a file the app never counts and a count the app never
+/// reads off the file would agree by luck.
+///
+/// Both figures are asserted as **bands** rather than floors, on the argument
+/// `the_disagreement_flags_reach_the_dataset` already makes: a scrape that
+/// returns nothing and a scrape that returns everything both slip past a bare
+/// `> 0`. The share is banded too, because a sentence on every rated pair would
+/// mean the templates had stopped being reached, and none would mean the prose
+/// had stopped being parsed.
+#[test]
+fn the_note_coverage_the_app_quotes_is_counted_from_the_matrix_rather_than_written_down() {
+    let ds = load().expect("committed data must load");
+    let matchups: MatchupsFile =
+        toml::from_str(overwatch_data::MATCHUPS_TOML).expect("committed matchups must parse");
+
+    // Unordered pairs, keyed the way the panel's claim is worded: the sources
+    // have an opinion about this matchup, and someone wrote a sentence about it.
+    let mut rated: HashSet<(&str, &str)> = HashSet::new();
+    let mut noted: HashSet<(&str, &str)> = HashSet::new();
+    for row in &matchups.matchups {
+        let key = if row.hero <= row.vs {
+            (row.hero.as_str(), row.vs.as_str())
+        } else {
+            (row.vs.as_str(), row.hero.as_str())
+        };
+        rated.insert(key);
+        if !row.reason.is_empty() {
+            noted.insert(key);
+        }
+    }
+
+    assert_eq!(
+        ds.pairs_rated(),
+        rated.len(),
+        "the dataset counts {} rated pairs and the file holds {}",
+        ds.pairs_rated(),
+        rated.len()
+    );
+    assert_eq!(
+        ds.notes_published(),
+        noted.len(),
+        "the dataset counts {} explained pairs and the file holds {}",
+        ds.notes_published(),
+        noted.len()
+    );
+
+    // 533 of 1,330 today, on a 53-hero roster whose pairs number 1,378.
+    let n = ds.hero_count();
+    let all_pairs = n * (n - 1) / 2;
+    assert!(
+        (all_pairs * 3 / 4..=all_pairs).contains(&ds.pairs_rated()),
+        "{} of {all_pairs} pairs are rated, which is outside the band a healthy \
+         scrape produces",
+        ds.pairs_rated()
+    );
+    let share = ds.notes_published() as f32 / ds.pairs_rated() as f32;
+    assert!(
+        (0.20..=0.80).contains(&share),
+        "{} of {} rated pairs carry a sentence ({:.0}%), which is outside the \
+         band the panel's claim assumes",
+        ds.notes_published(),
+        ds.pairs_rated(),
+        share * 100.0
+    );
+}
+
 #[test]
 fn base_strength_and_map_affinity_are_populated() {
     let ds = load().expect("committed data must load");

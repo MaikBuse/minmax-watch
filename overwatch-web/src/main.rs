@@ -1227,6 +1227,16 @@ fn App() -> Element {
                 }
             }
 
+            // Between the draft and the footer, so opening it grows the page
+            // downward and moves nothing above it. The counts come off the
+            // dataset rather than the copy, so the coverage sentence is a
+            // measurement of the tables in this bundle.
+            ui::HowItWorks {
+                generated: dataset.generated.clone(),
+                with_note: dataset.notes_published(),
+                rated: dataset.pairs_rated(),
+            }
+
             ui::Footer {}
 
             // Inside .app rather than beside it, so the root's keyboard handler

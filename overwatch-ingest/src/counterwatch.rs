@@ -24,8 +24,10 @@
 //! swing, read by [`parse_matchup_ratings`]. Where one exists it is the reading
 //! and the rank position is never consulted; [`hero_values`] is where that is
 //! decided and why. The ranked lists still matter, because the two documents do
-//! not rank a hero's matchups the same way — 530 pairs carry a number and another
-//! 265 exist only as a position.
+//! not rank a hero's matchups the same way — but they now cover very little: 530
+//! pairs carry a published counter rating, another 641 carry a published
+//! win-probability swing off the counters page, and only the remaining 48 exist
+//! as a position alone. Before the swings were read that last figure was 265.
 //!
 //! Those pages belong to the `strength` step by every other measure, and are read
 //! here anyway because the numbers on them land in `matchups.toml` and only the

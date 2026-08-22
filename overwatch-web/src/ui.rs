@@ -168,6 +168,133 @@ const BUILD: &str = match option_env!("MINMAX_BUILD") {
     None => "dev",
 };
 
+/// Every site the committed tables are built from, and what each one gives.
+///
+/// `(name, url, what it provides)`, held as a table rather than written into the
+/// markup so a test can check the panel names all of them —
+/// `keys::SHORTCUTS` is the precedent, and the reason is the same: a disclosure
+/// that has quietly stopped listing a source is worse than none.
+///
+/// **Five rows, and the fifth is the argument.** overpicker is fetched, recorded
+/// in every row of `matchups.toml` and deliberately not blended, on measured
+/// evidence rather than taste. Leaving it out would make the list shorter and
+/// the disclosure weaker.
+const SOURCES: [(&str, &str, &str); 5] = [
+    (
+        "OverFast API",
+        "https://overfast-api.tekrop.fr",
+        "the hero roster, the map list, and the portrait and screenshot artwork",
+    ),
+    (
+        "counterpickgg",
+        "https://counterpickgg.com",
+        "hero matchups with the written rationale, win and pick rates, best maps",
+    ),
+    (
+        "counterwatch",
+        "https://www.counterwatch.gg",
+        "hero matchups measured from duels, win rates, best duos, win rate per rank",
+    ),
+    (
+        "Blizzard hero rates",
+        "https://overwatch.blizzard.com/en-us/rates/",
+        "first-party win, pick and ban rates, per rank division",
+    ),
+    (
+        "overpicker",
+        "https://overpicker.com",
+        "recorded in every row for comparison, and deliberately not used: its matrix has no measurable relationship to either of the other two",
+    ),
+];
+
+/// Where the numbers come from, at the foot of the page.
+///
+/// The provenance was written long before this component was: the readme holds
+/// the sources, the blend weights, the evidence overpicker is excluded on and
+/// which files are hand-curated judgement. It was reachable only by guessing that
+/// a footer link labelled `source` led to a repository whose front page explains
+/// the scoring, and the first person to review the app publicly had to go and
+/// find it. A tool that argues from numbers has to say whose they are on the
+/// screen the numbers are on.
+///
+/// A native `<details>`, which is a deliberate divergence from the two
+/// disclosures already here: `RankPicker` toggles a class off a signal and
+/// `KeyHelp` is CSS hover and focus. Both are header controls that must not move
+/// what is under them mid-draft. This is a page-foot block that may — it grows
+/// the page downward and moves nothing above it, so "nothing appears or
+/// disappears mid-draft" holds without a single line of state.
+///
+/// **Escape is deliberately not bound to close it.** `keys::command_for`
+/// answers `Code::Escape` with `Command::Clear` on any modifier, the handler is
+/// on `div.app`, and closing a panel by clearing everyone's board is not a
+/// trade. Clicking the summary again is the way out, which is what a `<details>`
+/// does for free.
+///
+/// The counts are passed in from the dataset rather than written into the copy,
+/// so the sentence about coverage is a measurement of the tables in this bundle.
+#[component]
+pub fn HowItWorks(generated: String, with_note: usize, rated: usize) -> Element {
+    rsx! {
+        details { class: "how",
+            summary {
+                class: "how-summary",
+                // `KeyHelp`'s reason: the root's onclick hands focus back to
+                // `div.app` on every click, which would take it off the summary
+                // the instant it opened and leave Enter and Space doing nothing.
+                // The element's own default toggle is unaffected.
+                onclick: move |evt| evt.stop_propagation(),
+                "where these numbers come from"
+            }
+            div { class: "how-body",
+                h3 { "the score" }
+                p {
+                    "A weighted sum of eight terms: how strong the hero is in the current patch, \
+                     and how far that moves at your rank; its matchups against every enemy you have \
+                     entered; rated duos with your allies; how it does on this map; the attack or \
+                     defend lean; dive, poke and brawl against the shape of the enemy team; and your \
+                     own comfort on it \u{2014} the one term nothing on this screen can set yet. Each \
+                     row shows the three terms that moved it most."
+                }
+                h3 { "the words" }
+                p {
+                    "The matchup sentences are counterpickgg's, quoted exactly \u{2014} {with_note} of the \
+                     {rated} rated pairs have one. The dive/poke/brawl readings and the attack/defend \
+                     leans are written by hand in this repository, because no site publishes either. \
+                     Every other line under a pick is this app's own wording over its own \
+                     arithmetic, set in lowercase so the two are told apart."
+                }
+                h3 { "the sources" }
+                ul { class: "how-sources",
+                    for (name, url, what) in SOURCES {
+                        li { key: "{name}",
+                            a { href: "{url}", rel: "noopener", "{name}" }
+                            span { class: "how-what", "{what}" }
+                        }
+                    }
+                }
+                p {
+                    "Matchups are a weighted average of counterpickgg at 0.75 and counterwatch at \
+                     0.25, renormalised over whichever of the two has an opinion about a given pair. \
+                     Where they contradict each other the reading is pulled toward even and the row \
+                     says so."
+                }
+                p {
+                    "Nothing talks to any of these sites while you draft. The tables are compiled \
+                     into this page and the scoring runs in your browser."
+                }
+                p { class: "how-foot",
+                    "counter data ingested {generated} \u{2014} the full method is in the "
+                    a {
+                        href: "https://github.com/MaikBuse/minmax-watch#where-the-numbers-come-from",
+                        rel: "noopener",
+                        "readme"
+                    }
+                }
+            }
+        }
+    }
+}
+
 /// The one place the app says who it is and whose artwork it is borrowing.
 ///
 /// The portraits, map shots and rank badges in this bundle are Blizzard's.
@@ -185,10 +312,14 @@ pub fn Footer() -> Element {
         footer { class: "footer",
             a { href: "https://minmax.watch/", "minmax.watch" }
             span { class: "sep", "·" }
+            // `code` and not `source`: the readme it leads to is the long form of
+            // the panel above, and a reader following the word "source" to find
+            // out where the numbers came from used to land on a compiler input.
             a {
                 href: "https://github.com/MaikBuse/minmax-watch",
                 rel: "noopener",
-                "source"
+                title: "the source code on github",
+                "code"
             }
             span { class: "sep", "·" }
             span { "MIT" }
@@ -2023,6 +2154,74 @@ mod tests {
         Threat {
             disputed: true,
             ..threat(enemy, severity, text)
+        }
+    }
+
+    /// A disclosure that has quietly stopped listing one of its sources is worse
+    /// than no disclosure, and nothing else in the crate can see this table.
+    /// The precedent is `keys::SHORTCUTS` against the key handler.
+    #[test]
+    fn the_how_it_works_sheet_names_every_source_the_dataset_is_built_from() {
+        for expected in [
+            "OverFast API",
+            "counterpickgg",
+            "counterwatch",
+            "Blizzard hero rates",
+            "overpicker",
+        ] {
+            assert!(
+                SOURCES.iter().any(|(name, _, _)| *name == expected),
+                "the panel does not name {expected}, which the dataset is built from"
+            );
+        }
+
+        for (name, url, what) in SOURCES {
+            assert!(
+                url.starts_with("https://"),
+                "{name} is listed without a link"
+            );
+            assert!(!what.is_empty(), "{name} does not say what it provides");
+        }
+
+        // The excluded source is the most persuasive row in the list, and only
+        // while it says it is excluded. Without that clause it reads as a fifth
+        // input to the numbers.
+        let (_, _, overpicker) = SOURCES
+            .iter()
+            .find(|(name, _, _)| *name == "overpicker")
+            .expect("overpicker is listed");
+        assert!(
+            overpicker.contains("not used"),
+            "overpicker's row has to say it is not used: {overpicker}"
+        );
+    }
+
+    /// The panel claims nothing talks to these sites while you draft. That claim
+    /// is only as good as the bundle, so this checks the bundle: no module in
+    /// this crate may name a source host, which is the shape a live fetch would
+    /// have to take. `ui.rs` is exempt because it holds the table itself.
+    #[test]
+    fn no_source_row_claims_the_app_talks_to_it_while_you_draft() {
+        const MODULES: [(&str, &str); 7] = [
+            ("main.rs", include_str!("main.rs")),
+            ("sync.rs", include_str!("sync.rs")),
+            ("session.rs", include_str!("session.rs")),
+            ("board.rs", include_str!("board.rs")),
+            ("profile.rs", include_str!("profile.rs")),
+            ("matchlog.rs", include_str!("matchlog.rs")),
+            ("icons.rs", include_str!("icons.rs")),
+        ];
+
+        for (module, text) in MODULES {
+            for (name, url, _) in SOURCES {
+                let host = url.trim_start_matches("https://");
+                let host = host.split('/').next().unwrap_or(host);
+                assert!(
+                    !text.contains(host),
+                    "{module} names {name} ({host}) \u{2014} the panel says the app never \
+                     talks to it while you draft"
+                );
+            }
         }
     }
 

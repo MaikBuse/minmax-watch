@@ -72,6 +72,24 @@ pub struct Dataset {
     /// Read through [`Self::sources_disagree`] rather than directly, because the
     /// contradiction belongs to the pair and the flag lands on a direction.
     disputed: Vec<bool>,
+    /// How many unordered hero pairs any source rated, and how many of those
+    /// carry a published sentence.
+    ///
+    /// Counted in [`Self::new`] rather than written down anywhere, because the
+    /// panel that quotes them is making a claim about *this* bundle's tables and
+    /// a figure typed into copy is wrong the first time the ingest runs. Read
+    /// through [`Self::pairs_rated`] and [`Self::notes_published`].
+    ///
+    /// **Pairs and not directed rows**, because both are claims about a pair —
+    /// the sources have an opinion about this matchup, the site wrote a sentence
+    /// about it — and a halved row count is not the same number. It happens to
+    /// agree today (1,330 pairs behind 2,660 rated rows, 533 behind 1,066
+    /// sentences) and nothing guarantees it, in exactly the sense
+    /// [`Self::sources_disagree`] documents: the blend can rate one direction
+    /// whose mirror it says nothing about, and it writes a sentence only where it
+    /// found one.
+    pairs_rated: usize,
+    notes_published: usize,
     /// Free-form provenance shown in the UI so stale data is visible.
     pub generated: String,
     pub patch: String,
@@ -187,6 +205,31 @@ impl Dataset {
             });
         }
 
+        // Coverage, over unordered pairs. `rating` and not `get`: an unrated cell
+        // and a rated dead even both read as 0 through `get`, and a quarter of
+        // this matrix is rated even, so a `!= 0` test would report a fraction of
+        // the pairs the app actually has an opinion about.
+        let mut pairs_rated = 0usize;
+        let mut notes_published = 0usize;
+        let noted = |x: usize, y: usize| {
+            parts
+                .reasons
+                .get(x * n + y)
+                .is_some_and(|text| !text.is_empty())
+        };
+        for i in 0..n {
+            for j in i + 1..n {
+                let (a, b) = (HeroId(i as u16), HeroId(j as u16));
+                if parts.matchups.rating(a, b).is_none() && parts.matchups.rating(b, a).is_none() {
+                    continue;
+                }
+                pairs_rated += 1;
+                if noted(i, j) || noted(j, i) {
+                    notes_published += 1;
+                }
+            }
+        }
+
         Ok(Self {
             heroes: parts.heroes,
             maps: parts.maps,
@@ -201,6 +244,8 @@ impl Dataset {
             shape: parts.shape,
             reasons: parts.reasons,
             disputed: parts.disputed,
+            pairs_rated,
+            notes_published,
             generated: parts.generated,
             patch: parts.patch,
         })
@@ -405,6 +450,24 @@ impl Dataset {
         };
         at(a, b) || at(b, a)
     }
+
+    /// How many hero pairs any source rated at all.
+    ///
+    /// The denominator for a coverage claim on screen, counted off the matrix
+    /// the scorer reads rather than off the file. See the field for why it counts
+    /// pairs and not directed rows.
+    pub fn pairs_rated(&self) -> usize {
+        self.pairs_rated
+    }
+
+    /// How many rated pairs carry a written rationale.
+    ///
+    /// Always the numerator to [`Self::pairs_rated`]: a sentence about a pair
+    /// nobody rated is not counted, because there is nothing on screen for it to
+    /// explain.
+    pub fn notes_published(&self) -> usize {
+        self.notes_published
+    }
 }
 
 #[cfg(test)]
@@ -418,6 +481,17 @@ mod tests {
     /// Two heroes, with `disputed` and the matchup matrix handed in so a test can
     /// describe exactly the asymmetry it is about.
     fn dataset(matchups: Matrix, disputed: Vec<bool>) -> Dataset {
+        let n = 2;
+        dataset_with_reasons(matchups, disputed, vec![String::new(); n * n])
+    }
+
+    /// The same two heroes, with the rationale text handed in as well, for the
+    /// counts that read it.
+    fn dataset_with_reasons(
+        matchups: Matrix,
+        disputed: Vec<bool>,
+        reasons: Vec<String>,
+    ) -> Dataset {
         let heroes = ["a", "b"]
             .into_iter()
             .map(|key| Hero {
@@ -447,12 +521,56 @@ mod tests {
             win_rate: vec![None; n],
             side_lean: vec![0; n],
             shape: vec![[0; 3]; n],
-            reasons: vec![String::new(); n * n],
+            reasons,
             disputed,
             generated: "test".to_owned(),
             patch: "test".to_owned(),
         })
         .expect("a two-hero dataset is valid")
+    }
+
+    /// The counts are over pairs, so a reading on one side of a pair counts
+    /// once — not half of one, and not twice.
+    ///
+    /// Committed data has no one-sided pair today, which is exactly why this is
+    /// pinned here: the day the blend rates a direction whose mirror it says
+    /// nothing about, a halved row count reports a fraction of a pair, and a
+    /// sentence written on one side only reports half a sentence.
+    #[test]
+    fn a_pair_rated_in_one_direction_only_still_counts_once() {
+        let mut matchups = Matrix::unrated(2);
+        matchups.set(A, B, 40).expect("in range");
+
+        let reasons = vec![
+            String::new(),
+            "A dives B before the bubble is up.".to_owned(),
+            String::new(),
+            String::new(),
+        ];
+        let ds = dataset_with_reasons(matchups, vec![false; 4], reasons);
+
+        assert_eq!(ds.pairs_rated(), 1, "one pair, rated on one side");
+        assert_eq!(ds.notes_published(), 1, "one sentence about that one pair");
+    }
+
+    /// The distinction the whole coverage claim rests on, and the reason the walk
+    /// reads `Matrix::rating` and never `Matrix::get`: a pair rated dead even is
+    /// an opinion, and an unrated pair is the absence of one. Through `get` they
+    /// are the same zero.
+    #[test]
+    fn a_rated_dead_even_counts_as_coverage_and_an_unrated_pair_does_not() {
+        let unrated =
+            dataset_with_reasons(Matrix::unrated(2), vec![false; 4], vec![String::new(); 4]);
+        assert_eq!(unrated.pairs_rated(), 0);
+
+        let mut even = Matrix::unrated(2);
+        even.set(A, B, 0).expect("in range");
+        even.set(B, A, 0).expect("in range");
+        let rated = dataset_with_reasons(even, vec![false; 4], vec![String::new(); 4]);
+        assert_eq!(rated.pairs_rated(), 1);
+        // Nothing was written about it, so it is coverage without a sentence —
+        // which is the majority of the committed matrix.
+        assert_eq!(rated.notes_published(), 0);
     }
 
     /// The Winston/Zarya shape: the secondary source rated one direction and

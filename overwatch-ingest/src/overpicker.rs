@@ -12,9 +12,17 @@
 //! `A` does against `B`.
 //!
 //! It is a coarser source than counterpickgg — five levels against ten, and
-//! only ~42% of pairs are antisymmetric — so it is blended in at a lower weight
-//! and used mainly as a second opinion and as a fallback for heroes the primary
-//! source has not rated yet.
+//! only ~42% of pairs are antisymmetric — and it is **not blended at all**. Its
+//! matrix has no measurable relationship to either of the other two (r = -0.04
+//! against counterpickgg, -0.07 against counterwatch, in both orientations), and
+//! two sources that independently agree with each other and disagree with a
+//! third is evidence about the third. [`crate::blend`] excludes it on that
+//! measurement and two tests pin the exclusion.
+//!
+//! It is still fetched and still written into the `opick` column of every row, so
+//! the judgement stays visible and reversible rather than becoming a source
+//! nobody can see was dropped. The app's own provenance panel says as much on
+//! screen, which is why this doc comment may not say otherwise.
 
 use std::collections::HashMap;
 

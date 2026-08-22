@@ -82,7 +82,7 @@ request to score anything.
 | [OverFast API](https://overfast-api.tekrop.fr) | the hero roster, the map list, and the portrait/screenshot URLs |
 | [counterpickgg](https://counterpickgg.com) | hero matchups with written rationale, win and pick rates, best maps |
 | [counterwatch](https://www.counterwatch.gg) | hero matchups, win rates, best duos, win rate per rank division |
-| [Blizzard hero rates](https://overwatch.blizzard.com/en-us/rates/) | first-party win rate per rank division |
+| [Blizzard hero rates](https://overwatch.blizzard.com/en-us/rates/) | first-party win, pick and ban rates, per rank division |
 | [overpicker](https://overpicker.com) | recorded for comparison, **deliberately not used** |
 
 Matchups are a weighted average of **counterpickgg 0.75 and counterwatch 0.25**,
@@ -101,6 +101,24 @@ r = +0.98 where both exist. Only the remaining 48 are converted from a position 
 a ranked list, by interpolating down from whatever that list *did* publish a number
 for. A rank is the weakest of the three and the file does not distinguish them, so
 `just ingest-counters` reports the split on every run.
+
+Blizzard's endpoint feeds three different things, and only one of them is a
+matchup. Its win rate is **one of three evenly weighted** sources behind
+[`data/strength.toml`](data/strength.toml) — deliberately not the 0.75/0.25 the
+matchup blend uses, because there the two sources are of unequal precision and
+here the three are not. Its pick rates become
+[`data/prevalence.toml`](data/prevalence.toml), which discounts a ban by how rarely
+the hero actually turns up, and its ban rates become
+[`data/ban_rate.toml`](data/ban_rate.toml), which is the one generated file
+**never** compiled into the app.
+
+That last one is deliberate and it is load-bearing. The ban rate is the yardstick
+the ban list is judged against, so scoring on it would make the acceptance test
+circular — a list tuned to predict published bans, graded on how well it predicts
+published bans. `the_ban_rate_table_never_reaches_the_bundle` greps the loader to
+keep the file out of the bundle, and
+`the_patch_rung_at_grandmaster_moves_toward_what_grandmasters_actually_ban` is what
+reads it.
 
 overpicker is excluded on evidence rather than by taste: its published matrix has
 no measurable relationship to either other source — r = −0.04 against
@@ -141,6 +159,12 @@ before the swings were read it was 265. Where the two trusted sources disagree s
 **and pulled toward even**, rather than quietly averaged, and the app says so: the
 matchup carries a `disputed` tag on the matchups panel and a marker on the reason
 line that argues from it.
+
+Coverage is uneven and the app says so out loud rather than in this file: **533 of
+the 1,330 rated pairs carry a published sentence**, and the "where these numbers
+come from" panel at the foot of the app counts both figures off the matrix in the
+bundle it is running, so the claim cannot go stale the way a number typed into copy
+does.
 
 Both the flag and the correction belong to the pair rather than to one direction
 of it. The second source rates only part of each hero's list, so it usually states

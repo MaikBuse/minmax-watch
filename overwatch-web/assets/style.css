@@ -2035,6 +2035,132 @@ body {
     color: var(--enemy);
 }
 
+/* --- how it works ---
+   The provenance panel at the foot of the page. A native <details>, so it is
+   always in the document and costs no state: closed it is one line of text, and
+   opening it grows the page downward and moves nothing above it, which is how a
+   disclosure keeps the rule that nothing appears or disappears mid-draft.
+
+   Deliberately quiet closed and plain open. It is read once by the people who
+   want it and never again, so it gets no border, no card and no accent until it
+   is focused. */
+.how {
+    margin-top: var(--sp-6);
+}
+
+.how-summary {
+    /* `list-item` keeps the disclosure triangle, which is the only affordance
+       saying this line opens. Cursor and colour do the rest; the triangle turns
+       itself. */
+    display: list-item;
+    width: fit-content;
+    color: var(--text-muted);
+    font-size: var(--fs-sm);
+    letter-spacing: 0.02em;
+    cursor: pointer;
+}
+
+.how-summary:hover {
+    color: var(--text);
+}
+
+/* Matches `.footer a:focus-visible`: the summary is reached by tab and toggled
+   by Enter or Space, so it has to show where the caret is. */
+.how-summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
+.how-body {
+    margin-top: var(--sp-4);
+    padding-top: var(--sp-4);
+    border-top: 1px solid var(--line);
+    color: var(--text-muted);
+}
+
+.how-body h3 {
+    margin: var(--sp-5) 0 var(--sp-2);
+    color: var(--text);
+    font-size: var(--fs-sm);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: lowercase;
+}
+
+.how-body h3:first-child {
+    margin-top: 0;
+}
+
+/* Capped on the elements that carry the text and never on the block around
+   them, for the reason `.reason` records above: `ch` is the width of a "0" in
+   the font-size of the box it is written on, so 62 on a wrapper at the
+   inherited 16px comes out at about 76 characters — a cap that does not mean
+   what it says. These paragraphs are --fs-sm, so this one does. */
+.how-body p,
+.how-what {
+    max-width: 62ch;
+    margin: 0 0 var(--sp-3);
+    font-size: var(--fs-sm);
+    line-height: 1.5;
+}
+
+.how-sources {
+    list-style: none;
+    margin: 0 0 var(--sp-4);
+    padding: 0;
+    display: grid;
+    gap: var(--sp-3);
+}
+
+/* Name over description rather than beside it: the descriptions are sentences
+   and a two-column table of them wraps into an unreadable comb on a phone. */
+.how-sources li {
+    display: grid;
+    gap: var(--sp-1);
+}
+
+.how-sources a {
+    color: var(--text);
+    font-size: var(--fs-sm);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line-strong);
+    justify-self: start;
+}
+
+.how-sources a:hover {
+    color: var(--accent);
+}
+
+.how-sources a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--r-sm);
+}
+
+.how-what {
+    margin: 0;
+    color: var(--text-faint);
+}
+
+/* Two classes, so it outranks `.how-body p` above without an `!important`: the
+   one line here that is a footnote rather than prose, and it takes the smallest
+   step. */
+.how-body .how-foot {
+    color: var(--text-faint);
+    font-size: var(--fs-micro);
+}
+
+.how-body .how-foot a {
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--line-strong);
+    text-decoration: none;
+}
+
+.how-body .how-foot a:hover {
+    color: var(--text);
+}
+
 /* --- the footer ---
    The one place the app says who it is and whose artwork it is borrowing. The
    portraits and map shots in this bundle are Blizzard's, and serving them to
