@@ -1749,7 +1749,28 @@ body {
    for the control instead. Sits tight to the head — the heading and its caveat
    are one block, and the first row should not look like it belongs to them. */
 .rank-note {
-    margin: -0.15rem 0 0.6rem;
+    /* Almost no bottom margin because `.score-note` follows it: the two are one
+       block of caveat, and the distance to the first row is spent once, below
+       the pair. */
+    margin: -0.15rem 0 0.15rem;
+    font-size: var(--fs-micro);
+    color: var(--text-faint);
+}
+
+/* What the number in the right-hand column actually is — a weighted sum on this
+   app's own scale, or, once you are locked in, a gain over the hero you are on.
+
+   Below `.rank-note` and not above it: that one qualifies the *picker* in the
+   head and its own rule says it sits with the heading, while this qualifies the
+   *list*, which is the argument `.cite-legend` makes at the foot in the other
+   direction. Unlike either of them this line changes with the draft, which is
+   allowed because it is a read-out rather than an aim target — nothing is
+   clicked here and no target moves when the wording does.
+
+   No 62ch cap, like `.rank-note` and unlike `.reason`: one short line, and a
+   measure on it would only ever break it early. */
+.score-note {
+    margin: 0 0 0.6rem;
     font-size: var(--fs-micro);
     color: var(--text-faint);
 }

@@ -173,6 +173,27 @@ fn map_chip(dataset: &Dataset, map: overwatch_core::MapId) -> Option<MapChip> {
     })
 }
 
+/// How far the top pick leads the next, in the points the rows actually print.
+///
+/// **Rounded before the subtraction, not after**, and that is the whole reason
+/// this is a function rather than a line at the call site. The note sits directly
+/// above the two figures it is subtracting, so it has to be *their* difference:
+/// two scores of 0.414 and 0.408 both print `+41`, and `round((a - b) * 100)`
+/// would put "leads the next by 1" under them. A note that cannot subtract the
+/// two numbers beneath it undoes the thing it is there to do.
+///
+/// The cost is that a lead of zero is ordinary rather than rare, which
+/// [`ui::score_note`] words rather than printing as a margin of nothing.
+///
+/// `None` when there is no second row to lead — one candidate, or none.
+fn printed_lead(recs: &[Recommendation]) -> Option<i32> {
+    let printed = |rec: &Recommendation| (rec.score * 100.0).round() as i32;
+    match recs {
+        [top, next, ..] => Some(printed(top) - printed(next)),
+        _ => None,
+    }
+}
+
 /// What the ban list is defending, named rather than left to be inferred: the
 /// number on every row means a different thing in each case, and on the patch
 /// rung it is not about this team at all.
@@ -853,6 +874,24 @@ fn App() -> Element {
         })
         .collect();
 
+    // What the score column means, said once under the list. The margin comes
+    // off `printed_lead`, which is where the reason it rounds when it does is
+    // written down.
+    let locked_name = draft.locked.map(|hero| chip_of(hero).name);
+    let top_name = frame
+        .recommendations
+        .first()
+        .map(|rec| chip_of(rec.hero).name);
+    let score_note = ui::score_note(
+        locked_name.as_deref(),
+        top_name.as_deref(),
+        printed_lead(&frame.recommendations),
+        // The eight rows on screen, not the whole role: the line says "nothing
+        // *here* clears +15", and here is what you can see.
+        rec_rows.iter().any(|row| row.worth_swapping),
+        profile.read().weights.swap_threshold,
+    );
+
     rsx! {
         div {
             class: "app",
@@ -1219,6 +1258,7 @@ fn App() -> Element {
                     ui::Recommendations {
                         items: rec_rows.clone(),
                         swap_mode: draft.locked.is_some(),
+                        note: score_note,
                         rank: profile.read().rank,
                         rank_open: rank_open(),
                         on_lock: move |hero: HeroId| lock_hero.call(hero),
@@ -1360,6 +1400,50 @@ fn frame_top(dataset: &Dataset, draft: &Draft, profile: &Profile) -> Option<Hero
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The one decision behind the margin, and the one no test above `main` can
+    /// reach: it is the difference of the printed figures, not the printing of
+    /// the difference. Both heroes here round to `+41`, so the honest answer is
+    /// zero — `round((0.414 - 0.408) * 100)` is 1, and a note claiming a lead of
+    /// 1 over two identical numbers is the failure this forecloses.
+    #[test]
+    fn the_margin_is_the_difference_of_the_printed_figures_not_the_printed_difference() {
+        let recs = vec![rec_at(HeroId(0), 0.414), rec_at(HeroId(1), 0.408)];
+
+        assert_eq!(
+            format!("{:+.0}", recs[0].score * 100.0),
+            format!("{:+.0}", recs[1].score * 100.0),
+            "the fixture no longer prints two equal figures, so it tests nothing"
+        );
+        assert_eq!(printed_lead(&recs), Some(0));
+    }
+
+    /// A real gap still reads as one, and still agrees with the column.
+    #[test]
+    fn a_clear_leader_reports_the_gap_the_two_rows_show() {
+        let recs = vec![rec_at(HeroId(0), 0.41), rec_at(HeroId(1), 0.35)];
+        assert_eq!(printed_lead(&recs), Some(6));
+    }
+
+    /// Nothing to lead. Worded by `score_note` rather than printed as a margin.
+    #[test]
+    fn one_candidate_or_none_has_no_margin_to_report() {
+        assert_eq!(printed_lead(&[rec_at(HeroId(0), 0.41)]), None);
+        assert_eq!(printed_lead(&[]), None);
+    }
+
+    fn rec_at(hero: HeroId, score: f32) -> Recommendation {
+        Recommendation {
+            hero,
+            score,
+            delta_vs_locked: None,
+            worth_swapping: false,
+            is_locked: false,
+            breakdown: Default::default(),
+            place: 0,
+            reasons: Vec::new(),
+        }
+    }
 
     // The caption is the only place the ban list says which rung sorted it, and
     // it is one arm of a match on a subject with four other shapes. A branch on

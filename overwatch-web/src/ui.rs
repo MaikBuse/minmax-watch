@@ -1624,6 +1624,67 @@ pub fn ban_text(
     }
 }
 
+/// What the score column means, in one line under the list.
+///
+/// The number has always been a weighted sum on a scale of this app's own
+/// invention and nothing on screen ever said so, which leaves `+41` beside a
+/// portrait reading as a percentage. Locked, it is not even that — it is a gain
+/// over the hero you are on, which is a second meaning for one column and the
+/// reason the sentence changes rather than being appended to.
+///
+/// A free function here for the reason [`win_rate_text`] and [`ban_text`] are:
+/// `main.rs` assembles the props inline, and logic that exists only inside a
+/// component is logic no test can reach.
+///
+/// `lead` is in **displayed** points and the caller owes it that: the note sits
+/// directly above the two figures it subtracts, so it has to be their difference
+/// rather than the rounding of their difference. That makes a lead of zero
+/// ordinary rather than exceptional — any two heroes inside 0.005 print the same
+/// figure — hence an arm that says so instead of claiming a margin of nothing.
+pub fn score_note(
+    locked: Option<&str>,
+    top: Option<&str>,
+    lead: Option<i32>,
+    any_swap: bool,
+    swap_threshold: f32,
+) -> String {
+    // Rounded here rather than by the caller so the derivation is tested. It is
+    // the same weight `worth_swapping` is measured against, and a stored profile
+    // can have moved it — a hard-coded 15 would be a number on screen that
+    // nothing behind it agrees with.
+    //
+    // "over" and not "at": the tag compares the raw f32 against the raw
+    // threshold, so a row printing exactly +15 may fall either side of it. The
+    // wording is the one that stays true across that rounding rather than a
+    // claim the arithmetic cannot support.
+    let bar = (swap_threshold * 100.0).round();
+
+    if let Some(locked) = locked {
+        let clause = if any_swap {
+            format!("over +{bar:.0} is worth the swap")
+        } else {
+            format!("nothing here clears +{bar:.0}")
+        };
+        return format!("the column is the gain over {locked} \u{2014} {clause}");
+    }
+
+    // Said first and every time, because it is the half a newcomer needs and the
+    // half that is true whatever the draft is doing.
+    let scale = "weighted sum, not a percentage";
+    match (top, lead) {
+        (Some(top), Some(lead)) if lead > 0 => {
+            format!("{scale} \u{2014} {top} leads the next by {lead}")
+        }
+        // Not "leads by 0". The figures are equal as printed and saying so is the
+        // honest reading of a column the eye has already compared.
+        (Some(_), Some(_)) => format!("{scale} \u{2014} the top two are level"),
+        (Some(_), None) => format!("{scale} \u{2014} the only hero left in this role"),
+        // Nothing to compare. The scale is still worth stating: the panel below
+        // says why the list is empty, and this says what its numbers would mean.
+        (None, _) => scale.to_owned(),
+    }
+}
+
 /// One reason's wording, and whether it survives a leading minus.
 ///
 /// The sign on a reason line is a CSS pseudo-element driven by the sign of the
@@ -1837,7 +1898,15 @@ impl RecRow {
     ) -> Self {
         // Once you are locked in, the absolute score is noise: the only
         // question is whether a swap gains you anything.
-        let score = if swap_mode && !rec.is_locked {
+        //
+        // Including on your own row, which used to be the exception. It showed
+        // its absolute score while everything around it showed a delta, so under
+        // a heading asking "should you swap?" the row you were already on read
+        // +41 beside candidates reading +3 and the column meant two things at
+        // once. Its delta is exactly `Some(0.0)` by construction, so this reads
+        // `+0` and nothing had to be special-cased to get there. Nothing is lost:
+        // the row carries the `current` tag, and the `why` panel has its total.
+        let score = if swap_mode {
             match rec.delta_vs_locked {
                 Some(delta) => format!("{:+.0}", delta * 100.0),
                 None => String::new(),
@@ -1933,6 +2002,13 @@ impl RecRow {
 pub fn Recommendations(
     items: Vec<RecRow>,
     swap_mode: bool,
+    /// What the score column means, from [`score_note`].
+    ///
+    /// Passed in rather than derived here, on the `ThreatPanel::subject`
+    /// precedent: the sentence is arithmetic about the scores and [`RecRow`] has
+    /// already formatted those into strings, so the numbers it needs cannot be
+    /// reached from inside this component.
+    note: String,
     /// The rung patch strength is read on. The control lives here rather than in
     /// the header because this is the list it reorders: selecting one changes the
     /// top row for a fifth to well over a quarter of drafts, depending on the
@@ -1959,6 +2035,11 @@ pub fn Recommendations(
             p { class: "rank-note",
                 "only patch strength is sliced by rank \u{2014} matchups read the same at every rung"
             }
+            // Below the rank caveat rather than above it. That one qualifies the
+            // picker in the head and sits with it; this qualifies the list, so it
+            // sits against the rows — the same argument `.cite-legend` makes at
+            // the other end of the panel.
+            p { class: "score-note", "{note}" }
             if items.is_empty() {
                 p { class: "empty", "every hero in this role is already on your team" }
             }
@@ -3389,6 +3470,136 @@ mod tests {
     ///
     /// `Breakdown::default()` because none of these rows is about the arithmetic:
     /// the ledger is exercised where it is built, in the scorer's own tests.
+    /// The scale is the half a newcomer needs, so it leads whenever there is a
+    /// scale to state. `+41` beside a portrait reads as a percentage otherwise,
+    /// and nothing else on the screen corrects that.
+    #[test]
+    fn the_note_states_the_scale_when_nothing_is_locked() {
+        let note = score_note(None, Some("Winston"), Some(6), false, 0.15);
+
+        assert_eq!(
+            note,
+            "weighted sum, not a percentage \u{2014} Winston leads the next by 6"
+        );
+    }
+
+    /// Locked, the column stops being a score and becomes a gain over one hero,
+    /// so the sentence changes rather than gaining a clause. Naming that hero is
+    /// the whole point: "the gain" over an unnamed something is not a scale.
+    #[test]
+    fn the_note_names_the_hero_the_column_is_measured_against() {
+        let note = score_note(Some("Reinhardt"), Some("Winston"), Some(6), true, 0.15);
+
+        assert!(
+            note.starts_with("the column is the gain over Reinhardt"),
+            "{note}"
+        );
+        assert!(
+            !note.contains("weighted sum"),
+            "the column is not a weighted sum any more, so saying it is is worse \
+             than saying nothing: {note}"
+        );
+        assert!(
+            !note.contains("Winston"),
+            "the leader is not what this column is about"
+        );
+    }
+
+    /// The two locked arms are different answers to "is there anything here", and
+    /// a reader who cannot tell them apart has to compare eight numbers against a
+    /// threshold by hand.
+    #[test]
+    fn the_note_says_when_nothing_clears_the_swap_bar() {
+        let nothing = score_note(Some("Reinhardt"), Some("Winston"), Some(6), false, 0.15);
+        let something = score_note(Some("Reinhardt"), Some("Winston"), Some(6), true, 0.15);
+
+        assert!(nothing.contains("nothing here clears +15"), "{nothing}");
+        assert_ne!(nothing, something);
+    }
+
+    /// The first time `swap_threshold` is a number on screen, so it has to be
+    /// *the* number: a literal 15 would go on lying the moment a stored profile
+    /// moved the weight `worth_swapping` is actually measured against.
+    #[test]
+    fn the_swap_bar_on_the_note_is_read_off_the_stored_weight() {
+        let moved = score_note(Some("Reinhardt"), None, None, true, 0.25);
+
+        assert!(moved.contains("+25"), "{moved}");
+        assert!(
+            !moved.contains("+15"),
+            "the default leaked past the argument"
+        );
+    }
+
+    /// The margin is the difference of the figures the rows print, so two heroes
+    /// inside 0.005 of each other give a lead of zero — often, not rarely. "leads
+    /// the next by 0" is a sentence that reads as a bug.
+    #[test]
+    fn the_top_two_reading_the_same_is_said_rather_than_printed_as_a_lead_of_zero() {
+        let note = score_note(None, Some("Winston"), Some(0), false, 0.15);
+
+        assert!(note.ends_with("the top two are level"), "{note}");
+        assert!(
+            !note.contains(" 0"),
+            "a margin of nothing is not a margin: {note}"
+        );
+    }
+
+    /// One candidate has no next row to lead, and `by 0` would be as wrong there
+    /// as a margin against a hero that is not on the list.
+    #[test]
+    fn a_role_with_one_candidate_left_says_so_rather_than_naming_a_margin() {
+        let alone = score_note(None, Some("Winston"), None, false, 0.15);
+        assert!(
+            alone.ends_with("the only hero left in this role"),
+            "{alone}"
+        );
+
+        // And with nothing at all, the scale still stands on its own — the panel
+        // below says why the list is empty; this says what its numbers meant.
+        assert_eq!(
+            score_note(None, None, None, false, 0.15),
+            "weighted sum, not a percentage"
+        );
+    }
+
+    /// Every line this app writes itself is lowercase and unpunctuated, and this
+    /// one is assembled from pieces rather than written out, which is exactly how
+    /// a stray capital or a doubled space gets in.
+    #[test]
+    fn the_score_note_is_written_in_this_apps_own_voice_under_every_state() {
+        let states = [
+            score_note(None, Some("Winston"), Some(6), false, 0.15),
+            score_note(None, Some("Winston"), Some(0), false, 0.15),
+            score_note(None, Some("Winston"), None, false, 0.15),
+            score_note(None, None, None, false, 0.15),
+            score_note(Some("Reinhardt"), None, None, true, 0.15),
+            score_note(Some("Reinhardt"), None, None, false, 0.15),
+        ];
+        for note in states {
+            assert!(!note.starts_with(char::is_uppercase), "{note}");
+            assert!(!note.ends_with('.'), "{note}");
+            assert!(!note.contains("  "), "double space in {note:?}");
+        }
+    }
+
+    /// The row you are on used to be the one exception in the column: a delta
+    /// everywhere else and an absolute score here, under a heading asking whether
+    /// to swap. Its own delta is zero by construction, so this is what the column
+    /// meaning one thing looks like.
+    #[test]
+    fn in_swap_mode_the_row_you_are_on_reads_zero_rather_than_its_own_score() {
+        let ds = phrasing_fixture();
+        let mut rec = scored(REINHARDT, 0.41, Vec::new());
+        rec.is_locked = true;
+        rec.delta_vs_locked = Some(0.0);
+
+        assert_eq!(RecRow::build(&rec, &ds, true, 0, Rank::All).score, "+0");
+        // And out of swap mode the same row is still its own score, because there
+        // is nothing for it to be a gain over.
+        assert_eq!(RecRow::build(&rec, &ds, false, 0, Rank::All).score, "+41");
+    }
+
     fn scored(hero: HeroId, score: f32, reasons: Vec<Reason>) -> Recommendation {
         Recommendation {
             hero,
