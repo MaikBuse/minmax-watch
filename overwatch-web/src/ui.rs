@@ -1669,6 +1669,60 @@ impl ReasonLine {
     }
 }
 
+/// The one rule for turning a score into the whole number a reader sees.
+///
+/// Rounded before the sign is read, which is the argument `ThreatRow` makes in
+/// place: `format!("{:+.0}", -0.004)` prints `-0`, and a red minus-zero is a
+/// claim the data does not make. Both idioms were in this file — the threat
+/// column and the ledger's terms rounded first, the pick row and the ledger's
+/// total let the formatter do it — so numbers meant to be compared with each
+/// other were arrived at two different ways, and half-to-even against
+/// half-away-from-zero can disagree on a single value with no sum involved.
+pub fn points(value: f32) -> i32 {
+    (value * 100.0).round() as i32
+}
+
+/// Round a set of values to whole points so they sum to the total's own
+/// rounding.
+///
+/// A sum of rounded values is not the rounding of a sum. Eight terms rounded
+/// one at a time drift from the rounded total by up to four points, and the
+/// panel above them says out loud that they add up — so for a while they did
+/// not. Two terms at 1.4 print as `+1` and `+1` under a total of `+3`.
+///
+/// Largest remainder, which is the standard answer for a table that has to
+/// balance: floor every value, then hand the units still owed to the largest
+/// fractional parts. Every result is within one point of its own honest
+/// rounding, and together they come to `points(total)` exactly — so the rows add
+/// up to the footer *and* the footer is still the number on the row, which no
+/// single rounding of each value can give you.
+///
+/// Ties break by index rather than by value, so the same draft always draws the
+/// same table. A comparison that fell back on float order would move a point
+/// between two rows for no reason a reader could see.
+fn apportion(values: &[f32], total: f32) -> Vec<i32> {
+    let scaled: Vec<f32> = values.iter().map(|value| value * 100.0).collect();
+    let mut out: Vec<i32> = scaled.iter().map(|value| value.floor() as i32).collect();
+
+    // Non-negative and at most `values.len()` by construction, since flooring
+    // each value loses less than a point apiece. Clamped anyway: `total` is the
+    // caller's, and nothing here should be able to index past the end.
+    let owed = (points(total) - out.iter().sum::<i32>()).clamp(0, out.len() as i32);
+
+    let mut order: Vec<usize> = (0..scaled.len()).collect();
+    order.sort_by(|a, b| {
+        let fraction = |i: usize| scaled[i] - scaled[i].floor();
+        fraction(*b)
+            .partial_cmp(&fraction(*a))
+            .unwrap_or(core::cmp::Ordering::Equal)
+            .then(a.cmp(b))
+    });
+    for index in order.into_iter().take(owed as usize) {
+        out[index] += 1;
+    }
+    out
+}
+
 /// One term of the ledger, resolved to what it will show.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WhyTerm {
@@ -1680,6 +1734,10 @@ pub struct WhyTerm {
     /// A dead flat `+0`, which is neither. Takes no tint at all — the rule
     /// `ThreatRow` established: "+0" is not an argument in either direction.
     pub even: bool,
+    /// What this term is worth against the comparand, when there is one.
+    pub delta: Option<String>,
+    pub delta_positive: bool,
+    pub delta_even: bool,
 }
 
 /// The whole arithmetic behind one row, and the admissions the row has no space
@@ -1708,6 +1766,11 @@ pub struct WhyView {
     /// no reason line behind it, so this is the only place it can be said.
     pub shape: Option<String>,
     pub tie: Option<String>,
+    /// The hero the second column is measured against, when there is one: your
+    /// locked hero, or the top pick. `None` also when the hero being read *is*
+    /// that hero, where a column of `+0`s would answer a question nobody asked.
+    pub against: Option<String>,
+    pub delta_total: Option<String>,
     /// Every one of them, which is what dropping `take(MAX_REASONS)` buys.
     pub reasons: Vec<ReasonLine>,
 }
@@ -1722,26 +1785,62 @@ impl WhyView {
     /// `rank` for the reason [`RecRow::build`] takes it: the patch-strength
     /// sentence prints a ladder-wide win rate and has to say so once a rung is
     /// chosen.
+    /// `against` is the hero the second column reads against — the one you are
+    /// on, or the one at the top. Dropped here rather than at the call site when
+    /// it is this row's own hero, so the rule that a hero is not compared with
+    /// itself is under test rather than in a component.
     pub fn build(
         rec: &Recommendation,
+        against: Option<&Recommendation>,
         tied: usize,
         tie_band: f32,
         rank: Rank,
         ds: &Dataset,
     ) -> Self {
+        let against = against.filter(|other| other.hero != rec.hero);
         let breakdown = &rec.breakdown;
+        // Apportioned rather than rounded one at a time, so the eight rows come
+        // to the total printed under them. See `apportion`.
+        let contributions: Vec<f32> = TermKind::ALL
+            .into_iter()
+            .map(|kind| breakdown.term(kind).contribution())
+            .collect();
         let terms = TermKind::ALL
             .into_iter()
-            .map(|kind| {
-                let points = (breakdown.term(kind).contribution() * 100.0).round() as i32;
-                WhyTerm {
-                    label: kind.label(),
-                    value: format!("{points:+}"),
-                    positive: points > 0,
-                    even: points == 0,
-                }
+            .zip(apportion(&contributions, rec.score))
+            .map(|(kind, points)| WhyTerm {
+                label: kind.label(),
+                value: format!("{points:+}"),
+                positive: points > 0,
+                even: points == 0,
+                delta: None,
+                delta_positive: false,
+                delta_even: true,
             })
-            .collect();
+            .collect::<Vec<WhyTerm>>();
+
+        // The second column, apportioned the same way and against the same kind
+        // of total, so it balances for the same reason the first one does.
+        let (terms, delta_total) = match against {
+            None => (terms, None),
+            Some(other) => {
+                let gaps: Vec<f32> = TermKind::ALL
+                    .into_iter()
+                    .map(|kind| {
+                        breakdown.term(kind).contribution()
+                            - other.breakdown.term(kind).contribution()
+                    })
+                    .collect();
+                let total = rec.score - other.score;
+                let mut terms = terms;
+                for (term, points) in terms.iter_mut().zip(apportion(&gaps, total)) {
+                    term.delta = Some(format!("{points:+}"));
+                    term.delta_positive = points > 0;
+                    term.delta_even = points == 0;
+                }
+                (terms, Some(format!("{:+}", points(total))))
+            }
+        };
 
         let counter = breakdown.counter;
         let coverage = match counter.entered {
@@ -1776,11 +1875,13 @@ impl WhyView {
             hero: rec.hero,
             name: hero_name(ds, rec.hero),
             terms,
-            total: format!("{:+.0}", rec.score * 100.0),
+            total: format!("{:+}", points(rec.score)),
             coverage,
             allies,
             shape,
             tie,
+            against: against.map(|other| hero_name(ds, other.hero)),
+            delta_total,
             reasons: rec
                 .reasons
                 .iter()
@@ -2251,13 +2352,17 @@ impl RecRow {
         // once. Its delta is exactly `Some(0.0)` by construction, so this reads
         // `+0` and nothing had to be special-cased to get there. Nothing is lost:
         // the row carries the `current` tag, and the `why` panel has its total.
+        // Through `points` like every other number this column compares against:
+        // `format!("{:+.0}", -0.004)` prints `-0`, which is a red minus on a
+        // reading of nothing, and it is the idiom the threat column rejected in
+        // writing while this one went on using it.
         let score = if swap_mode {
             match rec.delta_vs_locked {
-                Some(delta) => format!("{:+.0}", delta * 100.0),
+                Some(delta) => format!("{:+}", points(delta)),
                 None => String::new(),
             }
         } else {
-            format!("{:+.0}", rec.score * 100.0)
+            format!("{:+}", points(rec.score))
         };
 
         // `take` here and not inside the builder: the cut to three is a fact
@@ -2326,6 +2431,13 @@ fn WhyPanel(view: Option<WhyView>) -> Element {
             if let Some(view) = &view {
                 h3 { class: "why-head", "why \u{b7} {view.name}" }
                 p { class: "why-lede", "all eight terms, and they add up to the score" }
+                // A line rather than a column header: a cell wide enough for
+                // "Δ vs Wrecking Ball" costs more width than the ledger has, and
+                // the wording is the one `score_note` already uses for the same
+                // relation one panel up.
+                if let Some(against) = &view.against {
+                    p { class: "why-lede", "the right column is the gain over {against}" }
+                }
                 div { class: "why-terms",
                     for term in view.terms.iter() {
                         div { key: "{term.label}", class: "why-term",
@@ -2344,11 +2456,26 @@ fn WhyPanel(view: Option<WhyView>) -> Element {
                                 },
                                 "{term.value}"
                             }
+                            if let Some(delta) = &term.delta {
+                                span {
+                                    class: if term.delta_even {
+                                        "why-delta"
+                                    } else if term.delta_positive {
+                                        "why-delta good"
+                                    } else {
+                                        "why-delta bad"
+                                    },
+                                    "{delta}"
+                                }
+                            }
                         }
                     }
                     div { class: "why-term why-total",
                         span { class: "why-term-label", "total" }
                         span { class: "score", "{view.total}" }
+                        if let Some(delta) = &view.delta_total {
+                            span { class: "why-delta", "{delta}" }
+                        }
                     }
                 }
                 p { class: "why-note", "{view.coverage}" }
@@ -4083,7 +4210,7 @@ mod tests {
         let ds = phrasing_fixture();
         let rec = ledger_rec();
 
-        let view = WhyView::build(&rec, 0, 0.15, Rank::All, &ds);
+        let view = WhyView::build(&rec, None, 0, 0.15, Rank::All, &ds);
         let summed: i32 = view
             .terms
             .iter()
@@ -4102,7 +4229,7 @@ mod tests {
     #[test]
     fn a_term_that_came_to_nothing_is_still_a_row_and_takes_neither_tint() {
         let ds = phrasing_fixture();
-        let view = WhyView::build(&ledger_rec(), 0, 0.15, Rank::All, &ds);
+        let view = WhyView::build(&ledger_rec(), None, 0, 0.15, Rank::All, &ds);
 
         let side = view
             .terms
@@ -4120,7 +4247,7 @@ mod tests {
     #[test]
     fn the_ledger_reads_in_the_order_the_score_is_summed() {
         let ds = phrasing_fixture();
-        let view = WhyView::build(&ledger_rec(), 0, 0.15, Rank::All, &ds);
+        let view = WhyView::build(&ledger_rec(), None, 0, 0.15, Rank::All, &ds);
 
         let labels: Vec<&str> = view.terms.iter().map(|term| term.label).collect();
         let expected: Vec<&str> = TermKind::ALL.into_iter().map(TermKind::label).collect();
@@ -4136,7 +4263,7 @@ mod tests {
         let mut rec = ledger_rec();
         rec.breakdown.shape = mixed_shape(&ds);
 
-        let view = WhyView::build(&rec, 0, 0.15, Rank::All, &ds);
+        let view = WhyView::build(&rec, None, 0, 0.15, Rank::All, &ds);
         let shape = view.shape.expect("a mixed board is worth saying");
         assert!(shape.contains("mixed"), "{shape}");
         assert!(
@@ -4156,7 +4283,7 @@ mod tests {
         let mut rec = ledger_rec();
         rec.breakdown.shape = leading_shape(&ds);
 
-        assert!(WhyView::build(&rec, 0, 0.15, Rank::All, &ds)
+        assert!(WhyView::build(&rec, None, 0, 0.15, Rank::All, &ds)
             .shape
             .is_none());
     }
@@ -4170,7 +4297,7 @@ mod tests {
         assert!(rec.reasons.len() > MAX_REASONS, "the fixture tests nothing");
 
         let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
-        let view = WhyView::build(&rec, 0, 0.15, Rank::All, &ds);
+        let view = WhyView::build(&rec, None, 0, 0.15, Rank::All, &ds);
 
         assert_eq!(row.reasons.len(), MAX_REASONS);
         assert_eq!(view.reasons.len(), rec.reasons.len());
@@ -4185,7 +4312,7 @@ mod tests {
         let rec = many_reasons_rec();
 
         let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
-        let view = WhyView::build(&rec, 0, 0.15, Rank::All, &ds);
+        let view = WhyView::build(&rec, None, 0, 0.15, Rank::All, &ds);
 
         assert_eq!(row.reasons, view.reasons[..MAX_REASONS]);
         assert!(
@@ -4207,7 +4334,7 @@ mod tests {
         };
 
         assert_eq!(coverage_note(rec.breakdown.counter), None);
-        let view = WhyView::build(&rec, 0, 0.15, Rank::All, &ds);
+        let view = WhyView::build(&rec, None, 0, 0.15, Rank::All, &ds);
         assert_eq!(view.coverage, "read against all 4 of their picks");
     }
 
@@ -4220,16 +4347,195 @@ mod tests {
         rec.tied_with_top = true;
 
         assert!(
-            WhyView::build(&rec, 1, 0.15, Rank::All, &ds).tie.is_none(),
+            WhyView::build(&rec, None, 1, 0.15, Rank::All, &ds)
+                .tie
+                .is_none(),
             "one is not a tie"
         );
-        let tied = WhyView::build(&rec, 3, 0.15, Rank::All, &ds)
+        let tied = WhyView::build(&rec, None, 3, 0.15, Rank::All, &ds)
             .tie
             .expect("three rows the scorer could not separate");
         assert!(
             tied.contains("15"),
             "the band is read off the weight: {tied}"
         );
+    }
+
+    /// The claim the panel makes out loud, on terms that do not land on whole
+    /// points — which is every real draft. Eight independently rounded values are
+    /// not the rounding of their sum, and the subtitle promises they are.
+    ///
+    /// `ledger_rec`'s terms all come out at exact points, so the test above it
+    /// agreed with the implementation for a reason unrelated to the property.
+    #[test]
+    fn the_ledger_adds_up_when_its_terms_do_not_land_on_whole_points() {
+        let ds = phrasing_fixture();
+        let rec = fractional_rec();
+
+        let view = WhyView::build(&rec, None, 0, 0.15, Rank::All, &ds);
+        let summed: i32 = view
+            .terms
+            .iter()
+            .map(|term| term.value.parse::<i32>().expect("a signed integer"))
+            .sum();
+
+        assert_eq!(
+            format!("{summed:+}"),
+            view.total,
+            "the rows do not come to the total the panel prints above them"
+        );
+    }
+
+    /// The second column balances for the same reason the first one does, and it
+    /// is a second set of roundings, so it needs saying separately.
+    #[test]
+    fn the_delta_column_adds_up_the_same_way() {
+        let ds = phrasing_fixture();
+        let rec = fractional_rec();
+        let other = ledger_rec_for(PHARAH);
+
+        let view = WhyView::build(&rec, Some(&other), 0, 0.15, Rank::All, &ds);
+        let summed: i32 = view
+            .terms
+            .iter()
+            .map(|term| {
+                term.delta
+                    .as_deref()
+                    .expect("every row carries the column")
+                    .parse::<i32>()
+                    .expect("a signed integer")
+            })
+            .sum();
+
+        assert_eq!(
+            format!("{summed:+}"),
+            view.delta_total.expect("a column has a footer")
+        );
+    }
+
+    /// And the footer is the difference of the two totals, which is what makes it
+    /// the same number the row shows in swap mode.
+    #[test]
+    fn the_delta_column_totals_to_the_same_number_the_row_shows() {
+        let ds = phrasing_fixture();
+        let rec = fractional_rec();
+        let other = ledger_rec_for(PHARAH);
+
+        let view = WhyView::build(&rec, Some(&other), 0, 0.15, Rank::All, &ds);
+        assert_eq!(
+            view.delta_total.as_deref(),
+            Some(format!("{:+}", points(rec.score - other.score)).as_str())
+        );
+        assert_eq!(view.against.as_deref(), Some("Pharah"));
+    }
+
+    /// The identity the whole column rests on: `delta_vs_locked` is
+    /// `score - locked_score`, and the locked hero's own row carries that same
+    /// score, so the panel's footer and the row's number are one subtraction.
+    /// Asserted on the formatted strings, because that is where it is claimed.
+    #[test]
+    fn in_swap_mode_the_column_is_measured_against_the_hero_you_are_on() {
+        let ds = phrasing_fixture();
+        let locked = ledger_rec_for(PHARAH);
+        let mut rec = fractional_rec();
+        rec.delta_vs_locked = Some(rec.score - locked.score);
+
+        let row = RecRow::build(&rec, &ds, true, 0, Rank::All);
+        let view = WhyView::build(&rec, Some(&locked), 0, 0.15, Rank::All, &ds);
+
+        assert_eq!(view.delta_total.as_deref(), Some(row.score.as_str()));
+    }
+
+    /// A hero is not compared with itself. A column of `+0`s would answer a
+    /// question nobody asked, and the caption would name the row it is on.
+    #[test]
+    fn the_delta_column_is_absent_when_the_hero_being_read_is_the_one_it_would_compare_against() {
+        let ds = phrasing_fixture();
+        let rec = fractional_rec();
+
+        let view = WhyView::build(&rec, Some(&rec.clone()), 0, 0.15, Rank::All, &ds);
+
+        assert!(view.against.is_none());
+        assert!(view.delta_total.is_none());
+        assert!(view.terms.iter().all(|term| term.delta.is_none()));
+    }
+
+    /// What makes largest-remainder honest rather than merely tidy: no row is
+    /// moved more than a point from what it would have said on its own.
+    #[test]
+    fn an_apportioned_value_is_never_more_than_a_point_from_its_own_rounding() {
+        let values = [0.0351, -0.324, 0.15175, 0.3318, 0.0049, -0.0049, 0.5, -0.5];
+        let total: f32 = values.iter().sum();
+
+        let given = apportion(&values, total);
+        assert_eq!(given.iter().sum::<i32>(), points(total));
+        for (value, given) in values.iter().zip(&given) {
+            assert!(
+                (given - points(*value)).abs() <= 1,
+                "{value} was rounded to {given} against its own {}",
+                points(*value)
+            );
+        }
+    }
+
+    /// Largest remainder, and not merely *a* remainder. Handing the spare unit to
+    /// the row that came *closest* to earning it is the whole rule; reversing it
+    /// still balances the table, and still leaves every row within a point of its
+    /// own rounding, so neither test above can see the difference. What it does
+    /// is move a point onto the row that wanted it least.
+    #[test]
+    fn the_point_goes_to_the_row_that_was_closest_to_earning_it() {
+        // Nine tenths of a point and one tenth, with a single unit to give away.
+        // Their own roundings are already `+1` and `+0`, and apportioning should
+        // agree with that rather than invert it.
+        let given = apportion(&[0.009, 0.001], 0.010);
+
+        assert_eq!(given, vec![1, 0]);
+        assert_eq!(given, vec![points(0.009), points(0.001)]);
+    }
+
+    /// One rule for every number this column compares against another. The
+    /// threat column has had `a_severity_that_rounds_to_nothing_never_prints_a
+    /// _signed_zero` since it was written; the pick column used the idiom that
+    /// test exists to forbid.
+    #[test]
+    fn one_rounding_rule_decides_every_number_the_pick_column_shows() {
+        let ds = phrasing_fixture();
+        let mut rec = scored(REINHARDT, -0.004, Vec::new());
+        rec.delta_vs_locked = Some(-0.004);
+
+        assert_eq!(RecRow::build(&rec, &ds, false, 0, Rank::All).score, "+0");
+        assert_eq!(RecRow::build(&rec, &ds, true, 0, Rank::All).score, "+0");
+        assert_eq!(
+            WhyView::build(&rec, None, 0, 0.15, Rank::All, &ds).total,
+            "+0"
+        );
+    }
+
+    /// A ledger on a named hero, for the tests that need two of them.
+    fn ledger_rec_for(hero: HeroId) -> Recommendation {
+        let mut rec = ledger_rec();
+        rec.hero = hero;
+        rec
+    }
+
+    /// A ledger whose terms carry fractions of a point, so the rounding is the
+    /// thing under test rather than an accident of the numbers.
+    fn fractional_rec() -> Recommendation {
+        let mut rec = scored(REINHARDT, 0.0, Vec::new());
+        let live = [
+            (TermKind::Base, 0.15, 0.234),
+            (TermKind::Counter, 1.0, -0.324),
+            (TermKind::Map, 0.25, 0.607),
+            (TermKind::Personal, 0.60, 0.553),
+        ];
+        for (kind, weight, value) in live {
+            let term = &mut rec.breakdown.terms[kind.index()];
+            term.weight = weight;
+            term.value = value;
+        }
+        rec.score = rec.breakdown.total();
+        rec
     }
 
     /// A scored recommendation with a live ledger, for the panel tests. Side is

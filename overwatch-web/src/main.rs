@@ -187,10 +187,28 @@ fn map_chip(dataset: &Dataset, map: overwatch_core::MapId) -> Option<MapChip> {
 ///
 /// `None` when there is no second row to lead — one candidate, or none.
 fn printed_lead(recs: &[Recommendation]) -> Option<i32> {
-    let printed = |rec: &Recommendation| (rec.score * 100.0).round() as i32;
     match recs {
-        [top, next, ..] => Some(printed(top) - printed(next)),
+        [top, next, ..] => Some(ui::points(top.score) - ui::points(next.score)),
         _ => None,
+    }
+}
+
+/// What the `why` panel's second column reads against: the hero you are on, or
+/// the one at the top.
+///
+/// **`find` and not `is_some`.** `recommend` measures `delta_vs_locked` against
+/// the locked hero unconditionally, while the rows it returns are filtered by
+/// role and by what your allies have taken — so a locked hero can put a delta on
+/// every row and have no row of its own. Falling through to the top pick there
+/// would caption the column with a hero you are not playing, which is worse than
+/// no column, so this answers `None`.
+///
+/// A free function for the reason `printed_lead` beside it is one: inside
+/// `App()` this is three lines no test can reach.
+fn comparand(rows: &[Recommendation], locked: Option<HeroId>) -> Option<&Recommendation> {
+    match locked {
+        Some(hero) => rows.iter().find(|rec| rec.hero == hero),
+        None => rows.first(),
     }
 }
 
@@ -918,25 +936,23 @@ fn App() -> Element {
     // about to be drawn, there is nothing to open. That covers a role change, an
     // ally taking the hero, and every other way a row can leave, without a
     // clearing line at each of them.
+    //
+    // The same prefix `rec_rows` was built from, rather than a lookup in it and
+    // back: that vector is this one mapped one to one, so the round trip bought
+    // nothing.
+    let shown = &frame.recommendations[..frame.recommendations.len().min(8)];
+    let against = comparand(shown, draft.locked);
     let why_view = why().and_then(|hero| {
-        rec_rows
-            .iter()
-            .find(|row| row.hero == hero)
-            .and_then(|row| {
-                frame
-                    .recommendations
-                    .iter()
-                    .find(|rec| rec.hero == row.hero)
-            })
-            .map(|rec| {
-                ui::WhyView::build(
-                    rec,
-                    tie_count(&rec_rows, draft.enemies.len()),
-                    profile.read().weights.tie_band,
-                    rank,
-                    &dataset,
-                )
-            })
+        shown.iter().find(|rec| rec.hero == hero).map(|rec| {
+            ui::WhyView::build(
+                rec,
+                against,
+                tie_count(&rec_rows, draft.enemies.len()),
+                profile.read().weights.tie_band,
+                rank,
+                &dataset,
+            )
+        })
     });
 
     let score_note = ui::score_note(
@@ -1468,6 +1484,38 @@ fn frame_top(dataset: &Dataset, draft: &Draft, profile: &Profile) -> Option<Hero
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Nothing locked: the column reads against the row everything else is being
+    /// compared with anyway.
+    #[test]
+    fn with_nothing_locked_the_column_reads_against_the_top_pick() {
+        let rows = vec![rec_at(HeroId(0), 0.41), rec_at(HeroId(1), 0.35)];
+
+        assert_eq!(comparand(&rows, None).map(|rec| rec.hero), Some(HeroId(0)));
+    }
+
+    /// Locked: against the hero you are on, wherever it sits in the list.
+    #[test]
+    fn with_a_hero_locked_the_column_reads_against_that_hero() {
+        let rows = vec![rec_at(HeroId(0), 0.41), rec_at(HeroId(1), 0.35)];
+
+        assert_eq!(
+            comparand(&rows, Some(HeroId(1))).map(|rec| rec.hero),
+            Some(HeroId(1))
+        );
+    }
+
+    /// And the case the `find` exists for: `delta_vs_locked` is measured against
+    /// the locked hero whether or not it has a row, so a hero that is off-role or
+    /// taken by an ally leaves the list while every row still carries a delta
+    /// against it. Captioning the column `vs Winston` while you are on Reinhardt
+    /// would be worse than drawing no column.
+    #[test]
+    fn a_locked_hero_with_no_row_of_its_own_gets_no_column_rather_than_the_wrong_one() {
+        let rows = vec![rec_at(HeroId(0), 0.41), rec_at(HeroId(1), 0.35)];
+
+        assert!(comparand(&rows, Some(HeroId(7))).is_none());
+    }
 
     /// The one decision behind the margin, and the one no test above `main` can
     /// reach: it is the difference of the printed figures, not the printing of

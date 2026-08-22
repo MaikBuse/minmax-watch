@@ -1323,6 +1323,31 @@ body {
     color: var(--text-muted);
 }
 
+/* The second column: what this term is worth against the hero you are on, or
+   against the top pick. The supporting argument rather than the answer, so it
+   stays in the muted register while `.score` beside it keeps the weight — and
+   narrower, because a gain is read after the number it qualifies.
+
+   Its own class rather than a second `.score`: two cells at `min-width: 46px`
+   with `margin-left: auto` on both would push the first one off its column. */
+.why-delta {
+    flex: 0 0 auto;
+    min-width: 40px;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--fs-sm);
+    text-align: right;
+    color: var(--text-faint);
+}
+
+.why-delta.good {
+    color: color-mix(in srgb, var(--positive) 70%, var(--text-faint));
+}
+
+.why-delta.bad {
+    color: color-mix(in srgb, var(--negative) 70%, var(--text-faint));
+}
+
 /* The one line that is not a term. A rule above it rather than a weight step,
    because the eight above are already the argument and this is only their sum. */
 .why-total {
