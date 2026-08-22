@@ -654,7 +654,6 @@ fn App() -> Element {
     let chip_of = move |hero: HeroId| hero_chip(&ds_view, hero);
 
     let role = profile.read().role;
-    let pool = profile.read().pool(&dataset, role);
     let map = draft.map.and_then(|m| map_chip(&dataset, m));
 
     // Every mode carries its own pool count, so how much of a role you have
@@ -844,7 +843,11 @@ fn App() -> Element {
                 rec,
                 &dataset,
                 draft.locked.is_some(),
-                pool.contains(rec.hero),
+                // The value, not membership in a derived `HeroSet`: the row draws
+                // its star from `> 0` and words that star from the rung, and a
+                // `bool` throws the rung away at this boundary. One read per row,
+                // exactly as the pool board takes one per tile.
+                profile.read().comfort(rec.hero),
                 rank,
             )
         })

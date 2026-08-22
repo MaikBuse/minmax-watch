@@ -1496,19 +1496,23 @@ pub struct RecRow {
     pub score: String,
     pub is_locked: bool,
     pub worth_swapping: bool,
-    /// One of yours, from the pool board.
+    /// How well you have said you play this hero, on the canonical -100..=100
+    /// scale. Zero for a hero you have said nothing about.
     ///
-    /// **No longer a highlight and nothing else.** It used to say the score was
-    /// untouched either way, because the comfort overrides were the lever for "I
-    /// like this hero" and two levers for one job would fight. They are now the
-    /// same lever: the pool *is* the comfort value, so a starred row is a row
-    /// whose score this marker also moved.
+    /// **The value and not a `bool`, and not a [`ComfortStep`] either.** It was a
+    /// bool while the pool was a highlight and nothing else; it is the number now
+    /// because the row asks two different questions of it. *Is this one of yours*
+    /// is [`RecRow::claimed`], which has to agree with `Profile::pool`, the mode
+    /// chip's count and the pool the ban list defends — all of them `> 0`. *Which
+    /// rung* is [`comfort_claim`], which is an exact match and has no answer for a
+    /// hand-edited `21`. An `Option<ComfortStep>` would answer the second question
+    /// in place of the first, and that row would go out unstarred while the
+    /// reasons beneath it still called the hero one of your comfort picks.
     ///
-    /// Which means a claimed hero can currently say so twice — a star up here and
-    /// a comfort line in the reasons below. That is a wording problem rather than
-    /// a modelling one, and it belongs to the change that makes the reason line
-    /// name the level.
-    pub in_pool: bool,
+    /// So a claimed hero still says so twice — a star up here and a comfort line
+    /// in the reasons below — but the two now say *which* claim, out of one
+    /// function, and the star is what survives when impact-sorting drops the line.
+    pub comfort: i8,
     pub reasons: Vec<ReasonLine>,
 }
 
@@ -1638,6 +1642,28 @@ impl Phrasing {
     }
 }
 
+/// What a comfort value claims, in the app's own words.
+///
+/// A free function with two callers, which is the whole reason it is one: the
+/// reason line renders it, and so does the star in the row's header. The star is
+/// not a duplicate of that line — reasons are sorted by impact and cut to
+/// `MAX_REASONS`, so the lowest rung's 0.12 loses to any three matchups and the
+/// line never renders, leaving the glyph as the only account of a term that moved
+/// the score. Two places saying it means one place deciding what is said.
+///
+/// [`ComfortStep::of`] is an exact match, so a value the ladder cannot name keeps
+/// the sentence this line has always carried rather than being rounded onto a rung
+/// the player never chose. That arm is reachable — a hand-edited profile, or a
+/// value stored before the rungs were what they are — not dead code.
+fn comfort_claim(value: i8) -> &'static str {
+    match ComfortStep::of(value) {
+        Some(ComfortStep::Ok) => "in your pool",
+        Some(ComfortStep::Good) => "one you play well",
+        Some(ComfortStep::Main) => "one of your mains",
+        None => "one of your comfort picks",
+    }
+}
+
 /// The app's own wording for one reason, for the rows where no source published
 /// a sentence of its own.
 ///
@@ -1741,16 +1767,19 @@ fn phrasing(kind: ReasonKind, hero: HeroId, rank: Rank, ds: &Dataset) -> Phrasin
             Phrasing::Symmetric(format!("suits {} right now", rung.label()))
         }
 
-        // Nothing in the UI writes a comfort override yet, so the negative arm
-        // needs a hand-edited stored profile to reach. Written now because the
-        // pool board is about to start writing them, and a level you set yourself
-        // is the last place a contradiction should turn up.
+        // The one arm whose positive side is four sentences rather than one,
+        // because the player chose between them: `ok`, `good` and `main` are three
+        // different claims, and every one of them used to arrive here as `one of
+        // your comfort picks`. The wording lives in [`comfort_claim`] because the
+        // star in the row's header says the same thing and the two must not drift.
         //
-        // The value is carried on the kind and deliberately not read here yet:
-        // naming the level a player chose ("one of your mains") is a separate
-        // change to the wording, and this slice only made the number reachable.
-        ReasonKind::Comfort(_) => Phrasing::Signed {
-            positive: "one of your comfort picks".to_owned(),
+        // Still `Signed`, and the negative side deliberately does not name a rung:
+        // there is no negative rung to name. The ladder is three positive steps by
+        // construction, and a value below zero is a hand-edited "rank this down" —
+        // a different statement rather than a fourth level, which is the argument
+        // `comfort.rs` and `Profile::pool` both make in place.
+        ReasonKind::Comfort(value) => Phrasing::Signed {
+            positive: comfort_claim(value).to_owned(),
             negative: "one you rated down".to_owned(),
         },
     }
@@ -1785,7 +1814,7 @@ impl RecRow {
         rec: &Recommendation,
         dataset: &Dataset,
         swap_mode: bool,
-        in_pool: bool,
+        comfort: i8,
         rank: Rank,
     ) -> Self {
         // Once you are locked in, the absolute score is noise: the only
@@ -1863,9 +1892,20 @@ impl RecRow {
             score,
             is_locked: rec.is_locked,
             worth_swapping: rec.worth_swapping,
-            in_pool,
+            comfort,
             reasons,
         }
+    }
+
+    /// Whether this hero is one of yours.
+    ///
+    /// `> 0` and not `!= 0`, and not `ComfortStep::of(..).is_some()` either: this
+    /// is the same predicate `Profile::pool` derives the pool from, and the two
+    /// have to answer alike or the row disagrees with the mode chip beside it. A
+    /// negative is a hand-edited "rank this down", which is the opposite of a
+    /// claim on the hero rather than a low one.
+    pub fn claimed(&self) -> bool {
+        self.comfort > 0
     }
 }
 
@@ -1909,7 +1949,7 @@ pub fn Recommendations(
                         "rec{}{}{}",
                         if rec.is_locked { " locked" } else { "" },
                         if rec.worth_swapping { " swap" } else { "" },
-                        if rec.in_pool { " pooled" } else { "" },
+                        if rec.claimed() { " pooled" } else { "" },
                     ),
                     onclick: {
                         let hero = rec.hero;
@@ -1932,8 +1972,21 @@ pub fn Recommendations(
                             // A read-out, not a control: the pool board is the
                             // one place it is edited, so there is no second
                             // click target here to mistake for the row's own.
-                            if rec.in_pool {
-                                span { class: "star on", title: "one of yours", aria_label: "in your pool", "★" }
+                            //
+                            // It names the rung, and that is not decoration. The
+                            // reason list is sorted by impact and cut to three, so
+                            // the lowest step's 0.12 loses to any three matchups
+                            // and the line saying you play this hero never renders
+                            // — leaving this glyph as the only account of a term
+                            // that moved the score. The same sentence that line
+                            // would have carried, out of the same function.
+                            if rec.claimed() {
+                                span {
+                                    class: "star on",
+                                    title: "{comfort_claim(rec.comfort)}",
+                                    aria_label: "{comfort_claim(rec.comfort)}",
+                                    "★"
+                                }
                             }
                         }
                         ul { class: "reasons",
@@ -2026,7 +2079,7 @@ pub fn AnswerStrip(
                             "strip-pick{}{}{}",
                             if rec.is_locked { " locked" } else { "" },
                             if rec.worth_swapping { " swap" } else { "" },
-                            if rec.in_pool { " pooled" } else { "" },
+                            if rec.claimed() { " pooled" } else { "" },
                         ),
                         // The rank is the reading order here rather than a
                         // column of its own — there is no room for one, and
@@ -2609,7 +2662,7 @@ mod tests {
             ],
         };
 
-        let row = RecRow::build(&rec, &ds, false, false, Rank::All);
+        let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
         assert!(row.reasons[0].disputed, "the counter line reads the matrix");
         assert!(!row.reasons[0].positive);
         assert!(
@@ -2736,7 +2789,7 @@ mod tests {
             ],
         };
 
-        let row = RecRow::build(&rec, &ds, false, false, Rank::All);
+        let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
         assert!(row.reasons[0].cited, "the site wrote that sentence");
         assert_eq!(
             row.reasons[0].text,
@@ -2773,7 +2826,7 @@ mod tests {
             }],
         };
 
-        let row = RecRow::build(&rec, &ds, false, false, Rank::All);
+        let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
         assert_eq!(
             row.reasons[0].text,
             "Wall denies a choke the attackers must clear."
@@ -2801,7 +2854,7 @@ mod tests {
                 text: String::new(),
             }],
         };
-        RecRow::build(&rec, ds, false, false, Rank::All)
+        RecRow::build(&rec, ds, false, 0, Rank::All)
             .reasons
             .remove(0)
             .text
@@ -3186,9 +3239,10 @@ mod tests {
         );
     }
 
-    /// Nothing writes a comfort override yet, so this needs a hand-edited stored
-    /// profile to reach today. Worth having in place first: a level you set
-    /// yourself is the last place the app should argue with itself.
+    /// The pool board writes the three positive rungs and nothing else, so a
+    /// negative still needs a hand-edited stored profile to reach. Worth keeping:
+    /// a level you set yourself is the last place the app should argue with
+    /// itself, and this is the one wording the ladder does not supply.
     #[test]
     fn a_hero_you_rated_down_never_reads_as_one_of_your_comfort_picks() {
         let ds = phrasing_fixture();
@@ -3198,6 +3252,137 @@ mod tests {
         let line = phrasing(ReasonKind::Comfort(-40), REINHARDT, Rank::All, &ds).under(false);
         assert_eq!(line, "one you rated down");
         assert!(!line.contains("comfort pick"));
+    }
+
+    /// Three rungs, three claims. The pool board has always been able to say "you
+    /// play it", "you play it well" and "this is your hero", and every one of them
+    /// arrived on the row as the same sentence.
+    ///
+    /// Driven off `LADDER` rather than off three literals, so a fourth rung cannot
+    /// be added without an answer for it here.
+    #[test]
+    fn each_rung_of_the_comfort_ladder_reads_as_a_different_claim() {
+        let ds = phrasing_fixture();
+
+        let mut seen: Vec<String> = Vec::new();
+        for step in ComfortStep::LADDER {
+            let line =
+                phrasing(ReasonKind::Comfort(step.value()), REINHARDT, Rank::All, &ds).under(true);
+            assert!(
+                !seen.contains(&line),
+                "{} reads exactly as a rung below it, which is the whole bug",
+                step.label()
+            );
+            seen.push(line);
+        }
+    }
+
+    /// The top of the ladder at 0.60 is the heaviest single claim the app makes
+    /// about a hero, and it used to be worded identically to the 0.12 below it.
+    #[test]
+    fn the_top_of_the_ladder_is_named_a_main_rather_than_a_comfort_pick() {
+        let ds = phrasing_fixture();
+
+        let line = phrasing(
+            ReasonKind::Comfort(ComfortStep::Main.value()),
+            REINHARDT,
+            Rank::All,
+            &ds,
+        )
+        .under(true);
+        assert_eq!(line, "one of your mains");
+    }
+
+    /// [`ComfortStep::of`] is an exact match on purpose, so the sentence the row
+    /// carried before the ladder had words is the honest answer for a value the
+    /// ladder cannot name. That is why the old string is kept rather than deleted:
+    /// it is reachable, through a hand-edited profile, and now tested.
+    #[test]
+    fn a_comfort_value_the_ladder_cannot_name_keeps_the_wording_it_always_had() {
+        let ds = phrasing_fixture();
+
+        assert_eq!(
+            ComfortStep::of(21),
+            None,
+            "21 has to be off the ladder or this test asserts nothing"
+        );
+        let line = phrasing(ReasonKind::Comfort(21), REINHARDT, Rank::All, &ds).under(true);
+        assert_eq!(line, "one of your comfort picks");
+    }
+
+    /// The star and the bar ask "is this one of yours", which is `> 0` — the same
+    /// predicate `Profile::pool` derives the pool from, the one the mode chip
+    /// counts and the one the ban list defends on.
+    ///
+    /// Were membership read off `ComfortStep::of(..).is_some()` instead, this row
+    /// would go out unstarred and unbarred while its own reason line called the
+    /// hero one of your comfort picks and the mode chip beside it counted a hero
+    /// the list said was not yours.
+    #[test]
+    fn a_comfort_value_the_ladder_cannot_name_still_marks_the_row_as_yours() {
+        let ds = phrasing_fixture();
+        let rec = comfort_rec();
+
+        assert!(RecRow::build(&rec, &ds, false, 21, Rank::All).claimed());
+        assert!(!RecRow::build(&rec, &ds, false, 0, Rank::All).claimed());
+        assert!(
+            !RecRow::build(&rec, &ds, false, -40, Rank::All).claimed(),
+            "a hero you rated down is not one of yours at a low level, it is not \
+             one of yours"
+        );
+    }
+
+    /// Two channels, one sentence. The star exists because the reason list is
+    /// impact-sorted and truncated, so at the lowest rung it is regularly the only
+    /// survivor — and a star saying something the line does not is worse than no
+    /// star at all.
+    #[test]
+    fn the_star_names_the_same_rung_the_reason_line_does() {
+        let ds = phrasing_fixture();
+
+        for value in [
+            ComfortStep::Ok.value(),
+            ComfortStep::Good.value(),
+            ComfortStep::Main.value(),
+            21,
+        ] {
+            assert_eq!(
+                comfort_claim(value),
+                phrasing(ReasonKind::Comfort(value), REINHARDT, Rank::All, &ds).under(true),
+                "the header and the reasons disagree about {value}"
+            );
+        }
+    }
+
+    /// The row carries the number rather than the fact that there is one.
+    /// Everything above depends on it still being there when the components read
+    /// it.
+    #[test]
+    fn a_row_carries_the_comfort_value_and_not_merely_that_there_is_one() {
+        let ds = phrasing_fixture();
+
+        let row = RecRow::build(
+            &comfort_rec(),
+            &ds,
+            false,
+            ComfortStep::Good.value(),
+            Rank::All,
+        );
+        assert_eq!(row.comfort, ComfortStep::Good.value());
+        assert!(row.claimed());
+    }
+
+    /// A row with no reasons on it, because the two tests above are about the
+    /// header and the comfort value reaches it without passing through the panel.
+    fn comfort_rec() -> Recommendation {
+        Recommendation {
+            hero: REINHARDT,
+            score: 0.4,
+            delta_vs_locked: None,
+            worth_swapping: false,
+            is_locked: false,
+            reasons: Vec::new(),
+        }
     }
 
     /// The whole chain, once, through the real builder: a negative base term on a
@@ -3219,7 +3404,7 @@ mod tests {
             }],
         };
 
-        let row = RecRow::build(&rec, &ds, false, false, Rank::All);
+        let row = RecRow::build(&rec, &ds, false, 0, Rank::All);
         assert!(!row.reasons[0].positive, "the sign is what draws the minus");
         assert_eq!(row.reasons[0].text, "45.6% win rate");
     }
